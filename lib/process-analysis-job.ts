@@ -23,6 +23,16 @@ import {
 } from "./gemini-retry";
 import { geminiPhase1Upload, geminiPhase2CheckReady } from "./gemini-phases";
 
+/** 分析已开始但函数被 Vercel 10s 杀掉时，超过此时长则重置重试 */
+const STALE_ANALYSIS_MS = 45_000;
+/** Gemini 处理视频阶段最长等待 */
+const STALE_GEMINI_PROCESSING_MS = 120_000;
+
+function msSince(iso?: string): number {
+  if (!iso) return 0;
+  return Date.now() - new Date(iso).getTime();
+}
+
 async function fetchVideoBuffer(
   job: AnalysisJob & { videoBuffer?: Buffer }
 ): Promise<Buffer> {
@@ -133,6 +143,12 @@ export async function advanceAnalysisJob(jobId: string): Promise<void> {
 
     // —— 阶段二-A：单次 getFile 检查是否 ACTIVE ——
     if (job.status === "gemini_processing" && job.geminiFileName) {
+      if (msSince(job.updatedAt) > STALE_GEMINI_PROCESSING_MS) {
+        throw new Error(
+          "Gemini 处理视频超过 2 分钟仍未就绪，请重新点击「上传并分析」（与文件大小无关，多为 API 排队）。"
+        );
+      }
+
       const geminiFileName = job.geminiFileName;
       const check = await geminiPhase2CheckReady(apiKey, geminiFileName);
 
@@ -161,13 +177,25 @@ export async function advanceAnalysisJob(jobId: string): Promise<void> {
       if (!geminiFileUri) return;
 
       if (job.analysisStarted) {
-        logInfo("job", `[阶段二-B] 分析进行中，跳过重复调用`);
-        return;
+        const staleMs = msSince(job.analysisStartedAt ?? job.updatedAt);
+        if (staleMs < STALE_ANALYSIS_MS) {
+          logInfo("job", `[阶段二-B] 分析进行中 ${Math.round(staleMs / 1000)}s，等待`);
+          return;
+        }
+        logInfo("job", `[阶段二-B] 上次分析已卡住 ${Math.round(staleMs / 1000)}s，重置并重试`);
+        job = {
+          ...job,
+          analysisStarted: false,
+          analysisStartedAt: undefined,
+          updatedAt: new Date().toISOString(),
+        };
+        await persistJob(job);
       }
 
       job = {
         ...job,
         analysisStarted: true,
+        analysisStartedAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
       await persistJob(job);
@@ -183,6 +211,8 @@ export async function advanceAnalysisJob(jobId: string): Promise<void> {
         ...job,
         status: "completed",
         analysis,
+        analysisStarted: false,
+        analysisStartedAt: undefined,
         updatedAt: new Date().toISOString(),
       });
       logInfo("job", `任务完成: ${jobId}`);
@@ -197,6 +227,7 @@ export async function advanceAnalysisJob(jobId: string): Promise<void> {
         ...current,
         status: "rate_limited",
         analysisStarted: false,
+        analysisStartedAt: undefined,
         retryAfter: new Date(Date.now() + waitSec * 1000).toISOString(),
         error: `Gemini 频率限制，约 ${waitSec} 秒后自动重试…`,
         updatedAt: new Date().toISOString(),
@@ -208,6 +239,8 @@ export async function advanceAnalysisJob(jobId: string): Promise<void> {
     await persistJob({
       ...current,
       status: "failed",
+      analysisStarted: false,
+      analysisStartedAt: undefined,
       error: message,
       updatedAt: new Date().toISOString(),
     });

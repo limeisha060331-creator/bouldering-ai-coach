@@ -1,5 +1,6 @@
-const POLL_INTERVAL_MS = 4000;
-const MAX_POLL_MS = 180_000;
+const POLL_INTERVAL_MS = 3000;
+/** 含 429 冷却、Gemini 处理、卡死重试，需长于 3 分钟 */
+const MAX_POLL_MS = 360_000;
 const VERCEL_SOFT_LIMIT_MS = 10_000;
 
 export interface AnalyzeApiResult {
@@ -125,8 +126,8 @@ export async function pollUntilComplete(
 
   throw new AnalysisPollError(
     `分析超时（已等待 ${Math.round(MAX_POLL_MS / 1000)} 秒）。` +
-      `Vercel 免费版单次函数限 ${VERCEL_SOFT_LIMIT_MS / 1000} 秒，我们已用轮询拆分任务。` +
-      `请剪辑更短的「关键一挂」片段后点击重试。`,
+      `这与视频文件大小无必然关系，常见原因是 Gemini 排队、限流(429) 或云端任务卡住。` +
+      `请等 1～2 分钟后重新上传并分析；若反复出现，请到 Vercel Logs 查看该 jobId。`,
     true,
     MAX_POLL_MS
   );

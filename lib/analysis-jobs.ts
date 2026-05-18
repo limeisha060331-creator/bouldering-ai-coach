@@ -30,6 +30,7 @@ export interface AnalysisJob {
   error?: string;
   logs?: string[];
   analysisStarted?: boolean;
+  analysisStartedAt?: string;
   /** 429 后自动重试的最早时间（ISO） */
   retryAfter?: string;
   originalSize?: number;

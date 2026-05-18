@@ -72,7 +72,9 @@ export async function GET(
     analysis: job.analysis,
     error: job.error,
     updatedAt: job.updatedAt,
-    retryable: job.status === "failed",
+    analysisStarted: job.analysisStarted ?? false,
+    retryAfter: job.retryAfter,
+    retryable: job.status === "failed" || job.status === "rate_limited",
     vercelNote:
       job.status !== "completed" && job.status !== "failed"
         ? "采用短请求轮询以规避 Vercel 10 秒函数限制"
