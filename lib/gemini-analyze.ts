@@ -2,6 +2,11 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { ANALYSIS_PROMPT, getGeminiModelId } from "./analyze-prompt";
 import { logInfo } from "./gemini-log";
 import {
+  isGeminiRateLimitError,
+  parseGeminiRetrySeconds,
+  sleep,
+} from "./gemini-retry";
+import {
   geminiPhase1Upload,
   geminiPhase2CheckReady,
 } from "./gemini-phases";
@@ -21,7 +26,7 @@ export function mapGeminiError(err: unknown): { message: string; status: number 
   ) {
     return {
       message:
-        "请求太频繁啦！Gemini 暂时限制了调用次数，请稍等 1～2 分钟后再试。",
+        "Gemini 免费额度/频率已达上限。请等待约 1 分钟后点击「重新分析」，或在 Vercel 设置 GEMINI_MODEL=gemini-2.0-flash-lite。也可查看 https://ai.dev/rate-limit",
       status: 429,
     };
   }
@@ -95,26 +100,46 @@ export async function runGeminiAnalysis(
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({ model: modelId });
 
-  logInfo("gemini", `开始 generateContent, model=${modelId}`);
+  const maxAttempts = 2;
+  let lastError: unknown;
 
-  const result = await model.generateContent([
-    { text: ANALYSIS_PROMPT },
-    {
-      fileData: {
-        mimeType,
-        fileUri,
-      },
-    },
-  ]);
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      logInfo(
+        "gemini",
+        `generateContent 开始 model=${modelId} attempt=${attempt}/${maxAttempts}`
+      );
 
-  const text = result.response.text();
-  logInfo("gemini", "generateContent 完成", { length: text?.length ?? 0 });
+      const result = await model.generateContent([
+        { text: ANALYSIS_PROMPT },
+        {
+          fileData: {
+            mimeType,
+            fileUri,
+          },
+        },
+      ]);
 
-  if (!text?.trim()) {
-    throw new Error("模型未返回分析文本");
+      const text = result.response.text();
+      logInfo("gemini", "generateContent 完成", { length: text?.length ?? 0 });
+
+      if (!text?.trim()) {
+        throw new Error("模型未返回分析文本");
+      }
+
+      return text.trim();
+    } catch (err) {
+      lastError = err;
+      if (!isGeminiRateLimitError(err) || attempt >= maxAttempts) {
+        throw err;
+      }
+      const waitSec = Math.min(parseGeminiRetrySeconds(err), 20);
+      logInfo("gemini", `429 限流，${waitSec}s 后同函数内重试`);
+      await sleep(waitSec * 1000);
+    }
   }
 
-  return text.trim();
+  throw lastError;
 }
 
 /** 同步直传（仅本地调试；Vercel 生产环境请用异步任务） */

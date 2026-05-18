@@ -9,6 +9,7 @@ export type JobStatus =
   | "gemini_uploading"
   | "gemini_processing"
   | "analyzing"
+  | "rate_limited"
   | "completed"
   | "failed";
 
@@ -29,6 +30,8 @@ export interface AnalysisJob {
   error?: string;
   logs?: string[];
   analysisStarted?: boolean;
+  /** 429 后自动重试的最早时间（ISO） */
+  retryAfter?: string;
   originalSize?: number;
   compressedSize?: number;
 }

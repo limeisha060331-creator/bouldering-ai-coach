@@ -15,6 +15,7 @@ const PHASE_MAP: Record<string, string> = {
   gemini_uploading: "phase1_gemini_upload",
   gemini_processing: "phase2_gemini_wait",
   analyzing: "phase2_gemini_analyze",
+  rate_limited: "rate_limited",
   completed: "done",
   failed: "failed",
 };
@@ -54,6 +55,7 @@ export async function GET(
     job.status !== "completed" &&
     job.status !== "failed"
   ) {
+    // rate_limited 也允许推进（冷却结束后自动重试）
     logInfo("status", `轮询推进 ${jobId} status=${job.status}`);
     try {
       await advanceAnalysisJob(jobId);

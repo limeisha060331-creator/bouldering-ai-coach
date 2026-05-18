@@ -17,6 +17,10 @@ import {
   mapGeminiError,
   runGeminiAnalysis,
 } from "./gemini-analyze";
+import {
+  isGeminiRateLimitError,
+  parseGeminiRetrySeconds,
+} from "./gemini-retry";
 import { geminiPhase1Upload, geminiPhase2CheckReady } from "./gemini-phases";
 
 async function fetchVideoBuffer(
@@ -66,6 +70,24 @@ export async function advanceAnalysisJob(jobId: string): Promise<void> {
   }
 
   if (job.status === "completed" || job.status === "failed") return;
+
+  // 429 后等待到 retryAfter 再自动重试分析
+  if (job.status === "rate_limited") {
+    if (job.retryAfter && new Date(job.retryAfter) > new Date()) {
+      logInfo("job", `限流冷却中，retryAfter=${job.retryAfter}`);
+      return;
+    }
+    job = {
+      ...job,
+      status: "analyzing",
+      analysisStarted: false,
+      retryAfter: undefined,
+      error: undefined,
+      updatedAt: new Date().toISOString(),
+    };
+    await persistJob(job);
+    logInfo("job", "冷却结束，重新进入分析阶段");
+  }
 
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
@@ -167,8 +189,22 @@ export async function advanceAnalysisJob(jobId: string): Promise<void> {
     }
   } catch (err) {
     logGeminiError(`job/${jobId}`, err);
-    const { message } = mapGeminiError(err);
     const current = (await loadJob(jobId)) ?? job;
+
+    if (isGeminiRateLimitError(err)) {
+      const waitSec = parseGeminiRetrySeconds(err);
+      await persistJob({
+        ...current,
+        status: "rate_limited",
+        analysisStarted: false,
+        retryAfter: new Date(Date.now() + waitSec * 1000).toISOString(),
+        error: `Gemini 频率限制，约 ${waitSec} 秒后自动重试…`,
+        updatedAt: new Date().toISOString(),
+      });
+      return;
+    }
+
+    const { message } = mapGeminiError(err);
     await persistJob({
       ...current,
       status: "failed",

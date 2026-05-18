@@ -1,4 +1,4 @@
-const POLL_INTERVAL_MS = 2000;
+const POLL_INTERVAL_MS = 4000;
 const MAX_POLL_MS = 180_000;
 const VERCEL_SOFT_LIMIT_MS = 10_000;
 
@@ -31,6 +31,7 @@ const STATUS_HINTS: Record<string, string> = {
   gemini_uploading: "【阶段一】正在上传至 Gemini Files API…",
   gemini_processing: "【阶段二】Gemini 正在处理视频，请稍候…",
   analyzing: "【阶段二】教练正在观看并分析…",
+  rate_limited: "【限流】Gemini 免费额度紧张，正在自动排队重试…",
 };
 
 const PHASE_LABELS: Record<string, string> = {
@@ -101,6 +102,14 @@ export async function pollUntilComplete(
         phase: PHASE_LABELS.completed,
         elapsedMs,
       };
+    }
+
+    if (data.status === "rate_limited") {
+      options?.onProgress?.(
+        "rate_limited",
+        data.error ?? STATUS_HINTS.rate_limited,
+        elapsedSec
+      );
     }
 
     if (data.status === "failed") {
