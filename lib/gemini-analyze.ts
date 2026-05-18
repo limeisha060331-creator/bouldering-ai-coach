@@ -1,5 +1,5 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { ANALYSIS_PROMPT, MODEL_ID } from "./analyze-prompt";
+import { ANALYSIS_PROMPT, getGeminiModelId } from "./analyze-prompt";
 import { logInfo } from "./gemini-log";
 import {
   geminiPhase1Upload,
@@ -61,8 +61,10 @@ export function mapGeminiError(err: unknown): { message: string; status: number 
   }
 
   if (lower.includes("not found") && lower.includes("model")) {
+    const model = getGeminiModelId();
     return {
-      message: `模型 ${MODEL_ID} 不可用，请在 Google AI Studio 确认模型权限。`,
+      message:
+        `模型「${model}」不可用。请在 Vercel 环境变量设置 GEMINI_MODEL，例如 gemini-2.0-flash 或 gemini-2.0-flash-lite，并在 AI Studio 查看可用模型列表。`,
       status: 400,
     };
   }
@@ -89,10 +91,11 @@ export async function runGeminiAnalysis(
   fileUri: string,
   mimeType: string
 ): Promise<string> {
+  const modelId = getGeminiModelId();
   const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ model: MODEL_ID });
+  const model = genAI.getGenerativeModel({ model: modelId });
 
-  logInfo("gemini", `开始 generateContent, model=${MODEL_ID}`);
+  logInfo("gemini", `开始 generateContent, model=${modelId}`);
 
   const result = await model.generateContent([
     { text: ANALYSIS_PROMPT },

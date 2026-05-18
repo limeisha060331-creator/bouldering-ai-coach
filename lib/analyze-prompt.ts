@@ -12,4 +12,10 @@ export const ANALYSIS_PROMPT = `
 语气鼓励、具体、适合初学者。若看不清或不是攀爬视频，请如实说明，仍保持上述格式。
 `.trim();
 
-export const MODEL_ID = "gemini-1.5-flash";
+/** 默认模型（1.5-flash 已对许多新 Key 停用，改用 2.0） */
+const DEFAULT_MODEL = "gemini-2.0-flash";
+
+/** 可在 .env.local / Vercel 设置 GEMINI_MODEL 覆盖 */
+export function getGeminiModelId(): string {
+  return process.env.GEMINI_MODEL?.trim() || DEFAULT_MODEL;
+}
