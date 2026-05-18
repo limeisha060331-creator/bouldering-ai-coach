@@ -1,27 +1,49 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextRequest, NextResponse } from "next/server";
+import { waitUntil } from "@vercel/functions";
+import { randomUUID } from "crypto";
+import {
+  hasBlobStorage,
+  saveJob,
+  uploadVideoBlob,
+  type AnalysisJob,
+} from "@/lib/analysis-jobs";
+import { advanceAnalysisJob } from "@/lib/process-analysis-job";
+import {
+  isMemoryJobStoreEnabled,
+  saveMemoryJob,
+} from "@/lib/job-memory-store";
+import {
+  analyzeVideoInline,
+  logGeminiError,
+  logInfo,
+  mapGeminiError,
+} from "@/lib/gemini-analyze";
 
 export const runtime = "nodejs";
+export const maxDuration = 60;
 
-const MAX_BYTES = 20 * 1024 * 1024;
+const MAX_BYTES = 10 * 1024 * 1024;
 
-const ANALYSIS_PROMPT = `
-你是一位专业的抱石（Bouldering）教练。请根据这段攀爬视频，用中文给出结构化分析：
-1. 整体动作评价（1-2 句）
-2. 优点（条列 2-3 点）
-3. 需要改进的地方（条列 2-4 点）
-4. 一条可立刻练习的建议
-
-语气鼓励、具体、适合初学者。若看不清或不是攀爬视频，请如实说明。
-`.trim();
+function useAsyncPipeline(): boolean {
+  return hasBlobStorage() || isMemoryJobStoreEnabled();
+}
 
 export async function POST(request: NextRequest) {
+  const startedAt = Date.now();
+  logInfo("POST", "收到分析请求", {
+    vercel: process.env.VERCEL === "1",
+    region: process.env.VERCEL_REGION,
+    blob: hasBlobStorage(),
+    memoryJobs: isMemoryJobStoreEnabled(),
+    async: useAsyncPipeline(),
+  });
+
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     return NextResponse.json(
       {
         error:
-          "未配置 GEMINI_API_KEY。请在项目根目录创建 .env.local 并填入你的 Google Gemini API Key",
+          "未配置 GEMINI_API_KEY。请在 .env.local / Vercel 环境变量中设置",
       },
       { status: 500 }
     );
@@ -30,8 +52,12 @@ export async function POST(request: NextRequest) {
   let formData: FormData;
   try {
     formData = await request.formData();
-  } catch {
-    return NextResponse.json({ error: "无法解析上传数据" }, { status: 400 });
+  } catch (err) {
+    logGeminiError("POST/formData", err);
+    return NextResponse.json(
+      { error: "无法解析上传数据，请确认视频已压缩到 10MB 以内。" },
+      { status: 400 }
+    );
   }
 
   const file = formData.get("video");
@@ -43,40 +69,115 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "仅支持视频格式" }, { status: 400 });
   }
 
+  const originalSize = Number(formData.get("originalSize")) || file.size;
+  const compressed = formData.get("compressed") === "true";
+
   if (file.size > MAX_BYTES) {
     return NextResponse.json(
-      { error: `视频过大，请小于 ${MAX_BYTES / 1024 / 1024}MB` },
+      {
+        error: `视频仍为 ${(file.size / 1024 / 1024).toFixed(1)}MB，超过 10MB 上限。请等待前端压缩完成或手动剪辑。`,
+      },
+      { status: 413 }
+    );
+  }
+
+  let buffer: Buffer;
+  try {
+    buffer = Buffer.from(await file.arrayBuffer());
+    logInfo("POST", `视频已读取`, {
+      size: buffer.length,
+      type: file.type,
+      compressed,
+      originalSize,
+    });
+  } catch (err) {
+    logGeminiError("POST/readBuffer", err);
+    return NextResponse.json(
+      { error: "读取视频失败，请换一个文件试试。" },
       { status: 400 }
     );
   }
 
-  const buffer = Buffer.from(await file.arrayBuffer());
-  const base64 = buffer.toString("base64");
+  const jobId = randomUUID();
+  const mimeType = file.type || "video/mp4";
 
-  const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+  if (useAsyncPipeline()) {
+    try {
+      const job: AnalysisJob = {
+        id: jobId,
+        status: "uploaded",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        fileName: file.name,
+        mimeType,
+        originalSize,
+        compressedSize: file.size,
+      };
+
+      if (hasBlobStorage()) {
+        logInfo("POST", `异步模式 jobId=${jobId} → Vercel Blob`);
+        job.videoBlobUrl = await uploadVideoBlob(jobId, buffer, mimeType);
+        await saveJob(job);
+      } else {
+        logInfo("POST", `异步模式 jobId=${jobId} → 内存任务表 (dev)`);
+        saveMemoryJob(job, buffer);
+      }
+
+      waitUntil(
+        advanceAnalysisJob(jobId).catch((err) => {
+          logGeminiError(`waitUntil/${jobId}`, err);
+        })
+      );
+
+      logInfo("POST", `任务已创建，耗时 ${Date.now() - startedAt}ms`);
+
+      return NextResponse.json({
+        id: jobId,
+        jobId,
+        async: true,
+        status: "processing",
+        phase: "phase_upload",
+        message:
+          "视频已接收。将分两阶段处理：① 上传 Gemini ② 获取分析结论。请保持页面打开。",
+        estimatedSeconds: Math.min(120, 30 + Math.ceil(file.size / (512 * 1024))),
+      });
+    } catch (err) {
+      logGeminiError("POST/async", err);
+      return NextResponse.json(
+        {
+          error: `任务创建失败：${err instanceof Error ? err.message : "未知错误"}`,
+        },
+        { status: 500 }
+      );
+    }
+  }
+
+  logInfo("POST", "无异步存储，同步两阶段（仅建议本地调试）");
 
   try {
-    const result = await model.generateContent([
-      { text: ANALYSIS_PROMPT },
-      {
-        inlineData: {
-          mimeType: file.type,
-          data: base64,
-        },
-      },
-    ]);
+    const analysis = await analyzeVideoInline(
+      apiKey,
+      buffer,
+      mimeType,
+      file.name
+    );
 
-    const analysis = result.response.text();
-    if (!analysis) {
-      return NextResponse.json({ error: "模型未返回分析结果" }, { status: 500 });
-    }
-
-    return NextResponse.json({ analysis });
+    return NextResponse.json({
+      id: jobId,
+      jobId,
+      async: false,
+      status: "completed",
+      analysis,
+    });
   } catch (err) {
-    console.error("[analyze]", err);
-    const message =
-      err instanceof Error ? err.message : "分析失败，请稍后重试";
-    return NextResponse.json({ error: message }, { status: 500 });
+    logGeminiError("POST/sync", err);
+    const { message, status } = mapGeminiError(err);
+    return NextResponse.json(
+      {
+        error: message,
+        retryable: status === 504 || status === 429,
+      },
+      { status }
+    );
   }
 }

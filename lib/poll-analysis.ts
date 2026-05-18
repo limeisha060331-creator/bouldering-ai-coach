@@ -1,0 +1,124 @@
+const POLL_INTERVAL_MS = 2000;
+const MAX_POLL_MS = 180_000;
+const VERCEL_SOFT_LIMIT_MS = 10_000;
+
+export interface AnalyzeApiResult {
+  id: string;
+  jobId?: string;
+  async?: boolean;
+  status: string;
+  analysis?: string;
+  error?: string;
+  message?: string;
+  phase?: string;
+  elapsedMs?: number;
+}
+
+export class AnalysisPollError extends Error {
+  readonly retryable: boolean;
+  readonly elapsedMs: number;
+
+  constructor(message: string, retryable: boolean, elapsedMs: number) {
+    super(message);
+    this.name = "AnalysisPollError";
+    this.retryable = retryable;
+    this.elapsedMs = elapsedMs;
+  }
+}
+
+const STATUS_HINTS: Record<string, string> = {
+  uploaded: "已上传，准备提交 Gemini…",
+  gemini_uploading: "【阶段一】正在上传至 Gemini Files API…",
+  gemini_processing: "【阶段二】Gemini 正在处理视频，请稍候…",
+  analyzing: "【阶段二】教练正在观看并分析…",
+};
+
+const PHASE_LABELS: Record<string, string> = {
+  uploaded: "phase_upload",
+  gemini_uploading: "phase1_gemini_upload",
+  gemini_processing: "phase2_gemini_wait",
+  analyzing: "phase2_gemini_analyze",
+  completed: "done",
+  failed: "failed",
+};
+
+function estimateWaitHint(elapsedMs: number, status: string): string {
+  if (elapsedMs > VERCEL_SOFT_LIMIT_MS && status !== "completed") {
+    return "（云端采用短请求 + 轮询，规避 Vercel 10 秒限制，请耐心等待）";
+  }
+  if (elapsedMs > 60_000) {
+    return "（分析时间较长，可继续等待或稍后重试）";
+  }
+  return "";
+}
+
+export interface PollOptions {
+  onProgress?: (status: string, hint: string, elapsedSec: number) => void;
+  signal?: AbortSignal;
+}
+
+export async function pollUntilComplete(
+  jobId: string,
+  options?: PollOptions
+): Promise<AnalyzeApiResult> {
+  const started = Date.now();
+  const deadline = started + MAX_POLL_MS;
+
+  while (Date.now() < deadline) {
+    if (options?.signal?.aborted) {
+      throw new AnalysisPollError("已取消", true, Date.now() - started);
+    }
+
+    const res = await fetch(`/api/analyze/status/${jobId}`, {
+      cache: "no-store",
+      signal: options?.signal,
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new AnalysisPollError(
+        data.error || "查询分析状态失败",
+        res.status >= 500 || res.status === 429,
+        Date.now() - started
+      );
+    }
+
+    const elapsedMs = Date.now() - started;
+    const elapsedSec = Math.floor(elapsedMs / 1000);
+    const hint =
+      (STATUS_HINTS[data.status] ?? "分析进行中…") +
+      estimateWaitHint(elapsedMs, data.status);
+
+    options?.onProgress?.(data.status, hint, elapsedSec);
+
+    if (data.status === "completed" && data.analysis) {
+      return {
+        id: jobId,
+        jobId,
+        status: "completed",
+        analysis: data.analysis,
+        async: true,
+        phase: PHASE_LABELS.completed,
+        elapsedMs,
+      };
+    }
+
+    if (data.status === "failed") {
+      throw new AnalysisPollError(
+        data.error || "分析失败",
+        true,
+        elapsedMs
+      );
+    }
+
+    await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
+  }
+
+  throw new AnalysisPollError(
+    `分析超时（已等待 ${Math.round(MAX_POLL_MS / 1000)} 秒）。` +
+      `Vercel 免费版单次函数限 ${VERCEL_SOFT_LIMIT_MS / 1000} 秒，我们已用轮询拆分任务。` +
+      `请剪辑更短的「关键一挂」片段后点击重试。`,
+    true,
+    MAX_POLL_MS
+  );
+}
