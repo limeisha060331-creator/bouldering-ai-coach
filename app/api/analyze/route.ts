@@ -116,7 +116,7 @@ export async function POST(request: NextRequest) {
 
       if (hasBlobStorage()) {
         logInfo("POST", `异步模式 jobId=${jobId} → Vercel Blob`);
-        job.videoBlobUrl = await uploadVideoBlob(jobId, buffer, mimeType);
+        job.videoBlobPath = await uploadVideoBlob(jobId, buffer, mimeType);
         await saveJob(job);
       } else {
         logInfo("POST", `异步模式 jobId=${jobId} → 内存任务表 (dev)`);

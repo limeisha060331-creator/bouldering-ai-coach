@@ -1,6 +1,7 @@
 import {
   appendJobLog,
   getJob,
+  readPrivateBlob,
   saveJob,
   type AnalysisJob,
 } from "./analysis-jobs";
@@ -18,12 +19,23 @@ import {
 } from "./gemini-analyze";
 import { geminiPhase1Upload, geminiPhase2CheckReady } from "./gemini-phases";
 
-async function fetchVideoBuffer(job: AnalysisJob & { videoBuffer?: Buffer }): Promise<Buffer> {
+async function fetchVideoBuffer(
+  job: AnalysisJob & { videoBuffer?: Buffer }
+): Promise<Buffer> {
   if (job.videoBuffer) return job.videoBuffer;
-  if (!job.videoBlobUrl) throw new Error("缺少视频数据");
-  const res = await fetch(job.videoBlobUrl);
-  if (!res.ok) throw new Error(`无法读取云存储视频: ${res.status}`);
-  return Buffer.from(await res.arrayBuffer());
+
+  if (job.videoBlobPath) {
+    return readPrivateBlob(job.videoBlobPath);
+  }
+
+  // 兼容旧任务里存的 public URL
+  if (job.videoBlobUrl) {
+    const res = await fetch(job.videoBlobUrl);
+    if (!res.ok) throw new Error(`无法读取云存储视频: ${res.status}`);
+    return Buffer.from(await res.arrayBuffer());
+  }
+
+  throw new Error("缺少视频数据");
 }
 
 async function loadJob(jobId: string): Promise<(AnalysisJob & { videoBuffer?: Buffer }) | null> {
