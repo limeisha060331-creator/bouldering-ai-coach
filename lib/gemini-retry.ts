@@ -26,8 +26,14 @@ export function isGeminiTransientError(err: unknown): boolean {
   );
 }
 
+import { isGeminiEmptyAnalysisError } from "./gemini-response-text";
+
 export function isGeminiRetryableError(err: unknown): boolean {
-  return isGeminiRateLimitError(err) || isGeminiTransientError(err);
+  return (
+    isGeminiRateLimitError(err) ||
+    isGeminiTransientError(err) ||
+    isGeminiEmptyAnalysisError(err)
+  );
 }
 
 /** 从 Gemini 报错中解析建议等待秒数，如 "retry in 29.35s" */

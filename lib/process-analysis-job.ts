@@ -17,6 +17,7 @@ import {
   mapGeminiError,
   runGeminiAnalysis,
 } from "./gemini-analyze";
+import { isGeminiEmptyAnalysisError } from "./gemini-response-text";
 import {
   isGeminiRateLimitError,
   isGeminiTransientError,
@@ -232,11 +233,19 @@ export async function advanceAnalysisJob(jobId: string): Promise<void> {
     logGeminiError(`job/${jobId}`, err);
     const current = (await loadJob(jobId)) ?? job;
 
-    if (isGeminiRateLimitError(err) || isGeminiTransientError(err)) {
-      const waitSec = parseGeminiRetrySeconds(err);
+    if (
+      isGeminiRateLimitError(err) ||
+      isGeminiTransientError(err) ||
+      isGeminiEmptyAnalysisError(err)
+    ) {
+      const waitSec = isGeminiEmptyAnalysisError(err)
+        ? 12
+        : parseGeminiRetrySeconds(err);
       const errorMsg = isGeminiTransientError(err)
         ? `Gemini 服务繁忙（503），约 ${waitSec} 秒后自动重试…`
-        : `Gemini 频率限制，约 ${waitSec} 秒后自动重试…`;
+        : isGeminiEmptyAnalysisError(err)
+          ? `模型未返回正文，约 ${waitSec} 秒后自动重试…`
+          : `Gemini 频率限制，约 ${waitSec} 秒后自动重试…`;
       await persistJob({
         ...current,
         status: "rate_limited",

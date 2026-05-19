@@ -18,6 +18,7 @@ const ZH_DEEP = `
 排版禁令：禁止使用任何双引号。
 深度要求：避开肤浅的口水话，必须深入到生物力学和攀爬逻辑层面。
 每条带时间的点评单独一行，时间格式严格为 [MM:SS] 开头，后面跟一句分析。
+必须输出完整分析正文，不得返回空白或仅写「无法分析」而不做具体说明。
 `.trim();
 
 const ZH_LIGHT_SUFFIX = `
@@ -41,6 +42,7 @@ Tone: strict but not cruel; stay coach-like.
 Do not use double quotation marks anywhere.
 Go beyond platitudes—tie comments to biomechanics and climbing logic.
 Each timestamped comment must be its own line, starting strictly with [MM:SS] followed by one line of analysis.
+You must return a full written analysis; never return blank output or only a refusal without specifics.
 `.trim();
 
 const EN_LIGHT_SUFFIX = `

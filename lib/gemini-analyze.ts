@@ -18,6 +18,12 @@ import {
   geminiPhase1Upload,
   geminiPhase2CheckReady,
 } from "./gemini-phases";
+import { BOULDER_SAFETY_SETTINGS } from "./gemini-safety";
+import {
+  extractAnalysisTextFromResponse,
+  GeminiEmptyAnalysisError,
+  isGeminiEmptyAnalysisError,
+} from "./gemini-response-text";
 
 export { logGeminiError, logInfo } from "./gemini-log";
 export { geminiPhase1Upload, geminiPhase2CheckReady } from "./gemini-phases";
@@ -98,6 +104,18 @@ export function mapGeminiError(err: unknown): { message: string; status: number 
     };
   }
 
+  if (err instanceof GeminiEmptyAnalysisError) {
+    return { message: err.userHint, status: 422 };
+  }
+
+  if (isGeminiEmptyAnalysisError(err)) {
+    return {
+      message:
+        "模型未返回分析正文。请换更短攀爬片段、尝试「轻量」深度，或稍后重试。",
+      status: 422,
+    };
+  }
+
   return {
     message: `分析失败：${msg.slice(0, 200)}`,
     status: 500,
@@ -129,8 +147,10 @@ export async function runGeminiAnalysis(
 
   const model = genAI.getGenerativeModel({
     model: modelId,
+    safetySettings: BOULDER_SAFETY_SETTINGS,
     generationConfig: {
       maxOutputTokens: maxTokens,
+      temperature: 0.4,
     },
   });
 
@@ -158,12 +178,18 @@ export async function runGeminiAnalysis(
         },
       ]);
 
-      const text = result.response.text();
-      logInfo("gemini", "generateContent 完成", { length: text?.length ?? 0 });
-
-      if (!text?.trim()) {
-        throw new Error("模型未返回分析文本");
+      let text = "";
+      try {
+        text = result.response.text();
+      } catch (textErr) {
+        logInfo("gemini", "response.text() 失败，改从 candidates 提取", textErr);
       }
+
+      if (!text.trim()) {
+        text = extractAnalysisTextFromResponse(result.response);
+      }
+
+      logInfo("gemini", "generateContent 完成", { length: text.length });
 
       return text.trim();
     } catch (err) {
@@ -173,11 +199,15 @@ export async function runGeminiAnalysis(
       }
       const waitSec = isGeminiRateLimitError(err)
         ? Math.min(parseGeminiRetrySeconds(err), 25)
-        : transientBackoffSeconds(attempt);
-      logInfo(
-        "gemini",
-        `${isGeminiTransientError(err) ? "503/临时故障" : "429 限流"}，${waitSec}s 后重试 (${attempt}/${maxAttempts})`
-      );
+        : isGeminiEmptyAnalysisError(err)
+          ? 6
+          : transientBackoffSeconds(attempt);
+      const kind = isGeminiRateLimitError(err)
+        ? "429 限流"
+        : isGeminiEmptyAnalysisError(err)
+          ? "空响应"
+          : "503/临时故障";
+      logInfo("gemini", `${kind}，${waitSec}s 后重试 (${attempt}/${maxAttempts})`);
       await sleep(waitSec * 1000);
     }
   }
