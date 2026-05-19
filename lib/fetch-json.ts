@@ -69,6 +69,55 @@ export async function readFetchJson<T extends Record<string, unknown>>(
   }
 }
 
+export type UiLocale = "zh" | "en";
+
+/** 浏览器层 fetch 失败（无 HTTP 响应），常见于断网、连接重置、上传中断 */
+export function explainFetchError(
+  err: unknown,
+  locale: UiLocale = "zh"
+): { message: string; retryable: boolean } {
+  if (err instanceof Error && err.name === "AbortError") {
+    return {
+      message: locale === "zh" ? "已取消" : "Canceled",
+      retryable: true,
+    };
+  }
+
+  const msg = err instanceof Error ? err.message : String(err);
+  const lower = msg.toLowerCase();
+
+  if (
+    lower.includes("failed to fetch") ||
+    lower.includes("networkerror") ||
+    lower.includes("network request failed") ||
+    lower.includes("load failed")
+  ) {
+    const offline =
+      typeof navigator !== "undefined" && navigator.onLine === false;
+    if (offline) {
+      return {
+        message:
+          locale === "zh"
+            ? "当前设备未联网，请连接网络后重试。"
+            : "You appear to be offline. Connect and try again.",
+        retryable: true,
+      };
+    }
+    return {
+      message:
+        locale === "zh"
+          ? "无法连接服务器（网络请求失败）。请检查：① 网络/Wi‑Fi 是否稳定；② 分析过程中保持本页在前台、勿切换应用；③ 视频是否已压缩到 4MB 以内；④ 若使用 VPN/代理，可尝试关闭后重试。稍等片刻再点「使用当前视频再试」。"
+          : "Could not reach the server. Check your connection, keep this tab in the foreground, ensure the clip is under 4MB, then retry.",
+      retryable: true,
+    };
+  }
+
+  return {
+    message: msg || (locale === "zh" ? "请求失败" : "Request failed"),
+    retryable: true,
+  };
+}
+
 export function errorFromFetchJson<T extends { error?: string; retryable?: boolean }>(
   parsed: ParsedFetchJson<T>,
   fallback: string

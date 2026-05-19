@@ -25,7 +25,11 @@ import {
   MAX_SOURCE_BYTES,
   prepareVideoForUpload,
 } from "@/lib/compress-video";
-import { errorFromFetchJson, readFetchJson } from "@/lib/fetch-json";
+import {
+  errorFromFetchJson,
+  explainFetchError,
+  readFetchJson,
+} from "@/lib/fetch-json";
 import { parseAnalysis } from "@/lib/parse-analysis";
 import { AnalysisPollError, pollUntilComplete } from "@/lib/poll-analysis";
 import type { AnalysisDepth, AnalysisLocale, AnalysisRecord } from "@/lib/types";
@@ -301,6 +305,7 @@ export default function Home() {
 
         data = await pollUntilComplete(data.jobId, {
           signal: abortRef.current.signal,
+          locale: uiLocale,
           onProgress: (status, hint, sec, meta) => {
             setElapsedSec(sec);
             setPollStatus(status);
@@ -344,8 +349,13 @@ export default function Home() {
       } else if (e instanceof Error && e.name === "AbortError") {
         setError(`${t.canceled} ${t.canceledHint}`);
       } else {
-        setError(e instanceof Error ? e.message : "请求失败");
-        setRetryable(true);
+        const { message, retryable } = explainFetchError(e, uiLocale);
+        if (message === (uiLocale === "zh" ? "已取消" : "Canceled")) {
+          setError(`${t.canceled} ${t.canceledHint}`);
+        } else {
+          setError(message);
+        }
+        setRetryable(retryable);
       }
     } finally {
       setLoading(false);

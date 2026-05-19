@@ -1,4 +1,8 @@
-import { errorFromFetchJson, readFetchJson } from "./fetch-json";
+import {
+  errorFromFetchJson,
+  explainFetchError,
+  readFetchJson,
+} from "./fetch-json";
 
 const POLL_INTERVAL_MS = 3000;
 /** 含 429 冷却、Gemini 处理、卡死重试，需长于 3 分钟 */
@@ -68,6 +72,8 @@ export interface PollOptions {
     meta?: PollProgressMeta
   ) => void;
   signal?: AbortSignal;
+  /** 用于网络错误文案 */
+  locale?: "zh" | "en";
 }
 
 export async function pollUntilComplete(
@@ -82,10 +88,23 @@ export async function pollUntilComplete(
       throw new AnalysisPollError("已取消", true, Date.now() - started);
     }
 
-    const res = await fetch(`/api/analyze/status/${jobId}`, {
-      cache: "no-store",
-      signal: options?.signal,
-    });
+    let res: Response;
+    try {
+      res = await fetch(`/api/analyze/status/${jobId}`, {
+        cache: "no-store",
+        signal: options?.signal,
+      });
+    } catch (err) {
+      const { message, retryable } = explainFetchError(
+        err,
+        options?.locale ?? "zh"
+      );
+      throw new AnalysisPollError(
+        message,
+        retryable,
+        Date.now() - started
+      );
+    }
 
     type StatusJson = {
       status?: string;
