@@ -12,8 +12,11 @@ export const ANALYSIS_PROMPT = `
 语气鼓励、具体、适合初学者。若看不清或不是攀爬视频，请如实说明，仍保持上述格式。
 `.trim();
 
-/** 默认用 lite 版，免费档配额更宽松 */
-const DEFAULT_MODEL = "gemini-2.0-flash-lite";
+/**
+ * 默认模型（须在 AI Studio Rate Limit 里为非 0/0）
+ * 2.0-flash / 2.0-flash-lite 对多数免费 Key 为 0/0，会恒 429
+ */
+const DEFAULT_MODEL = "gemini-2.5-flash";
 
 /** 可在 .env.local / Vercel 设置 GEMINI_MODEL 覆盖 */
 export function getGeminiModelId(): string {

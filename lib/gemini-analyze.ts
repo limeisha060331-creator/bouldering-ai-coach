@@ -69,7 +69,7 @@ export function mapGeminiError(err: unknown): { message: string; status: number 
     const model = getGeminiModelId();
     return {
       message:
-        `模型「${model}」不可用。请在 Vercel 环境变量设置 GEMINI_MODEL，例如 gemini-2.0-flash 或 gemini-2.0-flash-lite，并在 AI Studio 查看可用模型列表。`,
+        `模型「${model}」不可用。请在 Vercel 设置 GEMINI_MODEL，例如 gemini-2.5-flash 或 gemini-3.1-flash-lite（避免 2.0-flash 等 0/0 模型）。`,
       status: 400,
     };
   }
