@@ -54,8 +54,17 @@ function estimateWaitHint(elapsedMs: number, status: string): string {
   return "";
 }
 
+export type PollProgressMeta = {
+  retryAfter?: string;
+};
+
 export interface PollOptions {
-  onProgress?: (status: string, hint: string, elapsedSec: number) => void;
+  onProgress?: (
+    status: string,
+    hint: string,
+    elapsedSec: number,
+    meta?: PollProgressMeta
+  ) => void;
   signal?: AbortSignal;
 }
 
@@ -87,11 +96,18 @@ export async function pollUntilComplete(
 
     const elapsedMs = Date.now() - started;
     const elapsedSec = Math.floor(elapsedMs / 1000);
-    const hint =
-      (STATUS_HINTS[data.status] ?? "分析进行中…") +
-      estimateWaitHint(elapsedMs, data.status);
+    const baseHint =
+      data.status === "rate_limited" && data.error
+        ? String(data.error)
+        : STATUS_HINTS[data.status] ?? "分析进行中…";
+    const hint = baseHint + estimateWaitHint(elapsedMs, data.status);
 
-    options?.onProgress?.(data.status, hint, elapsedSec);
+    const meta: PollProgressMeta | undefined =
+      data.status === "rate_limited" && data.retryAfter
+        ? { retryAfter: data.retryAfter as string }
+        : undefined;
+
+    options?.onProgress?.(data.status, hint, elapsedSec, meta);
 
     if (data.status === "completed" && data.analysis) {
       return {
@@ -103,14 +119,6 @@ export async function pollUntilComplete(
         phase: PHASE_LABELS.completed,
         elapsedMs,
       };
-    }
-
-    if (data.status === "rate_limited") {
-      options?.onProgress?.(
-        "rate_limited",
-        data.error ?? STATUS_HINTS.rate_limited,
-        elapsedSec
-      );
     }
 
     if (data.status === "failed") {

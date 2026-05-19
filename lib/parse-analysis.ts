@@ -21,7 +21,8 @@ export function parseAnalysis(raw: string): ParsedAnalysis {
 
     const scoreMatch =
       trimmed.match(/(?:动作)?评分[：:]\s*(\d{1,3})\s*(?:\/\s*100)?/i) ||
-      trimmed.match(/(\d{1,3})\s*\/\s*100/);
+      trimmed.match(/(\d{1,3})\s*\/\s*100/) ||
+      trimmed.match(/(?:score|rating)[：:\s]+(\d{1,3})\s*(?:\/\s*100)?/i);
     if (scoreMatch && score === null) {
       score = Math.min(100, parseInt(scoreMatch[1], 10));
       continue;
@@ -29,6 +30,8 @@ export function parseAnalysis(raw: string): ParsedAnalysis {
 
     const highlightMatch = trimmed.match(
       /(?:金句|关键建议|教练金句)[：:]\s*(.+)/i
+    ) || trimmed.match(
+      /(?:coach\s*line|coach\s*note|highlight)[：:\s]+(.+)/i
     );
     if (highlightMatch) {
       highlight = highlightMatch[1].trim();

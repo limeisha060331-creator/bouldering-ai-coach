@@ -1,5 +1,10 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { ANALYSIS_PROMPT, getGeminiModelId } from "./analyze-prompt";
+import {
+  getAnalysisPrompt,
+  getGeminiModelId,
+  getMaxOutputTokens,
+} from "./analyze-prompt";
+import type { AnalysisDepth, AnalysisLocale } from "./types";
 import { logInfo } from "./gemini-log";
 import {
   isGeminiRateLimitError,
@@ -13,6 +18,13 @@ import {
 
 export { logGeminiError, logInfo } from "./gemini-log";
 export { geminiPhase1Upload, geminiPhase2CheckReady } from "./gemini-phases";
+
+export type RunGeminiAnalysisOptions = {
+  prompt?: string;
+  maxOutputTokens?: number;
+  depth?: AnalysisDepth;
+  locale?: AnalysisLocale;
+};
 
 export function mapGeminiError(err: unknown): { message: string; status: number } {
   const msg = err instanceof Error ? err.message : String(err);
@@ -94,11 +106,25 @@ export async function uploadVideoToGemini(
 export async function runGeminiAnalysis(
   apiKey: string,
   fileUri: string,
-  mimeType: string
+  mimeType: string,
+  options?: RunGeminiAnalysisOptions
 ): Promise<string> {
   const modelId = getGeminiModelId();
   const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ model: modelId });
+  const depth = options?.depth ?? "deep";
+  const maxTokens =
+    options?.maxOutputTokens ?? getMaxOutputTokens(depth);
+
+  const model = genAI.getGenerativeModel({
+    model: modelId,
+    generationConfig: {
+      maxOutputTokens: maxTokens,
+    },
+  });
+
+  const prompt =
+    options?.prompt ??
+    getAnalysisPrompt(depth, options?.locale ?? "zh");
 
   const maxAttempts = 2;
   let lastError: unknown;
@@ -107,11 +133,11 @@ export async function runGeminiAnalysis(
     try {
       logInfo(
         "gemini",
-        `generateContent 开始 model=${modelId} attempt=${attempt}/${maxAttempts}`
+        `generateContent 开始 model=${modelId} attempt=${attempt}/${maxAttempts} maxOut=${maxTokens}`
       );
 
       const result = await model.generateContent([
-        { text: ANALYSIS_PROMPT },
+        { text: prompt },
         {
           fileData: {
             mimeType,
@@ -147,7 +173,8 @@ export async function analyzeVideoInline(
   apiKey: string,
   buffer: Buffer,
   mimeType: string,
-  displayName: string
+  displayName: string,
+  opts?: { depth?: AnalysisDepth; locale?: AnalysisLocale }
 ): Promise<string> {
   logInfo("inline", "同步两阶段：phase1 upload + phase2 analyze");
   const p1 = await geminiPhase1Upload(apiKey, buffer, mimeType, displayName);
@@ -163,5 +190,12 @@ export async function analyzeVideoInline(
   }
   if (!ready) throw new Error("Gemini 视频处理超时");
 
-  return runGeminiAnalysis(apiKey, p1.fileUri, mimeType);
+  const depth = opts?.depth ?? "deep";
+  const locale = opts?.locale ?? "zh";
+  return runGeminiAnalysis(apiKey, p1.fileUri, mimeType, {
+    depth,
+    locale,
+    prompt: getAnalysisPrompt(depth, locale),
+    maxOutputTokens: getMaxOutputTokens(depth),
+  });
 }

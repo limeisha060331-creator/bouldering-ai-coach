@@ -2,18 +2,31 @@
 
 import Link from "next/link";
 import { IconChevronRight, IconClock } from "@/components/icons";
-import type { AnalysisRecord } from "@/lib/types";
 
 type Props = {
-  records: AnalysisRecord[];
+  records: Array<{
+    id: string;
+    createdAt: string;
+    fileName: string;
+    thumbnail: string;
+    score?: number | null;
+    highlight?: string | null;
+  }>;
+  emptyTitle: string;
+  emptyHint: string;
 };
 
-export function HistoryList({ records }: Props) {
+export function HistoryList({ records, emptyTitle, emptyHint }: Props) {
   if (records.length === 0) {
     return (
-      <p className="py-8 text-center text-sm text-[var(--spa-text-muted)]">
-        暂无记录。上传一段攀爬视频，开始你的第一次分析。
-      </p>
+      <div className="rounded-xl border border-dashed border-[var(--spa-border)] bg-[var(--spa-elevated)] px-6 py-12 text-center">
+        <p className="text-sm font-medium text-[var(--spa-text-secondary)]">
+          {emptyTitle}
+        </p>
+        <p className="mt-2 text-xs leading-relaxed text-[var(--spa-text-muted)]">
+          {emptyHint}
+        </p>
+      </div>
     );
   }
 
@@ -37,12 +50,15 @@ export function HistoryList({ records }: Props) {
               </p>
               <p className="mt-1 flex items-center gap-1.5 text-xs text-[var(--spa-text-muted)]">
                 <IconClock className="h-3.5 w-3.5" />
-                {new Date(r.createdAt).toLocaleString("zh-CN", {
-                  month: "short",
-                  day: "numeric",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
+                {new Date(r.createdAt).toLocaleString(
+                  undefined,
+                  {
+                    month: "short",
+                    day: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  }
+                )}
               </p>
               {r.score != null && (
                 <p className="mt-2 text-xs font-medium tabular-nums text-[var(--spa-text-secondary)]">

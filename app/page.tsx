@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PulseButton } from "@/components/pulse-button";
 import { VideoThumbnail } from "@/components/video-thumbnail";
@@ -12,6 +12,7 @@ import {
   IconMountain,
   IconSparkles,
   IconUpload,
+  IconX,
 } from "@/components/icons";
 import {
   captureVideoThumbnail,
@@ -24,14 +25,33 @@ import {
   prepareVideoForUpload,
 } from "@/lib/compress-video";
 import { parseAnalysis } from "@/lib/parse-analysis";
-import {
-  AnalysisPollError,
-  pollUntilComplete,
-} from "@/lib/poll-analysis";
-import type { AnalysisRecord } from "@/lib/types";
+import { AnalysisPollError, pollUntilComplete } from "@/lib/poll-analysis";
+import type { AnalysisDepth, AnalysisLocale, AnalysisRecord } from "@/lib/types";
+import { PROMPT_VERSION } from "@/lib/analyze-prompt";
+import { STRINGS, formatStr } from "@/lib/strings";
+import { useUiLocale } from "@/lib/use-ui-locale";
+
+function pipelineStep(
+  compressing: boolean,
+  loading: boolean,
+  pollStatus: string | null
+): number {
+  if (compressing) return 0;
+  if (!loading) return -1;
+  if (!pollStatus || pollStatus === "uploaded") return 1;
+  if (
+    pollStatus === "gemini_uploading" ||
+    pollStatus === "gemini_processing"
+  ) {
+    return 2;
+  }
+  return 3;
+}
 
 export default function Home() {
   const router = useRouter();
+  const [uiLocale, setUiLocale] = useUiLocale();
+  const t = STRINGS[uiLocale];
   const inputRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
 
@@ -44,17 +64,30 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [progressHint, setProgressHint] = useState<string | null>(null);
   const [elapsedSec, setElapsedSec] = useState(0);
+  const [pollStatus, setPollStatus] = useState<string | null>(null);
+  const [retryAfterIso, setRetryAfterIso] = useState<string | null>(null);
+  const [tick, setTick] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [retryable, setRetryable] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [history, setHistory] = useState<AnalysisRecord[]>([]);
+  const [historyDbError, setHistoryDbError] = useState(false);
+  const [depth, setDepth] = useState<AnalysisDepth>("deep");
+  const [analysisLocale, setAnalysisLocale] = useState<AnalysisLocale>("zh");
+
+  const [searchQ, setSearchQ] = useState("");
+  const [datePreset, setDatePreset] = useState<"all" | "7" | "30">("all");
+  const [scoreMin, setScoreMin] = useState("");
+  const [scoreMax, setScoreMax] = useState("");
 
   const loadHistory = useCallback(async () => {
     try {
+      setHistoryDbError(false);
       const list = await listAnalysisRecords();
       setHistory(list);
     } catch {
-      /* indexedDB unavailable */
+      setHistoryDbError(true);
+      setHistory([]);
     }
   }, []);
 
@@ -66,26 +99,68 @@ export default function Home() {
     };
   }, [preview, loadHistory]);
 
+  useEffect(() => {
+    if (!loading) return;
+    const id = window.setInterval(() => setTick((x) => x + 1), 1000);
+    return () => clearInterval(id);
+  }, [loading]);
+
+  const retryDisplaySec =
+    loading && retryAfterIso
+      ? Math.max(
+          0,
+          Math.ceil(
+            (new Date(retryAfterIso).getTime() - Date.now()) / 1000
+          )
+        )
+      : null;
+
+  const filteredHistory = useMemo(() => {
+    const now = Date.now();
+    const q = searchQ.trim().toLowerCase();
+    const minN = scoreMin.trim() === "" ? null : Number(scoreMin);
+    const maxN = scoreMax.trim() === "" ? null : Number(scoreMax);
+    let from = 0;
+    if (datePreset === "7") from = now - 7 * 86400000;
+    if (datePreset === "30") from = now - 30 * 86400000;
+
+    return history.filter((r) => {
+      if (q && !r.fileName.toLowerCase().includes(q)) return false;
+      if (datePreset !== "all") {
+        if (new Date(r.createdAt).getTime() < from) return false;
+      }
+      if (minN != null && !Number.isNaN(minN)) {
+        if (r.score == null || r.score < minN) return false;
+      }
+      if (maxN != null && !Number.isNaN(maxN)) {
+        if (r.score == null || r.score > maxN) return false;
+      }
+      return true;
+    });
+  }, [history, searchQ, datePreset, scoreMin, scoreMax]);
+
+  const activeStep = pipelineStep(compressing, loading, pollStatus);
+
   async function processSelectedFile(selected: File) {
     setError(null);
     setRetryable(false);
     setCompressInfo(null);
 
     if (!selected.type.startsWith("video/")) {
-      setError("请选择视频文件（如 mp4、webm、mov）");
+      setError(t.pickVideo);
       return;
     }
 
     if (selected.size > MAX_SOURCE_BYTES) {
       setError(
-        `视频超过 ${MAX_SOURCE_BYTES / 1024 / 1024}MB，请先裁剪后再上传`
+        `${formatStr(t.videoTooBig, { maxMb: MAX_SOURCE_BYTES / 1024 / 1024 })}。${t.videoTooBigHint}`
       );
       return;
     }
 
     setOriginalFile(selected);
     setCompressing(true);
-    setCompressHint("正在检查视频大小…");
+    setCompressHint(uiLocale === "zh" ? "正在检查视频大小…" : "Checking video…");
 
     try {
       const result = await prepareVideoForUpload(selected, (msg, pct) => {
@@ -99,11 +174,14 @@ export default function Home() {
 
       if (result.compressed) {
         setCompressInfo(
-          `已压缩：${(result.originalSize / 1024 / 1024).toFixed(1)}MB → ${(result.finalSize / 1024 / 1024).toFixed(1)}MB`
+          uiLocale === "zh"
+            ? `已压缩：${(result.originalSize / 1024 / 1024).toFixed(1)}MB → ${(result.finalSize / 1024 / 1024).toFixed(1)}MB`
+            : `Compressed: ${(result.originalSize / 1024 / 1024).toFixed(1)}MB → ${(result.finalSize / 1024 / 1024).toFixed(1)}MB`
         );
       } else {
         setCompressInfo(
-          `${(result.finalSize / 1024 / 1024).toFixed(1)}MB，无需压缩`
+          `${(result.finalSize / 1024 / 1024).toFixed(1)}MB` +
+            (uiLocale === "zh" ? "，无需压缩" : ", no compression needed")
         );
       }
     } catch (e) {
@@ -111,7 +189,7 @@ export default function Home() {
       setOriginalFile(null);
       if (preview) URL.revokeObjectURL(preview);
       setPreview(null);
-      setError(e instanceof Error ? e.message : "压缩失败");
+      setError(e instanceof Error ? e.message : uiLocale === "zh" ? "压缩失败" : "Compression failed");
     } finally {
       setCompressing(false);
       setCompressHint(null);
@@ -125,6 +203,7 @@ export default function Home() {
       if (preview) URL.revokeObjectURL(preview);
       setPreview(null);
       setCompressInfo(null);
+      if (inputRef.current) inputRef.current.value = "";
       return;
     }
     void processSelectedFile(selected);
@@ -140,22 +219,28 @@ export default function Home() {
     selectFile(e.dataTransfer.files?.[0]);
   }
 
+  function cancelAnalysis() {
+    abortRef.current?.abort();
+  }
+
   async function runAnalysis() {
     if (!file) {
-      setError("请先选择视频");
+      setError(t.needVideo);
       return;
     }
 
     if (file.size > MAX_ANALYZE_BYTES) {
-      setError("视频仍超过 10MB，请重新选择或等待压缩完成");
+      setError(t.stillLarge);
       return;
     }
 
     setLoading(true);
     setError(null);
     setRetryable(false);
-    setProgressHint("正在上传视频…");
+    setProgressHint(uiLocale === "zh" ? "正在上传视频…" : "Uploading…");
     setElapsedSec(0);
+    setPollStatus(null);
+    setRetryAfterIso(null);
 
     abortRef.current?.abort();
     abortRef.current = new AbortController();
@@ -167,6 +252,8 @@ export default function Home() {
       "originalSize",
       String(originalFile?.size ?? file.size)
     );
+    formData.append("depth", depth);
+    formData.append("locale", analysisLocale);
 
     try {
       const [res, thumbnail] = await Promise.all([
@@ -182,24 +269,33 @@ export default function Home() {
 
       if (!res.ok) {
         throw new AnalysisPollError(
-          data.error || "分析失败",
+          data.error || (uiLocale === "zh" ? "分析失败" : "Analysis failed"),
           Boolean(data.retryable),
           0
         );
       }
 
       if (data.async && data.jobId) {
+        setPollStatus("uploaded");
         const est = data.estimatedSeconds ?? 60;
         setProgressHint(
           data.message ??
-            `分析进行中（预计 ${est} 秒），请保持页面打开`
+            (uiLocale === "zh"
+              ? `分析进行中（预计 ${est} 秒），请保持页面打开`
+              : `In progress (~${est}s). Keep this tab open.`)
         );
 
         data = await pollUntilComplete(data.jobId, {
           signal: abortRef.current.signal,
-          onProgress: (status, hint, sec) => {
+          onProgress: (status, hint, sec, meta) => {
             setElapsedSec(sec);
+            setPollStatus(status);
             setProgressHint(`${hint}（${sec}s）`);
+            if (meta?.retryAfter) {
+              setRetryAfterIso(meta.retryAfter);
+            } else if (status !== "rate_limited") {
+              setRetryAfterIso(null);
+            }
           },
         });
       }
@@ -214,6 +310,10 @@ export default function Home() {
         score: parsed.score,
         highlight: parsed.highlight,
         segments: parsed.segments,
+        promptVersion: PROMPT_VERSION,
+        depth,
+        locale: analysisLocale,
+        bookmarkedSegmentIndices: [],
       };
 
       await saveAnalysisRecord(record, file);
@@ -221,10 +321,14 @@ export default function Home() {
       router.push(`/analysis/${record.id}`);
     } catch (e) {
       if (e instanceof AnalysisPollError) {
-        setError(e.message);
+        if (e.message === "已取消") {
+          setError(`${t.canceled} ${t.canceledHint}`);
+        } else {
+          setError(e.message);
+        }
         setRetryable(e.retryable);
       } else if (e instanceof Error && e.name === "AbortError") {
-        setError("已取消");
+        setError(`${t.canceled} ${t.canceledHint}`);
       } else {
         setError(e instanceof Error ? e.message : "请求失败");
         setRetryable(true);
@@ -232,8 +336,15 @@ export default function Home() {
     } finally {
       setLoading(false);
       setProgressHint(null);
+      setPollStatus(null);
+      setRetryAfterIso(null);
     }
   }
+
+  const emptyHistoryTitle =
+    history.length === 0 ? t.historyEmpty : t.historyNoMatch;
+  const emptyHistoryHint =
+    history.length === 0 ? t.historyEmptyHint : t.historyNoMatchHint;
 
   return (
     <main className="spa-page">
@@ -242,16 +353,143 @@ export default function Home() {
           <div className="mb-5 inline-flex items-center justify-center rounded-full border border-[var(--spa-border)] bg-[var(--spa-surface)] p-3 shadow-[var(--spa-shadow)]">
             <IconMountain className="h-6 w-6 text-[var(--spa-text-secondary)]" />
           </div>
-          <p className="spa-label mb-3">Bouldering · AI Coach</p>
+          <p className="spa-label mb-3">{t.brand}</p>
           <h1 className="text-2xl font-medium tracking-tight text-[var(--spa-text)] sm:text-3xl">
-            抱石分析
+            {t.title}
           </h1>
-          <p className="mx-auto mt-3 max-w-sm text-sm leading-relaxed text-[var(--spa-text-muted)]">
-            上传攀爬片段，获得克制、专业的动作反馈
+          <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-[var(--spa-text-muted)]">
+            {t.subtitle}
           </p>
+          <div className="mx-auto mt-6 max-w-lg rounded-xl border border-[var(--spa-border-subtle)] bg-[var(--spa-elevated)] px-4 py-3 text-left">
+            <p className="text-xs font-medium text-[var(--spa-text)]">
+              {t.expectTitle}
+            </p>
+            <p className="mt-2 text-xs leading-relaxed text-[var(--spa-text-muted)]">
+              {t.expectBody}
+            </p>
+          </div>
         </header>
 
         <section className="spa-panel p-6 sm:p-8">
+          <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
+            <div>
+              <p className="spa-label mb-2">{t.uiLangLabel}</p>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setUiLocale("zh")}
+                  className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
+                    uiLocale === "zh"
+                      ? "border-[var(--spa-text)] bg-[var(--spa-focus)] text-[var(--spa-text)]"
+                      : "border-[var(--spa-border)] text-[var(--spa-text-secondary)] hover:bg-[var(--spa-elevated)]"
+                  }`}
+                >
+                  {t.uiLangZh}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setUiLocale("en")}
+                  className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
+                    uiLocale === "en"
+                      ? "border-[var(--spa-text)] bg-[var(--spa-focus)] text-[var(--spa-text)]"
+                      : "border-[var(--spa-border)] text-[var(--spa-text-secondary)] hover:bg-[var(--spa-elevated)]"
+                  }`}
+                >
+                  {t.uiLangEn}
+                </button>
+              </div>
+            </div>
+            <div>
+              <p className="spa-label mb-2">{t.depthLabel}</p>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setDepth("light")}
+                  className={`rounded-lg border px-3 py-1.5 text-left text-xs transition ${
+                    depth === "light"
+                      ? "border-[var(--spa-text)] bg-[var(--spa-focus)]"
+                      : "border-[var(--spa-border)] hover:bg-[var(--spa-elevated)]"
+                  }`}
+                >
+                  <span className="font-medium text-[var(--spa-text)]">
+                    {t.depthLight}
+                  </span>
+                  <span className="ml-1 text-[var(--spa-text-muted)]">
+                    · {t.depthLightDesc}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDepth("deep")}
+                  className={`rounded-lg border px-3 py-1.5 text-left text-xs transition ${
+                    depth === "deep"
+                      ? "border-[var(--spa-text)] bg-[var(--spa-focus)]"
+                      : "border-[var(--spa-border)] hover:bg-[var(--spa-elevated)]"
+                  }`}
+                >
+                  <span className="font-medium text-[var(--spa-text)]">
+                    {t.depthDeep}
+                  </span>
+                  <span className="ml-1 text-[var(--spa-text-muted)]">
+                    · {t.depthDeepDesc}
+                  </span>
+                </button>
+              </div>
+            </div>
+            <div>
+              <p className="spa-label mb-2">{t.analysisOutputLang}</p>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setAnalysisLocale("zh")}
+                  className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
+                    analysisLocale === "zh"
+                      ? "border-[var(--spa-text)] bg-[var(--spa-focus)] text-[var(--spa-text)]"
+                      : "border-[var(--spa-border)] text-[var(--spa-text-secondary)] hover:bg-[var(--spa-elevated)]"
+                  }`}
+                >
+                  {t.analysisOutputZh}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAnalysisLocale("en")}
+                  className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
+                    analysisLocale === "en"
+                      ? "border-[var(--spa-text)] bg-[var(--spa-focus)] text-[var(--spa-text)]"
+                      : "border-[var(--spa-border)] text-[var(--spa-text-secondary)] hover:bg-[var(--spa-elevated)]"
+                  }`}
+                >
+                  {t.analysisOutputEn}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {activeStep >= 0 && (
+            <div className="mb-6 no-print">
+              <ol className="grid grid-cols-4 gap-2 text-center">
+                {t.steps.map((label, i) => (
+                  <li key={label}>
+                    <div
+                      className={`mx-auto mb-1.5 flex h-8 w-8 items-center justify-center rounded-full text-xs font-medium ${
+                        activeStep === i
+                          ? "bg-[var(--spa-text)] text-white"
+                          : activeStep > i
+                            ? "border border-[var(--spa-border)] bg-[var(--spa-elevated)] text-[var(--spa-text-muted)]"
+                            : "border border-[var(--spa-border-subtle)] text-[var(--spa-text-muted)]"
+                      }`}
+                    >
+                      {i + 1}
+                    </div>
+                    <span className="text-[10px] leading-tight text-[var(--spa-text-muted)] sm:text-xs">
+                      {label}
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          )}
+
           <label
             htmlFor="video-upload"
             onDragOver={(e) => {
@@ -272,10 +510,10 @@ export default function Home() {
               <IconUpload className="mb-3 h-7 w-7 text-[var(--spa-text-secondary)]" />
             )}
             <span className="text-sm font-medium text-[var(--spa-text)]">
-              {compressing ? "正在处理视频" : "点击或拖拽上传"}
+              {compressing ? t.uploadCompress : t.uploadIdle}
             </span>
             <span className="mt-2 text-xs text-[var(--spa-text-muted)]">
-              最大 {MAX_SOURCE_BYTES / 1024 / 1024}MB · 自动压缩至 10MB
+              {formatStr(t.uploadHint, { maxMb: MAX_SOURCE_BYTES / 1024 / 1024 })}
             </span>
           </label>
           <input
@@ -303,9 +541,14 @@ export default function Home() {
 
           <div className="mt-5 flex gap-3 rounded-xl border border-[var(--spa-border-subtle)] bg-[var(--spa-elevated)] px-4 py-3.5">
             <IconInfo className="mt-0.5 h-4 w-4 shrink-0 text-[var(--spa-text-muted)]" />
-            <p className="text-xs leading-relaxed text-[var(--spa-text-secondary)]">
-              建议只保留关键的一挂或一跃，10MB 以内、90 秒内的片段分析更精准。
-            </p>
+            <div>
+              <p className="text-xs font-medium text-[var(--spa-text)]">
+                {t.tipTitle}
+              </p>
+              <p className="mt-1 text-xs leading-relaxed text-[var(--spa-text-secondary)]">
+                {t.tipBody}
+              </p>
+            </div>
           </div>
 
           {preview && file && (
@@ -314,17 +557,29 @@ export default function Home() {
             </div>
           )}
 
-          <div className="mt-6">
-            <PulseButton
-              onClick={runAnalysis}
-              disabled={!file || compressing}
-              loading={loading}
-            >
-              <span className="inline-flex items-center justify-center gap-2">
-                <IconSparkles className="h-4 w-4" />
-                开始分析
-              </span>
-            </PulseButton>
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+            <div className="flex-1">
+              <PulseButton
+                onClick={runAnalysis}
+                disabled={!file || compressing}
+                loading={loading}
+              >
+                <span className="inline-flex items-center justify-center gap-2">
+                  <IconSparkles className="h-4 w-4" />
+                  {t.startAnalysis}
+                </span>
+              </PulseButton>
+            </div>
+            {loading && (
+              <button
+                type="button"
+                onClick={cancelAnalysis}
+                className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-[var(--spa-border)] px-4 py-3 text-sm font-medium text-[var(--spa-text-secondary)] transition hover:bg-[var(--spa-elevated)]"
+              >
+                <IconX className="h-4 w-4" />
+                {t.cancelAnalysis}
+              </button>
+            )}
           </div>
 
           {progressHint && loading && (
@@ -333,9 +588,19 @@ export default function Home() {
                 <IconLoader className="h-4 w-4" />
                 {progressHint}
               </p>
+              {retryDisplaySec != null && retryDisplaySec > 0 && (
+                <p
+                  key={tick}
+                  className="text-xs text-[var(--spa-text-muted)]"
+                >
+                  {t.rateLimitWait(retryDisplaySec)}
+                </p>
+              )}
               {elapsedSec > 10 && (
                 <p className="text-xs text-[var(--spa-text-muted)]">
-                  分析在云端进行，请保持页面打开
+                  {uiLocale === "zh"
+                    ? "分析在云端进行，请保持页面打开"
+                    : "Analysis runs in the cloud—keep this tab open."}
                 </p>
               )}
             </div>
@@ -350,13 +615,22 @@ export default function Home() {
                 {error}
               </p>
               {retryable && file && (
-                <button
-                  type="button"
-                  onClick={runAnalysis}
-                  className="w-full rounded-xl border border-[var(--spa-border)] py-2.5 text-sm font-medium text-[var(--spa-text)] transition hover:bg-[var(--spa-focus)]"
-                >
-                  重新分析
-                </button>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <button
+                    type="button"
+                    onClick={runAnalysis}
+                    className="flex-1 rounded-xl border border-[var(--spa-border)] py-2.5 text-sm font-medium text-[var(--spa-text)] transition hover:bg-[var(--spa-focus)]"
+                  >
+                    {t.retrySameVideo}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => selectFile(undefined)}
+                    className="flex-1 rounded-xl border border-[var(--spa-border)] py-2.5 text-sm font-medium text-[var(--spa-text-secondary)] transition hover:bg-[var(--spa-elevated)]"
+                  >
+                    {t.rechooseFile}
+                  </button>
+                </div>
               )}
             </div>
           )}
@@ -366,10 +640,91 @@ export default function Home() {
           <div className="mb-5 flex items-center gap-2">
             <IconHistory className="h-4 w-4 text-[var(--spa-text-muted)]" />
             <h2 className="text-sm font-medium text-[var(--spa-text)]">
-              分析历史
+              {t.historyTitle}
             </h2>
           </div>
-          <HistoryList records={history} />
+
+          {historyDbError && (
+            <div className="mb-4 rounded-xl border border-[var(--spa-border)] bg-[var(--spa-elevated)] px-4 py-3 text-xs leading-relaxed text-[var(--spa-text-secondary)]">
+              <p className="font-medium text-[var(--spa-text)]">
+                {t.historyDbError}
+              </p>
+              <p className="mt-1 text-[var(--spa-text-muted)]">{t.historyDbHint}</p>
+            </div>
+          )}
+
+          {!historyDbError && history.length > 0 && (
+            <div className="mb-4 flex flex-col gap-3 rounded-xl border border-[var(--spa-border-subtle)] bg-[var(--spa-elevated)] p-4 sm:flex-row sm:flex-wrap sm:items-end">
+              <div className="min-w-0 flex-1">
+                <label className="spa-label mb-1 block">{t.historySearch}</label>
+                <input
+                  value={searchQ}
+                  onChange={(e) => setSearchQ(e.target.value)}
+                  className="w-full rounded-lg border border-[var(--spa-border)] bg-[var(--spa-surface)] px-3 py-2 text-sm text-[var(--spa-text)] outline-none focus:border-[var(--spa-text-muted)]"
+                />
+              </div>
+              <div>
+                <label className="spa-label mb-1 block">
+                  {uiLocale === "zh" ? "时间" : "Date"}
+                </label>
+                <select
+                  value={datePreset}
+                  onChange={(e) =>
+                    setDatePreset(e.target.value as "all" | "7" | "30")
+                  }
+                  className="rounded-lg border border-[var(--spa-border)] bg-[var(--spa-surface)] px-3 py-2 text-sm text-[var(--spa-text)]"
+                >
+                  <option value="all">{t.historyDateAll}</option>
+                  <option value="7">{t.historyDate7}</option>
+                  <option value="30">{t.historyDate30}</option>
+                </select>
+              </div>
+              <div className="flex gap-2">
+                <div>
+                  <label className="spa-label mb-1 block">{t.historyScoreMin}</label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    placeholder="—"
+                    value={scoreMin}
+                    onChange={(e) => setScoreMin(e.target.value)}
+                    className="w-20 rounded-lg border border-[var(--spa-border)] bg-[var(--spa-surface)] px-2 py-2 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="spa-label mb-1 block">{t.historyScoreMax}</label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    placeholder="—"
+                    value={scoreMax}
+                    onChange={(e) => setScoreMax(e.target.value)}
+                    className="w-20 rounded-lg border border-[var(--spa-border)] bg-[var(--spa-surface)] px-2 py-2 text-sm"
+                  />
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchQ("");
+                  setDatePreset("all");
+                  setScoreMin("");
+                  setScoreMax("");
+                }}
+                className="rounded-lg border border-[var(--spa-border)] px-3 py-2 text-xs font-medium text-[var(--spa-text-secondary)] hover:bg-[var(--spa-surface)]"
+              >
+                {t.historyClearFilters}
+              </button>
+            </div>
+          )}
+
+          <HistoryList
+            records={filteredHistory}
+            emptyTitle={emptyHistoryTitle}
+            emptyHint={emptyHistoryHint}
+          />
         </section>
       </div>
     </main>

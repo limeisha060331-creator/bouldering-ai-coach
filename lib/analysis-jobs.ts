@@ -35,6 +35,10 @@ export interface AnalysisJob {
   retryAfter?: string;
   originalSize?: number;
   compressedSize?: number;
+  /** 提示词版本，便于回归对比 */
+  promptVersion?: string;
+  depth?: "light" | "deep";
+  locale?: "zh" | "en";
 }
 
 function jobPath(id: string) {

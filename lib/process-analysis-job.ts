@@ -22,6 +22,7 @@ import {
   parseGeminiRetrySeconds,
 } from "./gemini-retry";
 import { geminiPhase1Upload, geminiPhase2CheckReady } from "./gemini-phases";
+import { getAnalysisPrompt, getMaxOutputTokens } from "./analyze-prompt";
 
 /** 分析已开始但函数被 Vercel 10s 杀掉时，超过此时长则重置重试 */
 const STALE_ANALYSIS_MS = 45_000;
@@ -204,7 +205,16 @@ export async function advanceAnalysisJob(jobId: string): Promise<void> {
       const analysis = await runGeminiAnalysis(
         apiKey,
         geminiFileUri,
-        job.mimeType
+        job.mimeType,
+        {
+          depth: job.depth ?? "deep",
+          locale: job.locale ?? "zh",
+          prompt: getAnalysisPrompt(
+            job.depth ?? "deep",
+            job.locale ?? "zh"
+          ),
+          maxOutputTokens: getMaxOutputTokens(job.depth ?? "deep"),
+        }
       );
 
       await persistJob({

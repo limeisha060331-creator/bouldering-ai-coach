@@ -84,3 +84,24 @@ body {
   border: none;
   margin: 0;
 }
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  .spa-page {
+    background: white !important;
+    background-image: none !important;
+  }
+
+  body {
+    background: white !important;
+    color: #1a1917 !important;
+  }
+
+  #analysis-print-root {
+    box-shadow: none !important;
+    border: none !important;
+  }
+}

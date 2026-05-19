@@ -18,6 +18,8 @@ import {
   logInfo,
   mapGeminiError,
 } from "@/lib/gemini-analyze";
+import type { AnalysisDepth, AnalysisLocale } from "@/lib/types";
+import { PROMPT_VERSION } from "@/lib/analyze-prompt";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -72,6 +74,11 @@ export async function POST(request: NextRequest) {
   const originalSize = Number(formData.get("originalSize")) || file.size;
   const compressed = formData.get("compressed") === "true";
 
+  const depth: AnalysisDepth =
+    formData.get("depth") === "light" ? "light" : "deep";
+  const locale: AnalysisLocale =
+    formData.get("locale") === "en" ? "en" : "zh";
+
   if (file.size > MAX_BYTES) {
     return NextResponse.json(
       {
@@ -112,6 +119,9 @@ export async function POST(request: NextRequest) {
         mimeType,
         originalSize,
         compressedSize: file.size,
+        promptVersion: PROMPT_VERSION,
+        depth,
+        locale,
       };
 
       if (hasBlobStorage()) {
@@ -159,7 +169,8 @@ export async function POST(request: NextRequest) {
       apiKey,
       buffer,
       mimeType,
-      file.name
+      file.name,
+      { depth, locale }
     );
 
     return NextResponse.json({

@@ -1,17 +1,23 @@
 import {
   ArrowLeft,
+  Bookmark,
+  ChevronDown,
   ChevronRight,
   Clock,
   Download,
+  FileText,
   Film,
   History,
   Info,
   Loader2,
   Mountain,
+  Printer,
   Share2,
   Sparkles,
+  Star,
   Upload,
   Video,
+  X,
 } from "lucide-react";
 
 const iconClass = "shrink-0";
@@ -66,4 +72,38 @@ export const IconChevronRight = ({ className = "h-4 w-4" }: { className?: string
 
 export const IconLoader = ({ className = "h-4 w-4 animate-spin" }: { className?: string }) => (
   <Loader2 className={`${iconClass} ${className}`} strokeWidth={1.5} aria-hidden />
+);
+
+export const IconStar = ({
+  className = "h-4 w-4",
+  filled,
+}: {
+  className?: string;
+  filled?: boolean;
+}) => (
+  <Star
+    className={`${iconClass} ${filled ? "fill-current" : ""} ${className}`}
+    strokeWidth={1.5}
+    aria-hidden
+  />
+);
+
+export const IconBookmark = ({ className = "h-4 w-4" }: { className?: string }) => (
+  <Bookmark className={`${iconClass} ${className}`} strokeWidth={1.5} aria-hidden />
+);
+
+export const IconFileText = ({ className = "h-4 w-4" }: { className?: string }) => (
+  <FileText className={`${iconClass} ${className}`} strokeWidth={1.5} aria-hidden />
+);
+
+export const IconPrinter = ({ className = "h-4 w-4" }: { className?: string }) => (
+  <Printer className={`${iconClass} ${className}`} strokeWidth={1.5} aria-hidden />
+);
+
+export const IconChevronDown = ({ className = "h-4 w-4" }: { className?: string }) => (
+  <ChevronDown className={`${iconClass} ${className}`} strokeWidth={1.5} aria-hidden />
+);
+
+export const IconX = ({ className = "h-4 w-4" }: { className?: string }) => (
+  <X className={`${iconClass} ${className}`} strokeWidth={1.5} aria-hidden />
 );

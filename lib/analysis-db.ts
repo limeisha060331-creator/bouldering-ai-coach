@@ -1,7 +1,7 @@
 import type { AnalysisRecord } from "./types";
 
 const DB_NAME = "bouldering-ai-coach";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const STORE = "analyses";
 
 function openDb(): Promise<IDBDatabase> {
@@ -19,6 +19,13 @@ function openDb(): Promise<IDBDatabase> {
   });
 }
 
+function stripVideoBlob<T extends { videoBlob?: Blob }>(
+  row: T
+): Omit<T, "videoBlob"> {
+  const { videoBlob: _b, ...rest } = row;
+  return rest;
+}
+
 export async function saveAnalysisRecord(
   record: AnalysisRecord,
   videoBlob: Blob
@@ -28,6 +35,31 @@ export async function saveAnalysisRecord(
     const tx = db.transaction(STORE, "readwrite");
     const store = tx.objectStore(STORE);
     store.put({ ...record, videoBlob });
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+/** 合并更新元数据（书签、备注字段等），不替换 videoBlob 除非传入 */
+export async function patchAnalysisRecord(
+  id: string,
+  patch: Partial<AnalysisRecord>
+): Promise<void> {
+  const db = await openDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, "readwrite");
+    const store = tx.objectStore(STORE);
+    const req = store.get(id);
+    req.onsuccess = () => {
+      const prev = req.result as (AnalysisRecord & { videoBlob?: Blob }) | undefined;
+      if (!prev) {
+        reject(new Error("记录不存在"));
+        return;
+      }
+      const { videoBlob, ...meta } = prev;
+      const next = { ...meta, ...patch, id, videoBlob };
+      store.put(next);
+    };
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error);
   });
@@ -51,21 +83,13 @@ export async function listAnalysisRecords(): Promise<AnalysisRecord[]> {
     const tx = db.transaction(STORE, "readonly");
     const req = tx.objectStore(STORE).getAll();
     req.onsuccess = () => {
-      const items = (req.result as AnalysisRecord[]) ?? [];
+      const items =
+        (req.result as (AnalysisRecord & { videoBlob?: Blob })[]) ?? [];
       items.sort(
         (a, b) =>
           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       );
-      resolve(items.map(({ id, createdAt, fileName, thumbnail, analysis, score, highlight, segments }) => ({
-        id,
-        createdAt,
-        fileName,
-        thumbnail,
-        analysis,
-        score,
-        highlight,
-        segments,
-      })));
+      resolve(items.map((row) => stripVideoBlob(row) as AnalysisRecord));
     };
     req.onerror = () => reject(req.error);
   });
