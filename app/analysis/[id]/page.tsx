@@ -1,21 +1,30 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { AnalysisView } from "@/components/analysis-view";
-import { ShareCardButton } from "@/components/share-card";
+import { SiteNav } from "@/components/site-nav";
 import { IconArrowLeft, IconLoader } from "@/components/icons";
 import { getAnalysisRecord, patchAnalysisRecord } from "@/lib/analysis-db";
 import { STRINGS } from "@/lib/strings";
 import { useUiLocale } from "@/lib/use-ui-locale";
 import type { AnalysisRecord } from "@/lib/types";
 
-export default function AnalysisDetailPage() {
+function AnalysisDetailContent() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const id = params.id as string;
   const [uiLocale] = useUiLocale();
   const t = STRINGS[uiLocale];
+
+  const segParam = searchParams.get("seg");
+  const tParam = searchParams.get("t");
+  const initialSegmentIndex =
+    segParam != null && segParam !== "" ? parseInt(segParam, 10) : null;
+  const initialSeekSeconds =
+    tParam != null && tParam !== "" ? parseFloat(tParam) : null;
+
   const [record, setRecord] = useState<
     (AnalysisRecord & { videoBlob?: Blob }) | null
   >(null);
@@ -115,35 +124,26 @@ export default function AnalysisDetailPage() {
   return (
     <main className="spa-page">
       <div className="spa-container">
-        <header className="no-print mb-8 flex flex-col gap-5 sm:mb-10 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <Link
-              href="/"
-              className="inline-flex items-center gap-1.5 text-xs text-[var(--spa-text-muted)] transition hover:text-[var(--spa-text-secondary)]"
-            >
-              <IconArrowLeft className="h-3.5 w-3.5" />
-              {uiLocale === "zh" ? "返回" : "Back"}
-            </Link>
-            <h1 className="mt-4 text-xl font-medium tracking-tight text-[var(--spa-text)] sm:text-2xl">
-              {record.fileName}
-            </h1>
-            <p className="mt-1.5 text-xs text-[var(--spa-text-muted)]">
-              {new Date(record.createdAt).toLocaleString(
-                uiLocale === "zh" ? "zh-CN" : "en-US"
-              )}
-            </p>
-          </div>
-          <ShareCardButton
-            score={record.score}
-            highlight={record.highlight}
-            fileName={record.fileName}
-          />
+        <SiteNav uiLocale={uiLocale} />
+        <header className="mb-6">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1.5 text-xs text-[var(--spa-text-muted)] transition hover:text-[var(--spa-text-secondary)]"
+          >
+            <IconArrowLeft className="h-3.5 w-3.5" />
+            {uiLocale === "zh" ? "返回" : "Back"}
+          </Link>
+          <h1 className="mt-4 text-xl font-medium tracking-tight text-[var(--spa-text)] sm:text-2xl">
+            {record.fileName}
+          </h1>
+          <p className="mt-1.5 text-xs text-[var(--spa-text-muted)]">
+            {new Date(record.createdAt).toLocaleString(
+              uiLocale === "zh" ? "zh-CN" : "en-US"
+            )}
+          </p>
         </header>
 
-        <article
-          id="analysis-print-root"
-          className="spa-panel p-6 sm:p-8 print:border-0 print:shadow-none"
-        >
+        <article className="spa-panel p-6 sm:p-8">
           <AnalysisView
             analysis={record.analysis}
             videoUrl={videoUrl}
@@ -152,9 +152,31 @@ export default function AnalysisDetailPage() {
             uiLocale={uiLocale}
             bookmarkedIndices={bookmarks}
             onBookmarkChange={persistBookmarks}
+            initialSeekSeconds={
+              Number.isFinite(initialSeekSeconds!) ? initialSeekSeconds : null
+            }
+            initialSegmentIndex={
+              initialSegmentIndex != null && !Number.isNaN(initialSegmentIndex)
+                ? initialSegmentIndex
+                : null
+            }
           />
         </article>
       </div>
     </main>
+  );
+}
+
+export default function AnalysisDetailPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="spa-page flex min-h-screen items-center justify-center">
+          <p className="text-sm text-[var(--spa-text-muted)]">加载中…</p>
+        </main>
+      }
+    >
+      <AnalysisDetailContent />
+    </Suspense>
   );
 }

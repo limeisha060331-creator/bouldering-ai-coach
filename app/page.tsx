@@ -36,6 +36,7 @@ import type { AnalysisDepth, AnalysisLocale, AnalysisRecord } from "@/lib/types"
 import { PROMPT_VERSION } from "@/lib/analyze-prompt";
 import { STRINGS, formatStr } from "@/lib/strings";
 import { useUiLocale } from "@/lib/use-ui-locale";
+import { SiteNav } from "@/components/site-nav";
 
 function pipelineStep(
   compressing: boolean,
@@ -373,6 +374,7 @@ export default function Home() {
   return (
     <main className="spa-page">
       <div className="spa-container">
+        <SiteNav uiLocale={uiLocale} />
         <header className="mb-10 text-center sm:mb-12">
           <div className="mb-5 inline-flex items-center justify-center rounded-full border border-[var(--spa-border)] bg-[var(--spa-surface)] p-3 shadow-[var(--spa-shadow)]">
             <IconMountain className="h-6 w-6 text-[var(--spa-text-secondary)]" />

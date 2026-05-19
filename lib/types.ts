@@ -4,12 +4,40 @@ export interface AnalysisSegment {
   content: string;
 }
 
+export interface ImprovementBlock {
+  title: string;
+  practice?: string;
+  strength?: string;
+  lines: string[];
+}
+
+export interface StructuredReport {
+  dimensionSummary: string | null;
+  dimensionBullets: string[];
+  improvementIntro: string | null;
+  improvementBlocks: ImprovementBlock[];
+  overallAdvice: string | null;
+  hasStructuredContent: boolean;
+}
+
 export interface ParsedAnalysis {
   raw: string;
   score: number | null;
   highlight: string | null;
   segments: AnalysisSegment[];
+  /** @deprecated 改用 structured */
   summary: string;
+  structured: StructuredReport;
+}
+
+export interface SegmentBookmarkItem {
+  analysisId: string;
+  fileName: string;
+  createdAt: string;
+  segmentIndex: number;
+  timestamp: string;
+  seconds: number;
+  content: string;
 }
 
 export type AnalysisDepth = "light" | "deep";

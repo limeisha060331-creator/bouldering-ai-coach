@@ -1,6 +1,7 @@
 import {
   ArrowLeft,
   Bookmark,
+  BookMarked,
   ChevronDown,
   ChevronRight,
   Clock,
@@ -90,6 +91,11 @@ export const IconStar = ({
 
 export const IconBookmark = ({ className = "h-4 w-4" }: { className?: string }) => (
   <Bookmark className={`${iconClass} ${className}`} strokeWidth={1.5} aria-hidden />
+);
+
+/** 收藏夹导航 */
+export const IconBookmarkNav = ({ className = "h-4 w-4" }: { className?: string }) => (
+  <BookMarked className={`${iconClass} ${className}`} strokeWidth={1.5} aria-hidden />
 );
 
 export const IconFileText = ({ className = "h-4 w-4" }: { className?: string }) => (

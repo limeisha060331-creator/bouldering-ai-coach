@@ -1,4 +1,5 @@
 import type { AnalysisSegment, ParsedAnalysis } from "./types";
+import { parseStructuredReport } from "./parse-structured-report";
 
 const LINE_TIMESTAMP =
   /^(?:[-*•]\s*)?(?:\[)?(\d{1,2}):(\d{2})(?:\])?(?:\s*[-–—]\s*|\s+)(.+)$/;
@@ -56,12 +57,15 @@ export function parseAnalysis(raw: string): ParsedAnalysis {
     highlight = segments[0].content.slice(0, 80);
   }
 
+  const structured = parseStructuredReport(raw);
+
   return {
     raw,
     score,
     highlight,
     segments,
     summary: otherLines.join("\n"),
+    structured,
   };
 }
 

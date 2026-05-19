@@ -58,7 +58,12 @@ type CopyBlock = {
   showFullText: string;
   hideFullText: string;
   exportMarkdown: string;
-  printOrSavePdf: string;
+  downloadPdf: string;
+  favoritesTitle: string;
+  favoritesEmpty: string;
+  favoritesEmptyHint: string;
+  favoritesGoAnalysis: string;
+  favoritesSavedAt: string;
   pinSegment: string;
   unpinSegment: string;
   detailLoading: string;
@@ -130,7 +135,12 @@ export const STRINGS: Record<UiLocale, CopyBlock> = {
     showFullText: "展开全文",
     hideFullText: "收起全文",
     exportMarkdown: "导出 Markdown",
-    printOrSavePdf: "打印为 PDF（系统对话框）",
+    downloadPdf: "下载 PDF 报告",
+    favoritesTitle: "收藏夹",
+    favoritesEmpty: "暂无收藏",
+    favoritesEmptyHint: "在分析详情页的时间轴左侧点击星标，即可收藏关键片段。",
+    favoritesGoAnalysis: "查看原分析",
+    favoritesSavedAt: "分析时间",
     pinSegment: "标记",
     unpinSegment: "取消标记",
     detailLoading: "加载中",
@@ -200,7 +210,12 @@ export const STRINGS: Record<UiLocale, CopyBlock> = {
     showFullText: "Show full text",
     hideFullText: "Hide full text",
     exportMarkdown: "Export Markdown",
-    printOrSavePdf: "Print / Save as PDF",
+    downloadPdf: "Download PDF report",
+    favoritesTitle: "Saved clips",
+    favoritesEmpty: "Nothing saved yet",
+    favoritesEmptyHint: "Star a timeline entry on any analysis to save it here.",
+    favoritesGoAnalysis: "Open analysis",
+    favoritesSavedAt: "Analyzed",
     pinSegment: "Pin",
     unpinSegment: "Unpin",
     detailLoading: "Loading",
