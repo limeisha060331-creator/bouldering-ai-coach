@@ -5,8 +5,8 @@ import {
 } from "./fetch-json";
 
 const POLL_INTERVAL_MS = 3000;
-/** 含 429 冷却、Gemini 处理、卡死重试，需长于 3 分钟 */
-const MAX_POLL_MS = 360_000;
+/** 含 429 冷却、Gemini 处理、后台分析重试 */
+const MAX_POLL_MS = 540_000;
 const VERCEL_SOFT_LIMIT_MS = 10_000;
 
 export interface AnalyzeApiResult {
@@ -33,13 +33,34 @@ export class AnalysisPollError extends Error {
   }
 }
 
+type StatusJson = {
+  status?: string;
+  error?: string;
+  retryAfter?: string;
+  analysis?: string;
+  retryable?: boolean;
+  analysisAttempt?: number;
+  dailyQuotaExhausted?: boolean;
+};
+
 const STATUS_HINTS: Record<string, string> = {
   uploaded: "已上传，准备提交 Gemini…",
   gemini_uploading: "【阶段一】正在上传至 Gemini Files API…",
   gemini_processing: "【阶段二】Gemini 正在处理视频，请稍候…",
-  analyzing: "【阶段二】教练正在观看并分析…",
+  analyzing: "【阶段二】教练正在观看并分析（后台运行）…",
   rate_limited: "【排队】Gemini 限流或服务繁忙，正在自动重试…",
 };
+
+function analyzingHint(data: StatusJson, elapsedSec: number): string {
+  if (data.error) return String(data.error);
+  if (data.analysisAttempt && data.analysisAttempt > 1) {
+    return `【阶段二】后台分析中（第 ${data.analysisAttempt} 次尝试）…`;
+  }
+  if (elapsedSec > 120) {
+    return "【阶段二】深度分析耗时较长，请继续等待…";
+  }
+  return STATUS_HINTS.analyzing;
+}
 
 const PHASE_LABELS: Record<string, string> = {
   uploaded: "phase_upload",
@@ -106,14 +127,6 @@ export async function pollUntilComplete(
       );
     }
 
-    type StatusJson = {
-      status?: string;
-      error?: string;
-      retryAfter?: string;
-      analysis?: string;
-      retryable?: boolean;
-    };
-
     const parsedRes = await readFetchJson<StatusJson>(res);
     if (!parsedRes.ok || !parsedRes.data) {
       const { message, retryable } = errorFromFetchJson(
@@ -135,7 +148,9 @@ export async function pollUntilComplete(
     const baseHint =
       status === "rate_limited" && data.error
         ? String(data.error)
-        : STATUS_HINTS[status] ?? "分析进行中…";
+        : status === "analyzing"
+          ? analyzingHint(data, elapsedSec)
+          : STATUS_HINTS[status] ?? "分析进行中…";
     const hint = baseHint + estimateWaitHint(elapsedMs, status);
 
     const meta: PollProgressMeta | undefined =
@@ -160,7 +175,7 @@ export async function pollUntilComplete(
     if (status === "failed") {
       throw new AnalysisPollError(
         data.error || "分析失败",
-        true,
+        data.retryable !== false && !data.dailyQuotaExhausted,
         elapsedMs
       );
     }
@@ -169,9 +184,10 @@ export async function pollUntilComplete(
   }
 
   throw new AnalysisPollError(
-    `分析超时（已等待 ${Math.round(MAX_POLL_MS / 1000)} 秒）。` +
-      `这与视频文件大小无必然关系，常见原因是 Gemini 排队、限流(429) 或云端任务卡住。` +
-      `请等 1～2 分钟后重新上传并分析；若反复出现，请到 Vercel Logs 查看该 jobId。`,
+    `分析超时（已等待 ${Math.round(MAX_POLL_MS / 1000)} 秒，任务 ${jobId}）。` +
+      `常见原因：Gemini 限流、视频处理排队，或深度分析耗时过长。` +
+      `建议：① 改用「轻量」深度；② 视频压到 4MB、30 秒内；③ 等待 2 分钟后点「使用当前视频再试」；` +
+      `④ 确认 Vercel 中 GEMINI_MODEL=gemini-2.5-flash。可在 Logs 搜索 jobId=${jobId}。`,
     true,
     MAX_POLL_MS
   );

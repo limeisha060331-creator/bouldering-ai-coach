@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getJob, hasBlobStorage } from "@/lib/analysis-jobs";
-import { advanceAnalysisJob } from "@/lib/process-analysis-job";
+import {
+  recoverStaleJob,
+  schedulePipelineAdvance,
+} from "@/lib/process-analysis-job";
 import {
   getMemoryJob,
   isMemoryJobStoreEnabled,
@@ -51,19 +54,20 @@ export async function GET(
     return NextResponse.json({ error: "任务不存在或已过期" }, { status: 404 });
   }
 
-  if (
-    job.status !== "completed" &&
-    job.status !== "failed"
-  ) {
-    // rate_limited 也允许推进（冷却结束后自动重试）
-    logInfo("status", `轮询推进 ${jobId} status=${job.status}`);
+  if (job.status !== "completed" && job.status !== "failed") {
     try {
-      await advanceAnalysisJob(jobId);
-      job = (await loadJobRecord(jobId)) ?? job;
+      if (await recoverStaleJob(jobId)) {
+        job = (await loadJobRecord(jobId)) ?? job;
+      }
     } catch (err) {
-      logInfo("status", `单步推进异常（下次轮询继续）`, err);
+      logInfo("status", `卡死恢复异常 ${jobId}`, err);
     }
+
+    logInfo("status", `轮询触发后台推进 ${jobId} status=${job.status}`);
+    schedulePipelineAdvance(jobId);
   }
+
+  const elapsedSinceCreate = Date.now() - new Date(job.createdAt).getTime();
 
   return NextResponse.json({
     jobId: job.id,
@@ -72,9 +76,15 @@ export async function GET(
     analysis: job.analysis,
     error: job.error,
     updatedAt: job.updatedAt,
+    statusSince: job.statusSince,
     analysisStarted: job.analysisStarted ?? false,
+    analysisAttempt: job.analysisAttempt,
     retryAfter: job.retryAfter,
-    retryable: job.status === "failed" || job.status === "rate_limited",
+    elapsedMs: elapsedSinceCreate,
+    dailyQuotaExhausted: job.dailyQuotaExhausted ?? false,
+    retryable:
+      job.status === "rate_limited" ||
+      (job.status === "failed" && !job.dailyQuotaExhausted),
     vercelNote:
       job.status !== "completed" && job.status !== "failed"
         ? "采用短请求轮询以规避 Vercel 10 秒函数限制"

@@ -7,9 +7,11 @@ import {
 import type { AnalysisDepth, AnalysisLocale } from "./types";
 import { logInfo } from "./gemini-log";
 import {
-  isGeminiRateLimitError,
+  formatGeminiDailyQuotaMessage,
+  isGeminiDailyQuotaExceeded,
   isGeminiRetryableError,
   isGeminiTransientError,
+  isGeminiTransientRateLimit,
   parseGeminiRetrySeconds,
   sleep,
   transientBackoffSeconds,
@@ -33,11 +35,23 @@ export type RunGeminiAnalysisOptions = {
   maxOutputTokens?: number;
   depth?: AnalysisDepth;
   locale?: AnalysisLocale;
+  /**
+   * 单次调用内最多尝试次数。Vercel waitUntil 总时长 ≤60s，
+   * 后台分析务必传 1，429/503 由任务状态机跨轮询重试。
+   */
+  maxAttempts?: number;
 };
 
 export function mapGeminiError(err: unknown): { message: string; status: number } {
   const msg = err instanceof Error ? err.message : String(err);
   const lower = msg.toLowerCase();
+
+  if (isGeminiDailyQuotaExceeded(err)) {
+    return {
+      message: formatGeminiDailyQuotaMessage(err),
+      status: 429,
+    };
+  }
 
   if (
     lower.includes("429") ||
@@ -47,7 +61,7 @@ export function mapGeminiError(err: unknown): { message: string; status: number 
   ) {
     return {
       message:
-        "Gemini 免费额度/频率已达上限。请等待约 1 分钟后点击「重新分析」，或在 Vercel 设置 GEMINI_MODEL=gemini-2.0-flash-lite。也可查看 https://ai.dev/rate-limit",
+        "Gemini 请求过于频繁（短时限流）。请等待约 1 分钟后点击「使用当前视频再试」，或改用「轻量」深度减少调用压力。",
       status: 429,
     };
   }
@@ -90,7 +104,7 @@ export function mapGeminiError(err: unknown): { message: string; status: number 
     const model = getGeminiModelId();
     return {
       message:
-        `模型「${model}」不可用。请在 Vercel 设置 GEMINI_MODEL，例如 gemini-2.5-flash 或 gemini-3.1-flash-lite（避免 2.0-flash 等 0/0 模型）。`,
+        `模型「${model}」不可用。请在 Vercel 设置 GEMINI_MODEL=gemini-2.5-flash（在 AI Studio Rate Limit 中须为非 0/0）。`,
       status: 400,
     };
   }
@@ -99,7 +113,7 @@ export function mapGeminiError(err: unknown): { message: string; status: number 
     const model = getGeminiModelId();
     return {
       message:
-        `Gemini 模型「${model}」当前繁忙或临时不可用（503）。请 1～2 分钟后点击「使用当前视频再试」；若反复出现，可在 Vercel 将 GEMINI_MODEL 改为 gemini-3.1-flash-lite 后重新部署。`,
+        `Gemini 模型「${model}」当前繁忙或临时不可用（503）。请 1～2 分钟后点击「使用当前视频再试」。`,
       status: 503,
     };
   }
@@ -158,7 +172,7 @@ export async function runGeminiAnalysis(
     options?.prompt ??
     getAnalysisPrompt(depth, options?.locale ?? "zh");
 
-  const maxAttempts = 4;
+  const maxAttempts = options?.maxAttempts ?? 4;
   let lastError: unknown;
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -197,16 +211,23 @@ export async function runGeminiAnalysis(
       if (!isGeminiRetryableError(err) || attempt >= maxAttempts) {
         throw err;
       }
-      const waitSec = isGeminiRateLimitError(err)
+      const waitSec = isGeminiTransientRateLimit(err)
         ? Math.min(parseGeminiRetrySeconds(err), 25)
         : isGeminiEmptyAnalysisError(err)
           ? 6
           : transientBackoffSeconds(attempt);
-      const kind = isGeminiRateLimitError(err)
+      const kind = isGeminiTransientRateLimit(err)
         ? "429 限流"
         : isGeminiEmptyAnalysisError(err)
           ? "空响应"
           : "503/临时故障";
+      if (maxAttempts <= 1) {
+        logInfo(
+          "gemini",
+          `${kind}，不在本次函数内重试（避免 Vercel 60s 超时），交由任务冷却后再试`
+        );
+        throw err;
+      }
       logInfo("gemini", `${kind}，${waitSec}s 后重试 (${attempt}/${maxAttempts})`);
       await sleep(waitSec * 1000);
     }

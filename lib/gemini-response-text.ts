@@ -86,7 +86,7 @@ export function extractAnalysisTextFromResponse(
 
   if (reason && BLOCKED_FINISH.includes(reason)) {
     throw new GeminiEmptyAnalysisError(
-      `分析未生成：${detail}。若视频正常，可换片段或稍后在 Vercel 将 GEMINI_MODEL 改为 gemini-3.1-flash-lite 后重试。`,
+      `分析未生成：${detail}。若视频正常，可换更短片段、改用「轻量」深度后重试。`,
       true
     );
   }

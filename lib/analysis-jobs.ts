@@ -31,8 +31,16 @@ export interface AnalysisJob {
   logs?: string[];
   analysisStarted?: boolean;
   analysisStartedAt?: string;
+  /** 进入当前 status 的时间（用于卡死检测，勿用 updatedAt 心跳覆盖） */
+  statusSince?: string;
+  /** 分析阶段后台任务重试次数 */
+  analysisAttempt?: number;
+  /** 免费层按日额度用尽，短时重试无效 */
+  dailyQuotaExhausted?: boolean;
   /** 429 后自动重试的最早时间（ISO） */
   retryAfter?: string;
+  /** 防止多实例同时推进同一任务（ISO 到期时间） */
+  pipelineLockUntil?: string;
   originalSize?: number;
   compressedSize?: number;
   /** 提示词版本，便于回归对比 */

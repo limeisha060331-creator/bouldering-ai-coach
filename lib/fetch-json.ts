@@ -15,7 +15,20 @@ export function humanizeNonJsonBody(
     );
   }
   if (status === 502 || status === 503 || status === 504) {
-    return "服务暂时不可用或超时，请稍后重试。";
+    if (lower.includes("blob") || lower.includes("bLOB_READ_WRITE")) {
+      return "未配置 Vercel Blob。请在 Vercel → Storage 创建 Blob 并绑定 BLOB_READ_WRITE_TOKEN 后重新部署。";
+    }
+    if (status === 504) {
+      return (
+        "云端处理超时（504）。分析仍在后台进行时请继续等待；若反复出现，请用更短视频、选「轻量」深度，或查看 Vercel Logs。"
+      );
+    }
+    if (status === 503) {
+      return (
+        "服务暂不可用（503）。请确认已配置 BLOB_READ_WRITE_TOKEN 与 GEMINI_API_KEY，并重新部署后再试。"
+      );
+    }
+    return "服务暂时不可用，请稍后重试。";
   }
   if (status === 429) {
     return "请求过于频繁，请稍后再试。";
@@ -123,9 +136,14 @@ export function errorFromFetchJson<T extends { error?: string; retryable?: boole
   fallback: string
 ): { message: string; retryable: boolean } {
   if (parsed.parseError || !parsed.data) {
+    const message = humanizeNonJsonBody(parsed.status, parsed.rawText);
     return {
-      message: humanizeNonJsonBody(parsed.status, parsed.rawText),
-      retryable: parsed.status >= 500 || parsed.status === 429 || parsed.status === 413,
+      message,
+      retryable:
+        parsed.status >= 500 ||
+        parsed.status === 429 ||
+        parsed.status === 413 ||
+        parsed.status === 504,
     };
   }
   const data = parsed.data;

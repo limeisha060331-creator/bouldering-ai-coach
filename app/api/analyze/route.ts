@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { waitUntil } from "@vercel/functions";
 import { randomUUID } from "crypto";
 import {
   hasBlobStorage,
@@ -7,7 +6,7 @@ import {
   uploadVideoBlob,
   type AnalysisJob,
 } from "@/lib/analysis-jobs";
-import { advanceAnalysisJob } from "@/lib/process-analysis-job";
+import { schedulePipelineAdvance } from "@/lib/process-analysis-job";
 import {
   isMemoryJobStoreEnabled,
   saveMemoryJob,
@@ -112,11 +111,13 @@ export async function POST(request: NextRequest) {
 
   if (useAsyncPipeline()) {
     try {
+      const now = new Date().toISOString();
       const job: AnalysisJob = {
         id: jobId,
         status: "uploaded",
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        createdAt: now,
+        updatedAt: now,
+        statusSince: now,
         fileName: file.name,
         mimeType,
         originalSize,
@@ -135,11 +136,7 @@ export async function POST(request: NextRequest) {
         saveMemoryJob(job, buffer);
       }
 
-      waitUntil(
-        advanceAnalysisJob(jobId).catch((err) => {
-          logGeminiError(`waitUntil/${jobId}`, err);
-        })
-      );
+      schedulePipelineAdvance(jobId);
 
       logInfo("POST", `任务已创建，耗时 ${Date.now() - startedAt}ms`);
 

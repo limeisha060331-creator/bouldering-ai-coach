@@ -9,6 +9,36 @@ export function isGeminiRateLimitError(err: unknown): boolean {
   );
 }
 
+/** 免费层「按模型每日 generateContent 次数」用尽（重试无效，需换日/换模型/开通计费） */
+export function isGeminiDailyQuotaExceeded(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err);
+  return (
+    /generate_content_free_tier/i.test(msg) ||
+    /GenerateRequestsPerDay/i.test(msg) ||
+    /exceeded your current quota/i.test(msg) ||
+    (/QuotaFailure/i.test(msg) && /PerDay|free_tier|FreeTier/i.test(msg))
+  );
+}
+
+/** 短时 RPM/并发 429，等待后可能成功 */
+export function isGeminiTransientRateLimit(err: unknown): boolean {
+  return isGeminiRateLimitError(err) && !isGeminiDailyQuotaExceeded(err);
+}
+
+export function formatGeminiDailyQuotaMessage(err: unknown): string {
+  const msg = err instanceof Error ? err.message : String(err);
+  const modelMatch = msg.match(/model:\s*([\w.-]+)/i);
+  const limitMatch = msg.match(/limit:\s*(\d+)/i);
+  const model = modelMatch?.[1] ?? "当前模型";
+  const limit = limitMatch?.[1] ?? "20";
+
+  return (
+    `今日 Gemini 免费额度已用完（${model} 每天约 ${limit} 次分析请求，含失败重试也会扣次数）。` +
+    `请明天再试，或在 [Google AI Studio](https://aistudio.google.com/apikey) 为项目开通按量计费后继续使用同一 Key。` +
+    `请在 AI Studio 确认有额度的模型，并在 Vercel 设置 GEMINI_MODEL=gemini-2.5-flash（勿用 2.0 系列，常为 0/0）。用量： https://ai.dev/rate-limit`
+  );
+}
+
 /** 503 / 502 / 500 等可稍后重试的临时故障 */
 export function isGeminiTransientError(err: unknown): boolean {
   const msg = err instanceof Error ? err.message : String(err);
@@ -29,8 +59,9 @@ export function isGeminiTransientError(err: unknown): boolean {
 import { isGeminiEmptyAnalysisError } from "./gemini-response-text";
 
 export function isGeminiRetryableError(err: unknown): boolean {
+  if (isGeminiDailyQuotaExceeded(err)) return false;
   return (
-    isGeminiRateLimitError(err) ||
+    isGeminiTransientRateLimit(err) ||
     isGeminiTransientError(err) ||
     isGeminiEmptyAnalysisError(err)
   );
