@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { AnalysisView } from "@/components/analysis-view";
 import { ShareCardButton } from "@/components/share-card";
+import { IconArrowLeft, IconLoader } from "@/components/icons";
 import { getAnalysisRecord } from "@/lib/analysis-db";
 import type { AnalysisRecord } from "@/lib/types";
 
@@ -48,20 +49,26 @@ export default function AnalysisDetailPage() {
 
   if (loading) {
     return (
-      <main className="gym-bg flex min-h-screen items-center justify-center">
-        <p className="animate-pulse text-zinc-500">加载分析中…</p>
+      <main className="spa-page flex min-h-screen items-center justify-center">
+        <p className="flex items-center gap-2 text-sm text-[var(--spa-text-muted)]">
+          <IconLoader className="h-4 w-4" />
+          加载中
+        </p>
       </main>
     );
   }
 
   if (notFound || !record) {
     return (
-      <main className="gym-bg flex min-h-screen flex-col items-center justify-center gap-4 px-4">
-        <p className="text-zinc-400">找不到这条分析记录</p>
+      <main className="spa-page flex min-h-screen flex-col items-center justify-center gap-5 px-5">
+        <p className="text-sm text-[var(--spa-text-secondary)]">
+          找不到这条分析记录
+        </p>
         <Link
           href="/"
-          className="text-orange-400 underline-offset-4 hover:underline"
+          className="inline-flex items-center gap-2 text-sm font-medium text-[var(--spa-text)] underline-offset-4 hover:underline"
         >
+          <IconArrowLeft className="h-4 w-4" />
           返回首页
         </Link>
       </main>
@@ -69,20 +76,21 @@ export default function AnalysisDetailPage() {
   }
 
   return (
-    <main className="gym-bg min-h-screen">
-      <div className="mx-auto max-w-3xl px-4 py-8 sm:py-12">
-        <header className="mb-6 flex flex-wrap items-center justify-between gap-4">
+    <main className="spa-page">
+      <div className="spa-container">
+        <header className="mb-8 flex flex-col gap-5 sm:mb-10 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <Link
               href="/"
-              className="text-xs text-zinc-500 transition hover:text-orange-400"
+              className="inline-flex items-center gap-1.5 text-xs text-[var(--spa-text-muted)] transition hover:text-[var(--spa-text-secondary)]"
             >
-              ← 返回首页
+              <IconArrowLeft className="h-3.5 w-3.5" />
+              返回
             </Link>
-            <h1 className="mt-2 text-xl font-bold text-zinc-100 sm:text-2xl">
+            <h1 className="mt-4 text-xl font-medium tracking-tight text-[var(--spa-text)] sm:text-2xl">
               {record.fileName}
             </h1>
-            <p className="mt-1 text-xs text-zinc-500">
+            <p className="mt-1.5 text-xs text-[var(--spa-text-muted)]">
               {new Date(record.createdAt).toLocaleString("zh-CN")}
             </p>
           </div>
@@ -93,7 +101,7 @@ export default function AnalysisDetailPage() {
           />
         </header>
 
-        <article className="gym-panel rounded-2xl p-5 sm:p-6">
+        <article className="spa-panel p-6 sm:p-8">
           <AnalysisView
             analysis={record.analysis}
             videoUrl={videoUrl}

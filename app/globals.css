@@ -1,75 +1,86 @@
 @import "tailwindcss";
 
 :root {
-  --gym-bg: #0c0d10;
-  --gym-surface: #14161c;
-  --gym-accent: #f97316;
-  --gym-accent-glow: rgba(249, 115, 22, 0.55);
-  --gym-chalk: #e8e4dc;
-  --gym-muted: #8b919e;
+  --spa-bg: #f6f4f0;
+  --spa-surface: #ffffff;
+  --spa-elevated: #faf9f7;
+  --spa-border: #e8e4dc;
+  --spa-border-subtle: #f0ede6;
+  --spa-text: #1a1917;
+  --spa-text-secondary: #5c5852;
+  --spa-text-muted: #8a857c;
+  --spa-accent: #2a2826;
+  --spa-accent-hover: #3d3a36;
+  --spa-focus: rgba(42, 40, 38, 0.08);
+  --spa-shadow: 0 1px 2px rgba(26, 25, 23, 0.04), 0 8px 24px rgba(26, 25, 23, 0.06);
+  --spa-shadow-lg: 0 2px 4px rgba(26, 25, 23, 0.04), 0 16px 40px rgba(26, 25, 23, 0.08);
 }
 
 @theme inline {
-  --font-sans: ui-sans-serif, system-ui, "Segoe UI", "PingFang SC", sans-serif;
+  --font-sans: var(--font-dm-sans), ui-sans-serif, system-ui, "PingFang SC", sans-serif;
+  --color-spa-bg: var(--spa-bg);
+  --color-spa-surface: var(--spa-surface);
+  --color-spa-border: var(--spa-border);
+  --color-spa-text: var(--spa-text);
+  --color-spa-muted: var(--spa-text-muted);
 }
 
 body {
-  background: var(--gym-bg);
-  color: var(--gym-chalk);
+  background: var(--spa-bg);
+  color: var(--spa-text);
   font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
 }
 
-/* 岩馆纹理背景 */
-.gym-bg {
-  background-color: var(--gym-bg);
-  background-image:
-    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(249, 115, 22, 0.12), transparent),
-    radial-gradient(circle at 20% 80%, rgba(60, 60, 70, 0.4), transparent 40%),
-    radial-gradient(circle at 80% 60%, rgba(40, 40, 48, 0.5), transparent 35%),
-    repeating-linear-gradient(
-      -12deg,
-      transparent,
-      transparent 40px,
-      rgba(255, 255, 255, 0.015) 40px,
-      rgba(255, 255, 255, 0.015) 41px
-    ),
-    linear-gradient(180deg, #0a0b0e 0%, #12141a 45%, #0d0e12 100%);
-}
-
-.gym-panel {
-  background: linear-gradient(
-    145deg,
-    rgba(22, 24, 30, 0.95) 0%,
-    rgba(14, 15, 18, 0.98) 100%
+.spa-page {
+  min-height: 100vh;
+  background-color: var(--spa-bg);
+  background-image: radial-gradient(
+    ellipse 120% 80% at 50% -30%,
+    rgba(255, 255, 255, 0.9),
+    transparent 55%
   );
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  box-shadow:
-    0 4px 24px rgba(0, 0, 0, 0.5),
-    inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
-/* 呼吸灯按钮 */
-@keyframes pulse-glow {
-  0%,
-  100% {
-    box-shadow:
-      0 0 12px var(--gym-accent-glow),
-      0 0 24px rgba(249, 115, 22, 0.25),
-      0 4px 14px rgba(0, 0, 0, 0.4);
-  }
-  50% {
-    box-shadow:
-      0 0 22px var(--gym-accent-glow),
-      0 0 40px rgba(249, 115, 22, 0.4),
-      0 4px 20px rgba(0, 0, 0, 0.5);
+.spa-container {
+  width: 100%;
+  max-width: 42rem;
+  margin-inline: auto;
+  padding-inline: 1.25rem;
+  padding-block: 2.5rem;
+}
+
+@media (min-width: 640px) {
+  .spa-container {
+    padding-inline: 1.5rem;
+    padding-block: 3.5rem;
   }
 }
 
-.btn-pulse {
-  animation: pulse-glow 2.2s ease-in-out infinite;
+.spa-panel {
+  background: var(--spa-surface);
+  border: 1px solid var(--spa-border);
+  border-radius: 1rem;
+  box-shadow: var(--spa-shadow);
 }
 
-.btn-pulse:disabled {
-  animation: none;
-  box-shadow: none;
+.spa-panel-inset {
+  background: var(--spa-elevated);
+  border: 1px solid var(--spa-border-subtle);
+  border-radius: 0.75rem;
+}
+
+.spa-label {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--spa-text-muted);
+}
+
+.spa-divider {
+  height: 1px;
+  background: var(--spa-border);
+  border: none;
+  margin: 0;
 }

@@ -6,6 +6,14 @@ import { PulseButton } from "@/components/pulse-button";
 import { VideoThumbnail } from "@/components/video-thumbnail";
 import { HistoryList } from "@/components/history-list";
 import {
+  IconHistory,
+  IconInfo,
+  IconLoader,
+  IconMountain,
+  IconSparkles,
+  IconUpload,
+} from "@/components/icons";
+import {
   captureVideoThumbnail,
   listAnalysisRecords,
   saveAnalysisRecord,
@@ -91,11 +99,11 @@ export default function Home() {
 
       if (result.compressed) {
         setCompressInfo(
-          `已智能压缩：${(result.originalSize / 1024 / 1024).toFixed(1)}MB → ${(result.finalSize / 1024 / 1024).toFixed(1)}MB`
+          `已压缩：${(result.originalSize / 1024 / 1024).toFixed(1)}MB → ${(result.finalSize / 1024 / 1024).toFixed(1)}MB`
         );
       } else {
         setCompressInfo(
-          `原始大小 ${(result.finalSize / 1024 / 1024).toFixed(1)}MB，无需压缩`
+          `${(result.finalSize / 1024 / 1024).toFixed(1)}MB，无需压缩`
         );
       }
     } catch (e) {
@@ -184,7 +192,7 @@ export default function Home() {
         const est = data.estimatedSeconds ?? 60;
         setProgressHint(
           data.message ??
-            `已启动两阶段分析（预计 ${est} 秒内完成），请保持页面打开…`
+            `分析进行中（预计 ${est} 秒），请保持页面打开`
         );
 
         data = await pollUntilComplete(data.jobId, {
@@ -228,22 +236,22 @@ export default function Home() {
   }
 
   return (
-    <main className="gym-bg min-h-screen text-zinc-100">
-      <div className="mx-auto max-w-3xl px-4 py-10 sm:py-14">
-        <header className="mb-8 text-center">
-          <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-orange-500/30 bg-orange-500/10 px-4 py-1 text-xs font-medium uppercase tracking-[0.2em] text-orange-400">
-            <span className="h-1.5 w-1.5 rounded-full bg-orange-400 animate-pulse" />
-            Boulder Gym · AI
+    <main className="spa-page">
+      <div className="spa-container">
+        <header className="mb-10 text-center sm:mb-12">
+          <div className="mb-5 inline-flex items-center justify-center rounded-full border border-[var(--spa-border)] bg-[var(--spa-surface)] p-3 shadow-[var(--spa-shadow)]">
+            <IconMountain className="h-6 w-6 text-[var(--spa-text-secondary)]" />
           </div>
-          <h1 className="text-3xl font-black tracking-tight sm:text-4xl">
-            AI 抱石分析教练
+          <p className="spa-label mb-3">Bouldering · AI Coach</p>
+          <h1 className="text-2xl font-medium tracking-tight text-[var(--spa-text)] sm:text-3xl">
+            抱石分析
           </h1>
-          <p className="mt-2 text-sm text-zinc-500">
-            支持大视频自动压缩 · Gemini 两阶段分析 · 云端轮询
+          <p className="mx-auto mt-3 max-w-sm text-sm leading-relaxed text-[var(--spa-text-muted)]">
+            上传攀爬片段，获得克制、专业的动作反馈
           </p>
         </header>
 
-        <section className="gym-panel rounded-2xl p-6">
+        <section className="spa-panel p-6 sm:p-8">
           <label
             htmlFor="video-upload"
             onDragOver={(e) => {
@@ -252,20 +260,22 @@ export default function Home() {
             }}
             onDragLeave={() => setDragOver(false)}
             onDrop={handleDrop}
-            className={`flex min-h-[160px] cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed px-4 py-6 transition ${
+            className={`flex min-h-[11rem] cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed px-5 py-8 transition ${
               dragOver
-                ? "border-orange-400 bg-orange-500/10"
-                : "border-zinc-600/80 bg-zinc-900/50 hover:border-orange-500/50"
-            } ${compressing ? "pointer-events-none opacity-60" : ""}`}
+                ? "border-[var(--spa-text-muted)] bg-[var(--spa-focus)]"
+                : "border-[var(--spa-border)] bg-[var(--spa-elevated)] hover:border-[var(--spa-text-muted)]/50"
+            } ${compressing ? "pointer-events-none opacity-50" : ""}`}
           >
-            <span className="text-3xl" aria-hidden>
-              🧗
+            {compressing ? (
+              <IconLoader className="mb-3 h-7 w-7 text-[var(--spa-text-muted)]" />
+            ) : (
+              <IconUpload className="mb-3 h-7 w-7 text-[var(--spa-text-secondary)]" />
+            )}
+            <span className="text-sm font-medium text-[var(--spa-text)]">
+              {compressing ? "正在处理视频" : "点击或拖拽上传"}
             </span>
-            <span className="mt-2 font-semibold text-zinc-200">
-              {compressing ? "正在压缩视频…" : "点击或拖拽上传视频"}
-            </span>
-            <span className="mt-1 text-xs text-zinc-500">
-              最大 {MAX_SOURCE_BYTES / 1024 / 1024}MB · 自动压缩至 10MB 以内
+            <span className="mt-2 text-xs text-[var(--spa-text-muted)]">
+              最大 {MAX_SOURCE_BYTES / 1024 / 1024}MB · 自动压缩至 10MB
             </span>
           </label>
           <input
@@ -279,25 +289,27 @@ export default function Home() {
           />
 
           {compressHint && (
-            <p className="mt-3 text-center text-xs text-orange-300/90 animate-pulse">
+            <p className="mt-4 flex items-center justify-center gap-2 text-center text-xs text-[var(--spa-text-secondary)]">
+              <IconLoader className="h-3.5 w-3.5" />
               {compressHint}
             </p>
           )}
 
           {compressInfo && (
-            <p className="mt-2 text-center text-xs text-zinc-500">
+            <p className="mt-3 text-center text-xs text-[var(--spa-text-muted)]">
               {compressInfo}
             </p>
           )}
 
-          <p className="mt-4 rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2.5 text-xs leading-relaxed text-amber-200/80">
-            <span className="font-semibold text-amber-400">教练提醒：</span>
-            抱石视频建议只剪辑关键的「那一挂、那一蹿」，短视频分析更精准且不易出错哦（建议
-            10MB 以内，最长 90 秒）。
-          </p>
+          <div className="mt-5 flex gap-3 rounded-xl border border-[var(--spa-border-subtle)] bg-[var(--spa-elevated)] px-4 py-3.5">
+            <IconInfo className="mt-0.5 h-4 w-4 shrink-0 text-[var(--spa-text-muted)]" />
+            <p className="text-xs leading-relaxed text-[var(--spa-text-secondary)]">
+              建议只保留关键的一挂或一跃，10MB 以内、90 秒内的片段分析更精准。
+            </p>
+          </div>
 
           {preview && file && (
-            <div className="mt-4 flex justify-center">
+            <div className="mt-6 flex justify-center">
               <VideoThumbnail src={preview} fileName={file.name} />
             </div>
           )}
@@ -308,28 +320,32 @@ export default function Home() {
               disabled={!file || compressing}
               loading={loading}
             >
-              上传并分析
+              <span className="inline-flex items-center justify-center gap-2">
+                <IconSparkles className="h-4 w-4" />
+                开始分析
+              </span>
             </PulseButton>
           </div>
 
           {progressHint && loading && (
-            <div className="mt-4 space-y-1 text-center">
-              <p className="text-sm text-orange-300/90 animate-pulse">
+            <div className="mt-5 space-y-1.5 text-center">
+              <p className="flex items-center justify-center gap-2 text-sm text-[var(--spa-text-secondary)]">
+                <IconLoader className="h-4 w-4" />
                 {progressHint}
               </p>
               {elapsedSec > 10 && (
-                <p className="text-xs text-zinc-500">
-                  Vercel 单次请求限 10 秒，已自动切换轮询模式，请耐心等待
+                <p className="text-xs text-[var(--spa-text-muted)]">
+                  分析在云端进行，请保持页面打开
                 </p>
               )}
             </div>
           )}
 
           {error && (
-            <div className="mt-4 space-y-2">
+            <div className="mt-5 space-y-3">
               <p
                 role="alert"
-                className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300"
+                className="rounded-xl border border-[var(--spa-border)] bg-[var(--spa-elevated)] px-4 py-3 text-sm text-[var(--spa-text-secondary)]"
               >
                 {error}
               </p>
@@ -337,7 +353,7 @@ export default function Home() {
                 <button
                   type="button"
                   onClick={runAnalysis}
-                  className="w-full rounded-lg border border-orange-500/40 py-2 text-sm font-medium text-orange-300 transition hover:bg-orange-500/10"
+                  className="w-full rounded-xl border border-[var(--spa-border)] py-2.5 text-sm font-medium text-[var(--spa-text)] transition hover:bg-[var(--spa-focus)]"
                 >
                   重新分析
                 </button>
@@ -346,11 +362,13 @@ export default function Home() {
           )}
         </section>
 
-        <section className="mt-10">
-          <h2 className="mb-4 flex items-center gap-2 text-lg font-bold text-zinc-200">
-            <span className="h-5 w-1 rounded-full bg-orange-500" />
-            我的分析历史
-          </h2>
+        <section className="mt-12 sm:mt-14">
+          <div className="mb-5 flex items-center gap-2">
+            <IconHistory className="h-4 w-4 text-[var(--spa-text-muted)]" />
+            <h2 className="text-sm font-medium text-[var(--spa-text)]">
+              分析历史
+            </h2>
+          </div>
           <HistoryList records={history} />
         </section>
       </div>

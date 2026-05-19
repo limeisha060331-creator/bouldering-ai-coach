@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { IconClock } from "@/components/icons";
 import type { AnalysisSegment } from "@/lib/types";
 import { parseAnalysis } from "@/lib/parse-analysis";
 
@@ -26,29 +27,31 @@ export function AnalysisView({ analysis, videoUrl, segments: presetSegments }: P
   }
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-8">
       {videoUrl && (
-        <div className="overflow-hidden rounded-xl border border-white/10 shadow-lg">
+        <div className="overflow-hidden rounded-xl border border-[var(--spa-border)] bg-[var(--spa-elevated)]">
           <video
             ref={videoRef}
             src={videoUrl}
             controls
-            className="max-h-64 w-full bg-black object-contain sm:max-h-80"
+            className="max-h-64 w-full object-contain sm:max-h-80"
           />
         </div>
       )}
 
       {parsed.score != null && (
-        <div className="flex items-center gap-4">
-          <div className="flex h-20 w-20 flex-col items-center justify-center rounded-full border-2 border-orange-500/50 bg-orange-500/10">
-            <span className="text-2xl font-bold text-orange-400">
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:gap-8">
+          <div className="flex h-[4.5rem] w-[4.5rem] shrink-0 flex-col items-center justify-center rounded-full border border-[var(--spa-border)] bg-[var(--spa-elevated)]">
+            <span className="text-2xl font-light tabular-nums tracking-tight text-[var(--spa-text)]">
               {parsed.score}
             </span>
-            <span className="text-[10px] text-zinc-500">/ 100</span>
+            <span className="text-[10px] uppercase tracking-widest text-[var(--spa-text-muted)]">
+              / 100
+            </span>
           </div>
           {parsed.highlight && (
-            <blockquote className="flex-1 border-l-2 border-orange-500/60 pl-4 text-sm italic text-zinc-300">
-              「{parsed.highlight}」
+            <blockquote className="flex-1 border-l border-[var(--spa-border)] pl-5 text-sm leading-relaxed text-[var(--spa-text-secondary)]">
+              {parsed.highlight}
             </blockquote>
           )}
         </div>
@@ -56,25 +59,24 @@ export function AnalysisView({ analysis, videoUrl, segments: presetSegments }: P
 
       {segments.length > 0 && (
         <section>
-          <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-orange-400/90">
-            逐帧分析 · 点击跳转
-          </h3>
-          <ul className="space-y-2">
+          <h3 className="spa-label mb-4">逐帧分析</h3>
+          <ul className="flex flex-col gap-2">
             {segments.map((seg, i) => (
               <li key={`${seg.timestamp}-${i}`}>
                 <button
                   type="button"
                   onClick={() => seekTo(seg.seconds, i)}
-                  className={`gym-panel w-full rounded-lg px-4 py-3 text-left transition ${
+                  className={`w-full rounded-xl border px-4 py-3.5 text-left transition ${
                     activeIndex === i
-                      ? "border-orange-500/50 ring-1 ring-orange-500/40"
-                      : "hover:border-white/10"
+                      ? "border-[var(--spa-text)] bg-[var(--spa-focus)]"
+                      : "border-[var(--spa-border-subtle)] bg-[var(--spa-elevated)] hover:border-[var(--spa-border)]"
                   }`}
                 >
-                  <span className="font-mono text-sm font-bold text-orange-400">
-                    [{seg.timestamp}]
+                  <span className="inline-flex items-center gap-1.5 font-mono text-xs font-medium tabular-nums text-[var(--spa-text-secondary)]">
+                    <IconClock className="h-3.5 w-3.5" />
+                    {seg.timestamp}
                   </span>
-                  <span className="mt-1 block text-sm leading-relaxed text-zinc-300">
+                  <span className="mt-1.5 block text-sm leading-relaxed text-[var(--spa-text)]">
                     {seg.content}
                   </span>
                 </button>
@@ -85,20 +87,18 @@ export function AnalysisView({ analysis, videoUrl, segments: presetSegments }: P
       )}
 
       {parsed.summary && (
-        <section className="gym-panel rounded-xl p-4">
-          <h3 className="mb-2 text-sm font-semibold text-zinc-400">总结</h3>
-          <p className="whitespace-pre-wrap text-sm leading-relaxed text-zinc-300">
+        <section>
+          <h3 className="spa-label mb-3">总结</h3>
+          <p className="text-sm leading-relaxed text-[var(--spa-text-secondary)]">
             {parsed.summary}
           </p>
         </section>
       )}
 
       {segments.length === 0 && (
-        <div className="gym-panel rounded-xl p-4">
-          <p className="whitespace-pre-wrap text-sm leading-relaxed text-zinc-300">
-            {analysis}
-          </p>
-        </div>
+        <p className="whitespace-pre-wrap text-sm leading-relaxed text-[var(--spa-text-secondary)]">
+          {analysis}
+        </p>
       )}
     </div>
   );

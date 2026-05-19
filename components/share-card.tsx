@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { IconDownload, IconLoader } from "@/components/icons";
 
 type Props = {
   score: number | null;
@@ -20,56 +21,57 @@ export function ShareCardButton({ score, highlight, fileName }: Props) {
     canvas.width = w;
     canvas.height = h;
 
-    const grad = ctx.createLinearGradient(0, 0, w, h);
-    grad.addColorStop(0, "#0c0d10");
-    grad.addColorStop(0.4, "#1a1510");
-    grad.addColorStop(1, "#0a0a0c");
+    const grad = ctx.createLinearGradient(0, 0, 0, h);
+    grad.addColorStop(0, "#f6f4f0");
+    grad.addColorStop(1, "#efede8");
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, w, h);
 
-    ctx.strokeStyle = "rgba(249, 115, 22, 0.15)";
-    for (let i = 0; i < 12; i++) {
+    ctx.strokeStyle = "rgba(26, 25, 23, 0.06)";
+    ctx.lineWidth = 1;
+    for (let y = 0; y < h; y += 48) {
       ctx.beginPath();
-      ctx.moveTo(0, i * 100);
-      ctx.lineTo(w, i * 100 + 40);
+      ctx.moveTo(0, y);
+      ctx.lineTo(w, y);
       ctx.stroke();
     }
 
-    ctx.fillStyle = "#f97316";
-    ctx.font = "bold 28px system-ui, sans-serif";
-    ctx.fillText("🧗 AI 抱石分析教练", 48, 80);
+    ctx.fillStyle = "#1a1917";
+    ctx.font = "500 26px system-ui, sans-serif";
+    ctx.fillText("抱石分析 · AI Coach", 48, 88);
 
-    ctx.fillStyle = "#a1a1aa";
+    ctx.fillStyle = "#8a857c";
     ctx.font = "20px system-ui, sans-serif";
-    ctx.fillText(fileName || "我的攀爬片段", 48, 120);
+    ctx.fillText(fileName || "攀爬片段", 48, 128);
 
     if (score != null) {
-      ctx.fillStyle = "rgba(249, 115, 22, 0.2)";
+      ctx.strokeStyle = "#e8e4dc";
+      ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.arc(w / 2, 320, 100, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = "#fb923c";
-      ctx.font = "bold 72px system-ui, sans-serif";
+      ctx.arc(w / 2, 320, 96, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.fillStyle = "#1a1917";
+      ctx.font = "300 72px system-ui, sans-serif";
       ctx.textAlign = "center";
       ctx.fillText(String(score), w / 2, 340);
-      ctx.font = "24px system-ui, sans-serif";
-      ctx.fillStyle = "#71717a";
-      ctx.fillText("/ 100", w / 2, 380);
+      ctx.font = "18px system-ui, sans-serif";
+      ctx.fillStyle = "#8a857c";
+      ctx.fillText("/ 100", w / 2, 378);
       ctx.textAlign = "left";
     }
 
-    ctx.fillStyle = "#e4e4e7";
-    ctx.font = "bold 26px system-ui, sans-serif";
+    ctx.fillStyle = "#5c5852";
+    ctx.font = "500 22px system-ui, sans-serif";
     ctx.fillText("教练金句", 48, 480);
 
     const quote = highlight || "每一次发力，都是向顶点的致敬。";
-    ctx.fillStyle = "#d4d4d8";
-    ctx.font = "italic 32px system-ui, sans-serif";
-    wrapText(ctx, `「${quote}」`, 48, 530, w - 96, 44);
+    ctx.fillStyle = "#1a1917";
+    ctx.font = "28px system-ui, sans-serif";
+    wrapText(ctx, quote, 48, 530, w - 96, 42);
 
-    ctx.fillStyle = "#52525b";
-    ctx.font = "20px system-ui, sans-serif";
-    ctx.fillText("扫码或搜索 · AI 抱石分析教练", 48, h - 60);
+    ctx.fillStyle = "#9c9890";
+    ctx.font = "18px system-ui, sans-serif";
+    ctx.fillText("bouldering-ai-coach.vercel.app", 48, h - 56);
 
     return new Promise((resolve, reject) => {
       canvas.toBlob(
@@ -128,9 +130,19 @@ export function ShareCardButton({ score, highlight, fileName }: Props) {
         type="button"
         onClick={handleShare}
         disabled={sharing}
-        className="rounded-xl border border-orange-500/40 bg-orange-500/10 px-5 py-2.5 text-sm font-semibold text-orange-300 transition hover:bg-orange-500/20 disabled:opacity-50"
+        className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-[var(--spa-border)] bg-[var(--spa-surface)] px-4 py-2.5 text-sm font-medium text-[var(--spa-text)] shadow-[var(--spa-shadow)] transition hover:bg-[var(--spa-elevated)] disabled:opacity-50"
       >
-        {sharing ? "生成中…" : "分享给岩友"}
+        {sharing ? (
+          <>
+            <IconLoader className="h-4 w-4" />
+            生成中
+          </>
+        ) : (
+          <>
+            <IconDownload className="h-4 w-4" />
+            保存分享图
+          </>
+        )}
       </button>
     </>
   );
