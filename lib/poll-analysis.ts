@@ -34,7 +34,7 @@ const STATUS_HINTS: Record<string, string> = {
   gemini_uploading: "【阶段一】正在上传至 Gemini Files API…",
   gemini_processing: "【阶段二】Gemini 正在处理视频，请稍候…",
   analyzing: "【阶段二】教练正在观看并分析…",
-  rate_limited: "【限流】Gemini 免费额度紧张，正在自动排队重试…",
+  rate_limited: "【排队】Gemini 限流或服务繁忙，正在自动重试…",
 };
 
 const PHASE_LABELS: Record<string, string> = {

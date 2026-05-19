@@ -19,6 +19,7 @@ import {
 } from "./gemini-analyze";
 import {
   isGeminiRateLimitError,
+  isGeminiTransientError,
   parseGeminiRetrySeconds,
 } from "./gemini-retry";
 import { geminiPhase1Upload, geminiPhase2CheckReady } from "./gemini-phases";
@@ -231,15 +232,18 @@ export async function advanceAnalysisJob(jobId: string): Promise<void> {
     logGeminiError(`job/${jobId}`, err);
     const current = (await loadJob(jobId)) ?? job;
 
-    if (isGeminiRateLimitError(err)) {
+    if (isGeminiRateLimitError(err) || isGeminiTransientError(err)) {
       const waitSec = parseGeminiRetrySeconds(err);
+      const errorMsg = isGeminiTransientError(err)
+        ? `Gemini 服务繁忙（503），约 ${waitSec} 秒后自动重试…`
+        : `Gemini 频率限制，约 ${waitSec} 秒后自动重试…`;
       await persistJob({
         ...current,
         status: "rate_limited",
         analysisStarted: false,
         analysisStartedAt: undefined,
         retryAfter: new Date(Date.now() + waitSec * 1000).toISOString(),
-        error: `Gemini 频率限制，约 ${waitSec} 秒后自动重试…`,
+        error: errorMsg,
         updatedAt: new Date().toISOString(),
       });
       return;

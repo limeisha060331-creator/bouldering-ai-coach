@@ -8,8 +8,11 @@ import type { AnalysisDepth, AnalysisLocale } from "./types";
 import { logInfo } from "./gemini-log";
 import {
   isGeminiRateLimitError,
+  isGeminiRetryableError,
+  isGeminiTransientError,
   parseGeminiRetrySeconds,
   sleep,
+  transientBackoffSeconds,
 } from "./gemini-retry";
 import {
   geminiPhase1Upload,
@@ -86,6 +89,15 @@ export function mapGeminiError(err: unknown): { message: string; status: number 
     };
   }
 
+  if (isGeminiTransientError(err)) {
+    const model = getGeminiModelId();
+    return {
+      message:
+        `Gemini 模型「${model}」当前繁忙或临时不可用（503）。请 1～2 分钟后点击「使用当前视频再试」；若反复出现，可在 Vercel 将 GEMINI_MODEL 改为 gemini-3.1-flash-lite 后重新部署。`,
+      status: 503,
+    };
+  }
+
   return {
     message: `分析失败：${msg.slice(0, 200)}`,
     status: 500,
@@ -126,7 +138,7 @@ export async function runGeminiAnalysis(
     options?.prompt ??
     getAnalysisPrompt(depth, options?.locale ?? "zh");
 
-  const maxAttempts = 2;
+  const maxAttempts = 4;
   let lastError: unknown;
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -156,11 +168,16 @@ export async function runGeminiAnalysis(
       return text.trim();
     } catch (err) {
       lastError = err;
-      if (!isGeminiRateLimitError(err) || attempt >= maxAttempts) {
+      if (!isGeminiRetryableError(err) || attempt >= maxAttempts) {
         throw err;
       }
-      const waitSec = Math.min(parseGeminiRetrySeconds(err), 20);
-      logInfo("gemini", `429 限流，${waitSec}s 后同函数内重试`);
+      const waitSec = isGeminiRateLimitError(err)
+        ? Math.min(parseGeminiRetrySeconds(err), 25)
+        : transientBackoffSeconds(attempt);
+      logInfo(
+        "gemini",
+        `${isGeminiTransientError(err) ? "503/临时故障" : "429 限流"}，${waitSec}s 后重试 (${attempt}/${maxAttempts})`
+      );
       await sleep(waitSec * 1000);
     }
   }
