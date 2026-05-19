@@ -21,9 +21,11 @@ import {
 } from "@/lib/analysis-db";
 import {
   MAX_ANALYZE_BYTES,
+  MAX_ANALYZE_MB,
   MAX_SOURCE_BYTES,
   prepareVideoForUpload,
 } from "@/lib/compress-video";
+import { errorFromFetchJson, readFetchJson } from "@/lib/fetch-json";
 import { parseAnalysis } from "@/lib/parse-analysis";
 import { AnalysisPollError, pollUntilComplete } from "@/lib/poll-analysis";
 import type { AnalysisDepth, AnalysisLocale, AnalysisRecord } from "@/lib/types";
@@ -230,7 +232,7 @@ export default function Home() {
     }
 
     if (file.size > MAX_ANALYZE_BYTES) {
-      setError(t.stillLarge);
+      setError(formatStr(t.stillLarge, { analyzeMb: MAX_ANALYZE_MB }));
       return;
     }
 
@@ -265,15 +267,27 @@ export default function Home() {
         captureVideoThumbnail(file).catch(() => ""),
       ]);
 
-      let data = await res.json();
+      type AnalyzePostJson = {
+        error?: string;
+        retryable?: boolean;
+        async?: boolean;
+        jobId?: string;
+        id?: string;
+        estimatedSeconds?: number;
+        message?: string;
+        analysis?: string;
+      };
 
-      if (!res.ok) {
-        throw new AnalysisPollError(
-          data.error || (uiLocale === "zh" ? "分析失败" : "Analysis failed"),
-          Boolean(data.retryable),
-          0
+      const parsedRes = await readFetchJson<AnalyzePostJson>(res);
+      if (!parsedRes.ok || !parsedRes.data) {
+        const { message, retryable } = errorFromFetchJson(
+          parsedRes,
+          uiLocale === "zh" ? "分析失败" : "Analysis failed"
         );
+        throw new AnalysisPollError(message, retryable, 0);
       }
+
+      let data = parsedRes.data;
 
       if (data.async && data.jobId) {
         setPollStatus("uploaded");
@@ -513,7 +527,10 @@ export default function Home() {
               {compressing ? t.uploadCompress : t.uploadIdle}
             </span>
             <span className="mt-2 text-xs text-[var(--spa-text-muted)]">
-              {formatStr(t.uploadHint, { maxMb: MAX_SOURCE_BYTES / 1024 / 1024 })}
+              {formatStr(t.uploadHint, {
+                maxMb: MAX_SOURCE_BYTES / 1024 / 1024,
+                analyzeMb: MAX_ANALYZE_MB,
+              })}
             </span>
           </label>
           <input

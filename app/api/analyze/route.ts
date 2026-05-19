@@ -20,11 +20,10 @@ import {
 } from "@/lib/gemini-analyze";
 import type { AnalysisDepth, AnalysisLocale } from "@/lib/types";
 import { PROMPT_VERSION } from "@/lib/analyze-prompt";
+import { MAX_ANALYZE_BYTES, MAX_ANALYZE_MB } from "@/lib/upload-limits";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
-
-const MAX_BYTES = 10 * 1024 * 1024;
 
 function useAsyncPipeline(): boolean {
   return hasBlobStorage() || isMemoryJobStoreEnabled();
@@ -57,7 +56,9 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     logGeminiError("POST/formData", err);
     return NextResponse.json(
-      { error: "无法解析上传数据，请确认视频已压缩到 10MB 以内。" },
+      {
+        error: `无法解析上传数据，请确认视频已压缩到 ${MAX_ANALYZE_MB}MB 以内。`,
+      },
       { status: 400 }
     );
   }
@@ -79,10 +80,11 @@ export async function POST(request: NextRequest) {
   const locale: AnalysisLocale =
     formData.get("locale") === "en" ? "en" : "zh";
 
-  if (file.size > MAX_BYTES) {
+  if (file.size > MAX_ANALYZE_BYTES) {
     return NextResponse.json(
       {
-        error: `视频仍为 ${(file.size / 1024 / 1024).toFixed(1)}MB，超过 10MB 上限。请等待前端压缩完成或手动剪辑。`,
+        error: `视频仍为 ${(file.size / 1024 / 1024).toFixed(1)}MB，超过 ${MAX_ANALYZE_MB}MB 上限。请等待前端压缩完成或手动剪辑。`,
+        retryable: true,
       },
       { status: 413 }
     );

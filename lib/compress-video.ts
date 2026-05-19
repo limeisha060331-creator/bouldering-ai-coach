@@ -1,8 +1,10 @@
+import { MAX_ANALYZE_BYTES, MAX_ANALYZE_MB } from "./upload-limits";
+
 /** 允许用户选择的原始视频上限（前端会先压缩再上传） */
 export const MAX_SOURCE_BYTES = 200 * 1024 * 1024;
 
-/** 提交给后端的分析上限 */
-export const MAX_ANALYZE_BYTES = 10 * 1024 * 1024;
+/** 提交给后端的分析上限（与 Vercel 请求体限制对齐） */
+export { MAX_ANALYZE_BYTES, MAX_ANALYZE_MB };
 
 /** 分析用视频最长秒数（过长易超时） */
 export const MAX_DURATION_SEC = 90;
@@ -61,7 +63,9 @@ async function recordWithBitrate(
 
   if (!stream) {
     cleanup();
-    throw new Error("当前浏览器不支持视频压缩，请手动剪辑到 10MB 以内");
+    throw new Error(
+      `当前浏览器不支持视频压缩，请手动剪辑到 ${MAX_ANALYZE_MB}MB 以内`
+    );
   }
 
   try {

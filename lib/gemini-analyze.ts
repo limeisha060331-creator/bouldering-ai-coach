@@ -52,7 +52,7 @@ export function mapGeminiError(err: unknown): { message: string; status: number 
   ) {
     return {
       message:
-        "视频文件太大了！请剪辑成 10MB 以内的关键片段（那一挂、那一蹿）再上传。",
+        "视频文件太大了！请剪辑成 4MB 以内的关键片段（那一挂、那一蹿）再上传。",
       status: 413,
     };
   }

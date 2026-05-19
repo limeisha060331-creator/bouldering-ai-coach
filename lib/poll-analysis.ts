@@ -1,3 +1,5 @@
+import { errorFromFetchJson, readFetchJson } from "./fetch-json";
+
 const POLL_INTERVAL_MS = 3000;
 /** 含 429 冷却、Gemini 处理、卡死重试，需长于 3 分钟 */
 const MAX_POLL_MS = 360_000;
@@ -84,32 +86,47 @@ export async function pollUntilComplete(
       cache: "no-store",
       signal: options?.signal,
     });
-    const data = await res.json();
 
-    if (!res.ok) {
+    type StatusJson = {
+      status?: string;
+      error?: string;
+      retryAfter?: string;
+      analysis?: string;
+      retryable?: boolean;
+    };
+
+    const parsedRes = await readFetchJson<StatusJson>(res);
+    if (!parsedRes.ok || !parsedRes.data) {
+      const { message, retryable } = errorFromFetchJson(
+        parsedRes,
+        "查询分析状态失败"
+      );
       throw new AnalysisPollError(
-        data.error || "查询分析状态失败",
-        res.status >= 500 || res.status === 429,
+        message,
+        retryable,
         Date.now() - started
       );
     }
 
+    const data = parsedRes.data;
+
     const elapsedMs = Date.now() - started;
     const elapsedSec = Math.floor(elapsedMs / 1000);
+    const status = data.status ?? "uploaded";
     const baseHint =
-      data.status === "rate_limited" && data.error
+      status === "rate_limited" && data.error
         ? String(data.error)
-        : STATUS_HINTS[data.status] ?? "分析进行中…";
-    const hint = baseHint + estimateWaitHint(elapsedMs, data.status);
+        : STATUS_HINTS[status] ?? "分析进行中…";
+    const hint = baseHint + estimateWaitHint(elapsedMs, status);
 
     const meta: PollProgressMeta | undefined =
-      data.status === "rate_limited" && data.retryAfter
+      status === "rate_limited" && data.retryAfter
         ? { retryAfter: data.retryAfter as string }
         : undefined;
 
-    options?.onProgress?.(data.status, hint, elapsedSec, meta);
+    options?.onProgress?.(status, hint, elapsedSec, meta);
 
-    if (data.status === "completed" && data.analysis) {
+    if (status === "completed" && data.analysis) {
       return {
         id: jobId,
         jobId,
@@ -121,7 +138,7 @@ export async function pollUntilComplete(
       };
     }
 
-    if (data.status === "failed") {
+    if (status === "failed") {
       throw new AnalysisPollError(
         data.error || "分析失败",
         true,
