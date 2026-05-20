@@ -8,8 +8,10 @@ import type { AnalysisDepth, AnalysisLocale } from "./types";
 import { logInfo } from "./gemini-log";
 import {
   formatGeminiDailyQuotaMessage,
+  formatGeminiGenerateContentCooldownMessage,
   formatGeminiRpmRateLimitMessage,
   isGeminiDailyQuotaExceeded,
+  isGeminiDailyQuotaHardStop,
   isGeminiRpmRateLimit,
   isGeminiRetryableError,
   isGeminiTransientError,
@@ -50,7 +52,9 @@ export function mapGeminiError(err: unknown): { message: string; status: number 
 
   if (isGeminiDailyQuotaExceeded(err)) {
     return {
-      message: formatGeminiDailyQuotaMessage(err),
+      message: isGeminiDailyQuotaHardStop(err)
+        ? formatGeminiDailyQuotaMessage(err)
+        : formatGeminiGenerateContentCooldownMessage(err),
       status: 429,
     };
   }

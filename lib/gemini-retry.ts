@@ -10,8 +10,7 @@ export function isGeminiRateLimitError(err: unknown): boolean {
 }
 
 /**
- * 免费层「按模型每日 generateContent 次数」用尽。
- * 勿用宽泛的 "exceeded your current quota"——RPM 限流也会带这句。
+ * 报错涉及 generateContent 免费日配额（与 AI Studio 总 RPD 可能不是同一计数器）。
  */
 export function isGeminiDailyQuotaExceeded(err: unknown): boolean {
   const msg = err instanceof Error ? err.message : String(err);
@@ -24,6 +23,22 @@ export function isGeminiDailyQuotaExceeded(err: unknown): boolean {
     (/QuotaFailure/i.test(msg) &&
       /PerDay|free_tier|FreeTier|GenerateRequestsPerDay/i.test(msg))
   );
+}
+
+/** Google 建议等待超过 1 小时时，视为当日额度真正用尽 */
+export function isGeminiDailyQuotaHardStop(err: unknown): boolean {
+  if (!isGeminiDailyQuotaExceeded(err)) return false;
+  const raw = parseGeminiRetrySecondsRaw(err);
+  if (raw == null) return true;
+  return raw > 3600;
+}
+
+/** 从报错解析 retry in Xs（不封顶，用于判断是否硬失败） */
+export function parseGeminiRetrySecondsRaw(err: unknown): number | null {
+  const msg = err instanceof Error ? err.message : String(err);
+  const match = msg.match(/retry in (\d+(?:\.\d+)?)\s*s/i);
+  if (match) return Math.ceil(parseFloat(match[1]));
+  return null;
 }
 
 /** 免费档 RPM 过密（AI Studio 里常见 5 RPM） */
@@ -40,9 +55,19 @@ export function isGeminiRpmRateLimit(err: unknown): boolean {
 export function formatGeminiRpmRateLimitMessage(err: unknown): string {
   const waitSec = parseGeminiRetrySeconds(err);
   return (
-    `Gemini 请求过于频繁（免费档约 5 次/分钟，AI Studio 显示 RPM 未满日额度 RPD 时多为该项）。` +
+    `Gemini 请求过于频繁（免费档约 5 次/分钟）。` +
     `请等待约 ${waitSec} 秒后自动重试，分析过程中请勿连续点击。` +
     ` 用量： https://aistudio.google.com/rate-limit`
+  );
+}
+
+/** generateContent 配额冷却（RPD 未满也可能出现，会自动重试） */
+export function formatGeminiGenerateContentCooldownMessage(err: unknown): string {
+  const waitSec = parseGeminiRetrySeconds(err);
+  return (
+    `Gemini 视频分析接口（generateContent）触发免费配额限制，约 ${waitSec} 秒后自动重试。` +
+    `AI Studio 里的 RPD 与该项计数可能不一致；请保持页面打开、勿重复点击。` +
+    `若多次失败，可在 Google AI Studio 开通按量计费。`
   );
 }
 
@@ -55,13 +80,13 @@ export function formatGeminiDailyQuotaMessage(err: unknown): string {
   const msg = err instanceof Error ? err.message : String(err);
   const modelMatch = msg.match(/model:\s*([\w.-]+)/i);
   const limitMatch = msg.match(/limit:\s*(\d+)/i);
-  const model = modelMatch?.[1] ?? "当前模型";
+  const model = modelMatch?.[1] ?? "gemini-2.5-flash";
   const limit = limitMatch?.[1] ?? "20";
 
   return (
-    `Gemini 今日分析次数已达免费上限（${model} 的 generateContent 日配额约 ${limit} 次/天，以 AI Studio 中 RPD 为准）。` +
-    `若控制台显示 RPD 未满，请刷新后重试或查看是否误触 RPM（5 次/分钟）。` +
-    `也可在 [Google AI Studio](https://aistudio.google.com/apikey) 开通按量计费。用量： https://ai.dev/rate-limit`
+    `Gemini 视频分析（generateContent）今日免费次数已用尽（${model} 该项约 ${limit} 次/天）。` +
+    `这与 AI Studio 总 RPD 可能不同步；请明天再试，或开通按量计费后继续使用同一 Key。` +
+    ` https://aistudio.google.com/rate-limit`
   );
 }
 
@@ -85,19 +110,21 @@ export function isGeminiTransientError(err: unknown): boolean {
 import { isGeminiEmptyAnalysisError } from "./gemini-response-text";
 
 export function isGeminiRetryableError(err: unknown): boolean {
-  if (isGeminiDailyQuotaExceeded(err)) return false;
+  if (isGeminiDailyQuotaExceeded(err) && isGeminiDailyQuotaHardStop(err)) {
+    return false;
+  }
   return (
-    isGeminiTransientRateLimit(err) ||
+    isGeminiRateLimitError(err) ||
     isGeminiTransientError(err) ||
-    isGeminiEmptyAnalysisError(err)
+    isGeminiEmptyAnalysisError(err) ||
+    isGeminiDailyQuotaExceeded(err)
   );
 }
 
 /** 从 Gemini 报错中解析建议等待秒数，如 "retry in 29.35s" */
 export function parseGeminiRetrySeconds(err: unknown): number {
-  const msg = err instanceof Error ? err.message : String(err);
-  const match = msg.match(/retry in (\d+(?:\.\d+)?)\s*s/i);
-  if (match) return Math.min(120, Math.ceil(parseFloat(match[1])) + 3);
+  const raw = parseGeminiRetrySecondsRaw(err);
+  if (raw != null) return Math.min(120, raw + 3);
   if (isGeminiTransientError(err)) return 25;
   return 45;
 }

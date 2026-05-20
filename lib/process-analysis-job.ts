@@ -22,8 +22,10 @@ import {
 import { isGeminiEmptyAnalysisError } from "./gemini-response-text";
 import {
   formatGeminiDailyQuotaMessage,
+  formatGeminiGenerateContentCooldownMessage,
   formatGeminiRpmRateLimitMessage,
   isGeminiDailyQuotaExceeded,
+  isGeminiDailyQuotaHardStop,
   isGeminiRpmRateLimit,
   isGeminiRateLimitError,
   isGeminiTransientError,
@@ -109,17 +111,35 @@ async function persistGeminiError(
   if (!current) return;
 
   if (isGeminiDailyQuotaExceeded(err)) {
+    if (isGeminiDailyQuotaHardStop(err)) {
+      await persistJob(
+        withStatus(
+          {
+            ...current,
+            analysisStarted: false,
+            analysisStartedAt: undefined,
+            retryAfter: undefined,
+            dailyQuotaExhausted: true,
+            error: formatGeminiDailyQuotaMessage(err),
+          },
+          "failed"
+        )
+      );
+      return;
+    }
+
+    const waitSec = parseGeminiRetrySeconds(err);
     await persistJob(
       withStatus(
         {
           ...current,
           analysisStarted: false,
           analysisStartedAt: undefined,
-          retryAfter: undefined,
-          dailyQuotaExhausted: true,
-          error: formatGeminiDailyQuotaMessage(err),
+          dailyQuotaExhausted: false,
+          retryAfter: new Date(Date.now() + waitSec * 1000).toISOString(),
+          error: formatGeminiGenerateContentCooldownMessage(err),
         },
-        "failed"
+        "rate_limited"
       )
     );
     return;
