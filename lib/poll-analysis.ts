@@ -128,7 +128,7 @@ export async function pollUntilComplete(
     }
 
     const parsedRes = await readFetchJson<StatusJson>(res);
-    if (!parsedRes.ok || !parsedRes.data) {
+    if (parsedRes.parseError || !parsedRes.ok || !parsedRes.data) {
       const { message, retryable } = errorFromFetchJson(
         parsedRes,
         "查询分析状态失败"
@@ -186,7 +186,7 @@ export async function pollUntilComplete(
   throw new AnalysisPollError(
     `分析超时（已等待 ${Math.round(MAX_POLL_MS / 1000)} 秒，任务 ${jobId}）。` +
       `常见原因：Gemini 限流、视频处理排队，或深度分析耗时过长。` +
-      `建议：① 改用「轻量」深度；② 视频压到 4MB、30 秒内；③ 等待 2 分钟后点「使用当前视频再试」；` +
+      `建议：① 改用「轻量」深度；② 视频压到 3.5MB、30 秒内；③ 等待 2 分钟后点「使用当前视频再试」；` +
       `④ 确认 Vercel 中 GEMINI_MODEL=gemini-2.5-flash。可在 Logs 搜索 jobId=${jobId}。`,
     true,
     MAX_POLL_MS

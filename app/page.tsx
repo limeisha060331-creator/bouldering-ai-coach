@@ -284,7 +284,7 @@ export default function Home() {
       };
 
       const parsedRes = await readFetchJson<AnalyzePostJson>(res);
-      if (!parsedRes.ok || !parsedRes.data) {
+      if (parsedRes.parseError || !parsedRes.ok || !parsedRes.data) {
         const { message, retryable } = errorFromFetchJson(
           parsedRes,
           uiLocale === "zh" ? "分析失败" : "Analysis failed"

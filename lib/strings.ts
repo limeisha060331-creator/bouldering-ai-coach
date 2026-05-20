@@ -90,7 +90,7 @@ export const STRINGS: Record<UiLocale, CopyBlock> = {
     uploadHint: "最大 {maxMb}MB · 自动压缩至 {analyzeMb}MB",
     tipTitle: "剪辑建议",
     tipBody:
-      "建议只保留关键的一挂或一跃，4MB 以内、90 秒内的片段分析更精准（适配线上服务器上传限制）。",
+      "建议只保留关键的一挂或一跃，3.5MB 以内、90 秒内的片段分析更精准（适配线上服务器上传限制）。",
     startAnalysis: "开始分析",
     historyTitle: "分析历史",
     historyEmpty: "暂无记录",
@@ -165,7 +165,7 @@ export const STRINGS: Record<UiLocale, CopyBlock> = {
     uploadHint: "Up to {maxMb}MB · auto-compress to {analyzeMb}MB",
     tipTitle: "Editing tip",
     tipBody:
-      "Keep only the crux move; clips under 4MB and ~90s work best on production hosting.",
+      "Keep only the crux move; clips under 3.5MB and ~90s work best on production hosting.",
     startAnalysis: "Start analysis",
     historyTitle: "History",
     historyEmpty: "No records yet",

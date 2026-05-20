@@ -8,14 +8,16 @@ export function humanizeNonJsonBody(
     status === 413 ||
     lower.includes("request entity too large") ||
     lower.includes("payload too large") ||
-    lower.includes("body exceeded")
+    lower.includes("body exceeded") ||
+    lower.includes("content too large") ||
+    lower.includes("max body")
   ) {
     return (
-      "上传体积超过服务器限制（Vercel 约 4.5MB）。请使用更短片段或等待前端压缩到 4MB 以内后再试。"
+      "上传体积超过服务器限制（Vercel 约 4.5MB，请压到 3.5MB 以内）。请用更短片段或等待前端压缩完成后再试。"
     );
   }
   if (status === 502 || status === 503 || status === 504) {
-    if (lower.includes("blob") || lower.includes("bLOB_READ_WRITE")) {
+    if (lower.includes("blob") || lower.includes("blob_read_write")) {
       return "未配置 Vercel Blob。请在 Vercel → Storage 创建 Blob 并绑定 BLOB_READ_WRITE_TOKEN 后重新部署。";
     }
     if (status === 504) {
@@ -35,6 +37,33 @@ export function humanizeNonJsonBody(
   }
   const trimmed = text.trim().slice(0, 280);
   return trimmed || `请求失败（HTTP ${status}）`;
+}
+
+/** 从响应正文推断 HTTP 语义（网关常返回 200/502 + 纯文本） */
+export function inferStatusFromBody(status: number, text: string): number {
+  const lower = text.toLowerCase();
+  if (
+    lower.includes("request entity too large") ||
+    lower.includes("payload too large") ||
+    lower.includes("body exceeded")
+  ) {
+    return 413;
+  }
+  if (lower.includes("timeout") || lower.includes("timed out")) {
+    return 504;
+  }
+  return status || 500;
+}
+
+export function isLikelyJsonParseError(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err);
+  const lower = msg.toLowerCase();
+  return (
+    lower.includes("unexpected token") ||
+    lower.includes("is not valid json") ||
+    lower.includes("json.parse") ||
+    (lower.includes("request en") && lower.includes("json"))
+  );
 }
 
 export type ParsedFetchJson<T> = {
@@ -72,9 +101,10 @@ export async function readFetchJson<T extends Record<string, unknown>>(
       parseError: false,
     };
   } catch {
+    const status = inferStatusFromBody(res.status, rawText);
     return {
-      ok: res.ok,
-      status: res.status,
+      ok: false,
+      status,
       data: null,
       rawText,
       parseError: true,
@@ -99,6 +129,13 @@ export function explainFetchError(
   const msg = err instanceof Error ? err.message : String(err);
   const lower = msg.toLowerCase();
 
+  if (isLikelyJsonParseError(err) || lower.includes("request entity too large")) {
+    return {
+      message: humanizeNonJsonBody(413, msg),
+      retryable: true,
+    };
+  }
+
   if (
     lower.includes("failed to fetch") ||
     lower.includes("networkerror") ||
@@ -119,8 +156,8 @@ export function explainFetchError(
     return {
       message:
         locale === "zh"
-          ? "无法连接服务器（网络请求失败）。请检查：① 网络/Wi‑Fi 是否稳定；② 分析过程中保持本页在前台、勿切换应用；③ 视频是否已压缩到 4MB 以内；④ 若使用 VPN/代理，可尝试关闭后重试。稍等片刻再点「使用当前视频再试」。"
-          : "Could not reach the server. Check your connection, keep this tab in the foreground, ensure the clip is under 4MB, then retry.",
+          ? "无法连接服务器（网络请求失败）。请检查：① 网络/Wi‑Fi 是否稳定；② 分析过程中保持本页在前台、勿切换应用；③ 视频是否已压缩到 3.5MB 以内；④ 若使用 VPN/代理，可尝试关闭后重试。稍等片刻再点「使用当前视频再试」。"
+          : "Could not reach the server. Check your connection, keep this tab in the foreground, ensure the clip is under 3.5MB, then retry.",
       retryable: true,
     };
   }
@@ -147,6 +184,16 @@ export function errorFromFetchJson<T extends { error?: string; retryable?: boole
     };
   }
   const data = parsed.data;
+  if (!parsed.ok) {
+    return {
+      message: data.error || humanizeNonJsonBody(parsed.status, parsed.rawText) || fallback,
+      retryable:
+        Boolean(data.retryable) ||
+        parsed.status >= 500 ||
+        parsed.status === 429 ||
+        parsed.status === 413,
+    };
+  }
   return {
     message: data.error || fallback,
     retryable: Boolean(data.retryable) || parsed.status >= 500 || parsed.status === 429,

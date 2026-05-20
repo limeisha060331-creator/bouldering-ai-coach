@@ -92,7 +92,7 @@ export function extractAnalysisTextFromResponse(
   }
 
   throw new GeminiEmptyAnalysisError(
-    `模型未返回分析文本（${detail}）。请保持视频在 4MB、90 秒内，或切换「轻量」深度后重试。`,
+    `模型未返回分析文本（${detail}）。请保持视频在 3.5MB、90 秒内，或切换「轻量」深度后重试。`,
     true
   );
 }
