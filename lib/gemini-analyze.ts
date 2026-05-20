@@ -8,7 +8,9 @@ import type { AnalysisDepth, AnalysisLocale } from "./types";
 import { logInfo } from "./gemini-log";
 import {
   formatGeminiDailyQuotaMessage,
+  formatGeminiRpmRateLimitMessage,
   isGeminiDailyQuotaExceeded,
+  isGeminiRpmRateLimit,
   isGeminiRetryableError,
   isGeminiTransientError,
   isGeminiTransientRateLimit,
@@ -53,6 +55,13 @@ export function mapGeminiError(err: unknown): { message: string; status: number 
     };
   }
 
+  if (isGeminiRpmRateLimit(err)) {
+    return {
+      message: formatGeminiRpmRateLimitMessage(err),
+      status: 429,
+    };
+  }
+
   if (
     lower.includes("429") ||
     lower.includes("quota") ||
@@ -60,8 +69,7 @@ export function mapGeminiError(err: unknown): { message: string; status: number 
     lower.includes("resource exhausted")
   ) {
     return {
-      message:
-        "Gemini 请求过于频繁（短时限流）。请等待约 1 分钟后点击「使用当前视频再试」，或改用「轻量」深度减少调用压力。",
+      message: formatGeminiRpmRateLimitMessage(err),
       status: 429,
     };
   }

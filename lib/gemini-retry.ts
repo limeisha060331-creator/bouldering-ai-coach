@@ -9,14 +9,40 @@ export function isGeminiRateLimitError(err: unknown): boolean {
   );
 }
 
-/** 免费层「按模型每日 generateContent 次数」用尽（重试无效，需换日/换模型/开通计费） */
+/**
+ * 免费层「按模型每日 generateContent 次数」用尽。
+ * 勿用宽泛的 "exceeded your current quota"——RPM 限流也会带这句。
+ */
 export function isGeminiDailyQuotaExceeded(err: unknown): boolean {
   const msg = err instanceof Error ? err.message : String(err);
+  if (/GenerateRequestsPerMinute|RequestsPerMinute|per minute/i.test(msg)) {
+    return false;
+  }
   return (
     /generate_content_free_tier/i.test(msg) ||
     /GenerateRequestsPerDay/i.test(msg) ||
-    /exceeded your current quota/i.test(msg) ||
-    (/QuotaFailure/i.test(msg) && /PerDay|free_tier|FreeTier/i.test(msg))
+    (/QuotaFailure/i.test(msg) &&
+      /PerDay|free_tier|FreeTier|GenerateRequestsPerDay/i.test(msg))
+  );
+}
+
+/** 免费档 RPM 过密（AI Studio 里常见 5 RPM） */
+export function isGeminiRpmRateLimit(err: unknown): boolean {
+  if (isGeminiDailyQuotaExceeded(err)) return false;
+  const msg = err instanceof Error ? err.message : String(err);
+  return (
+    isGeminiRateLimitError(err) &&
+    (/GenerateRequestsPerMinute|RequestsPerMinute/i.test(msg) ||
+      /retry in \d/i.test(msg))
+  );
+}
+
+export function formatGeminiRpmRateLimitMessage(err: unknown): string {
+  const waitSec = parseGeminiRetrySeconds(err);
+  return (
+    `Gemini 请求过于频繁（免费档约 5 次/分钟，AI Studio 显示 RPM 未满日额度 RPD 时多为该项）。` +
+    `请等待约 ${waitSec} 秒后自动重试，分析过程中请勿连续点击。` +
+    ` 用量： https://aistudio.google.com/rate-limit`
   );
 }
 
@@ -33,9 +59,9 @@ export function formatGeminiDailyQuotaMessage(err: unknown): string {
   const limit = limitMatch?.[1] ?? "20";
 
   return (
-    `今日 Gemini 免费额度已用完（${model} 每天约 ${limit} 次分析请求，含失败重试也会扣次数）。` +
-    `请明天再试，或在 [Google AI Studio](https://aistudio.google.com/apikey) 为项目开通按量计费后继续使用同一 Key。` +
-    `请在 AI Studio 确认有额度的模型，并在 Vercel 设置 GEMINI_MODEL=gemini-2.5-flash（勿用 2.0 系列，常为 0/0）。用量： https://ai.dev/rate-limit`
+    `Gemini 今日分析次数已达免费上限（${model} 的 generateContent 日配额约 ${limit} 次/天，以 AI Studio 中 RPD 为准）。` +
+    `若控制台显示 RPD 未满，请刷新后重试或查看是否误触 RPM（5 次/分钟）。` +
+    `也可在 [Google AI Studio](https://aistudio.google.com/apikey) 开通按量计费。用量： https://ai.dev/rate-limit`
   );
 }
 

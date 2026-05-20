@@ -22,7 +22,9 @@ import {
 import { isGeminiEmptyAnalysisError } from "./gemini-response-text";
 import {
   formatGeminiDailyQuotaMessage,
+  formatGeminiRpmRateLimitMessage,
   isGeminiDailyQuotaExceeded,
+  isGeminiRpmRateLimit,
   isGeminiRateLimitError,
   isGeminiTransientError,
   parseGeminiRetrySeconds,
@@ -135,7 +137,9 @@ async function persistGeminiError(
       ? `Gemini 服务繁忙（503），约 ${waitSec} 秒后自动重试…`
       : isGeminiEmptyAnalysisError(err)
         ? `模型未返回正文，约 ${waitSec} 秒后自动重试…`
-        : `Gemini 短时限流，约 ${waitSec} 秒后自动重试…`;
+        : isGeminiRpmRateLimit(err)
+          ? formatGeminiRpmRateLimitMessage(err)
+          : `Gemini 短时限流，约 ${waitSec} 秒后自动重试…`;
     await persistJob(
       withStatus(
         {
