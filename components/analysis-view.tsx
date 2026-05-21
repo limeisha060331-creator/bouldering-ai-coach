@@ -99,8 +99,14 @@ export function AnalysisView({
     setPdfBusy(true);
     try {
       await downloadAnalysisPdf(pdfRef.current, record.fileName);
-    } catch {
-      alert(uiLocale === "zh" ? "PDF 生成失败，请重试" : "PDF export failed");
+    } catch (e) {
+      console.error("[pdf]", e);
+      const detail = e instanceof Error ? e.message : "";
+      alert(
+        uiLocale === "zh"
+          ? `PDF 生成失败${detail ? `：${detail}` : "，请用 Chrome/Edge 桌面浏览器重试"}`
+          : `PDF export failed${detail ? `: ${detail}` : ". Try Chrome/Edge on desktop."}`
+      );
     } finally {
       setPdfBusy(false);
     }

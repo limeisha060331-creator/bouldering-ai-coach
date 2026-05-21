@@ -13,7 +13,7 @@ function PdfSectionTitle({ children }: { children: ReactNode }) {
   return (
     <h2
       className="border-b-2 border-[#1a1917] pb-2 font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-[#6b6560]"
-      style={{ fontFamily: "var(--font-mono), ui-monospace, monospace" }}
+      style={{ fontFamily: 'ui-monospace, "Menlo", "Consolas", monospace' }}
     >
       {children}
     </h2>
@@ -29,7 +29,8 @@ function PdfPanel({
 }) {
   return (
     <div
-      className={`border-2 border-[#1a1917] bg-white p-4 shadow-[4px_4px_0_#1a1917] ${className}`}
+      className={`border-2 border-[#1a1917] bg-white p-4 ${className}`}
+      style={{ boxShadow: "4px 4px 0 #1a1917" }}
     >
       {children}
     </div>
@@ -59,18 +60,18 @@ export const AnalysisPdfTemplate = forwardRef<HTMLDivElement, Props>(
     return (
       <div
         ref={ref}
-        className="pointer-events-none fixed left-[-9999px] top-0 z-[-1] w-[210mm] bg-[#f5f3ef] text-[#0a0a0a]"
+        data-pdf-root
+        className="pointer-events-none fixed left-0 top-0 z-[-1] w-[210mm] opacity-0 bg-[#f5f3ef] text-[#0a0a0a]"
         style={{
-          fontFamily:
-            'var(--font-dm-sans), "PingFang SC", "Microsoft YaHei", sans-serif',
+          fontFamily: '"PingFang SC", "Microsoft YaHei", system-ui, sans-serif',
         }}
         aria-hidden
       >
         {/* 品牌顶栏 — 与首页橙区一致 */}
         <header className="border-b-2 border-[#1a1917] bg-[#ff5c1a] px-10 py-8">
           <p
-            className="font-mono text-[10px] font-bold tracking-[0.28em] text-[#0a0a0a]/70"
-            style={{ fontFamily: "var(--font-mono), ui-monospace, monospace" }}
+            className="font-mono text-[10px] font-bold tracking-[0.28em] text-[#3d3a36]"
+            style={{ fontFamily: 'ui-monospace, "Menlo", "Consolas", monospace' }}
           >
             BOULDERING · AI
           </p>
@@ -84,8 +85,8 @@ export const AnalysisPdfTemplate = forwardRef<HTMLDivElement, Props>(
               </p>
             </div>
             <p
-              className="shrink-0 font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-[#0a0a0a]/80"
-              style={{ fontFamily: "var(--font-mono), ui-monospace, monospace" }}
+              className="shrink-0 font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-[#3d3a36]"
+              style={{ fontFamily: 'ui-monospace, "Menlo", "Consolas", monospace' }}
             >
               教练报告
             </p>
@@ -97,7 +98,7 @@ export const AnalysisPdfTemplate = forwardRef<HTMLDivElement, Props>(
           <PdfPanel>
             <p
               className="font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-[#6b6560]"
-              style={{ fontFamily: "var(--font-mono), ui-monospace, monospace" }}
+              style={{ fontFamily: 'ui-monospace, "Menlo", "Consolas", monospace' }}
             >
               分析对象
             </p>
@@ -116,14 +117,17 @@ export const AnalysisPdfTemplate = forwardRef<HTMLDivElement, Props>(
           {(data.score || data.highlight) && (
             <div className="flex flex-wrap items-stretch gap-4">
               {data.score && (
-                <div className="flex h-[4.5rem] w-[4.5rem] shrink-0 flex-col items-center justify-center border-2 border-[#1a1917] bg-[#ff5c1a] shadow-[3px_3px_0_#1a1917]">
+                <div
+                  className="flex h-[4.5rem] w-[4.5rem] shrink-0 flex-col items-center justify-center border-2 border-[#1a1917] bg-[#ff5c1a]"
+                  style={{ boxShadow: "3px 3px 0 #1a1917" }}
+                >
                   <span className="text-2xl font-black tabular-nums leading-none">
                     {data.score.split("/")[0]?.trim()}
                   </span>
                   <span
-                    className="mt-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-[#0a0a0a]/75"
+                    className="mt-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-[#3d3a36]"
                     style={{
-                      fontFamily: "var(--font-mono), ui-monospace, monospace",
+                      fontFamily: 'ui-monospace, "Menlo", "Consolas", monospace',
                     }}
                   >
                     / 100
@@ -131,11 +135,14 @@ export const AnalysisPdfTemplate = forwardRef<HTMLDivElement, Props>(
                 </div>
               )}
               {data.highlight && (
-                <div className="min-w-[12rem] flex-1 border-2 border-[#1a1917] bg-white px-5 py-4 shadow-[4px_4px_0_#1a1917]">
+                <div
+                  className="min-w-[12rem] flex-1 border-2 border-[#1a1917] bg-white px-5 py-4"
+                  style={{ boxShadow: "4px 4px 0 #1a1917" }}
+                >
                   <p
                     className="font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-[#6b6560]"
                     style={{
-                      fontFamily: "var(--font-mono), ui-monospace, monospace",
+                      fontFamily: 'ui-monospace, "Menlo", "Consolas", monospace',
                     }}
                   >
                     教练金句
@@ -227,8 +234,8 @@ export const AnalysisPdfTemplate = forwardRef<HTMLDivElement, Props>(
 
         <footer className="border-t-2 border-[#1a1917] bg-[#0a0a0a] px-10 py-4">
           <p
-            className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-white/70"
-            style={{ fontFamily: "var(--font-mono), ui-monospace, monospace" }}
+            className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-[#cccccc]"
+            style={{ fontFamily: 'ui-monospace, "Menlo", "Consolas", monospace' }}
           >
             仅供训练参考 · 非医疗或现场安全建议 · CRUX 抱石 AI 教练
           </p>
