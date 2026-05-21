@@ -1,11 +1,15 @@
-import type { AnalysisRecord, StructuredReport } from "./types";
+import type { AnalysisRecord, ImprovementBlock, StructuredReport } from "./types";
 import { parseAnalysis } from "./parse-analysis";
 
 export const PDF_SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
   "https://bouldering-ai-coach.vercel.app";
 
-/** 摘取 1～2 句，控制长度，用于填满单页 PDF */
+function stripMd(s: string): string {
+  return s.replace(/\*\*/g, "").trim();
+}
+
+/** 摘取 1～2 句，控制长度 */
 export function summarizeParagraph(text: string, maxLen: number): string {
   const t = text.replace(/\s+/g, " ").trim();
   if (!t) return "";
@@ -24,85 +28,152 @@ export function summarizeParagraph(text: string, maxLen: number): string {
   return `${out.slice(0, maxLen - 1)}…`;
 }
 
-function parseNumberedBlock(raw: string): { label: string; body: string } | null {
-  const oneLine = raw.replace(/\s+/g, " ").trim();
-  const m = oneLine.match(/^(\d+)[.、)\]]\s*([^：:]+)[：:]\s*(.+)$/);
-  if (m) return { label: m[2].trim(), body: m[3].trim() };
-  const m2 = oneLine.match(/^(\d+)[.、)\]]\s*(.+)$/);
-  if (m2) {
-    const rest = m2[2].trim();
-    const colon = rest.indexOf("：") >= 0 ? rest.indexOf("：") : rest.indexOf(":");
-    if (colon > 0) {
-      return {
-        label: rest.slice(0, colon).trim(),
-        body: rest.slice(colon + 1).trim(),
-      };
+type DimensionGroup = { label: string; points: string[] };
+
+/** 把扁平 bullet 列表合并为「标题 + 子要点」结构（与网站展示一致） */
+function buildDimensionGroups(bullets: string[]): DimensionGroup[] {
+  const groups: DimensionGroup[] = [];
+  let current: DimensionGroup | null = null;
+
+  const flush = () => {
+    if (current && (current.label || current.points.length > 0)) {
+      groups.push(current);
     }
-    return { label: rest, body: "" };
+    current = null;
+  };
+
+  for (const raw of bullets) {
+    const line = stripMd(raw.replace(/^\s*[-*•]\s*/, "").trim());
+    if (!line || /^核心维度/.test(line)) continue;
+
+    const withBody = line.match(
+      /^(\d+)[.、．)\]]\s*(.+?)[：:]\s*(.+)$/
+    );
+    const titleOnly = line.match(/^(\d+)[.、．)\]]\s*(.+?)[：:]\s*$/);
+    const titleNoColon = line.match(/^(\d+)[.、．)\]]\s*(.+)$/);
+
+    if (withBody) {
+      flush();
+      current = {
+        label: withBody[2].trim(),
+        points: [withBody[3].trim()],
+      };
+      continue;
+    }
+
+    if (titleOnly) {
+      flush();
+      current = { label: titleOnly[2].trim(), points: [] };
+      continue;
+    }
+
+    if (titleNoColon) {
+      const rest = titleNoColon[2].trim();
+      const colonAt =
+        rest.indexOf("：") >= 0 ? rest.indexOf("：") : rest.indexOf(":");
+      if (colonAt > 0 && colonAt < 40) {
+        flush();
+        current = {
+          label: rest.slice(0, colonAt).trim(),
+          points: [rest.slice(colonAt + 1).trim()].filter(Boolean),
+        };
+        continue;
+      }
+    }
+
+    if (current) {
+      current.points.push(line);
+    } else {
+      flush();
+      current = { label: "", points: [line] };
+    }
   }
-  return null;
+
+  flush();
+  return groups;
 }
 
-export type PdfDimensionItem = { label?: string; text: string };
-export type PdfImprovementItem = { title: string; text: string };
+export type PdfDimensionItem = { label: string; text: string };
 
 export function summarizeDimensions(
   structured: StructuredReport
 ): PdfDimensionItem[] {
+  const groups = buildDimensionGroups(structured.dimensionBullets);
   const items: PdfDimensionItem[] = [];
-  const maxItems = 4;
-  const lineMax = 108;
 
-  for (const raw of structured.dimensionBullets) {
-    const parsed = parseNumberedBlock(raw);
-    if (parsed) {
-      const text = parsed.body
-        ? summarizeParagraph(parsed.body, lineMax)
-        : summarizeParagraph(parsed.label, lineMax);
-      items.push({ label: parsed.label, text });
+  for (const g of groups.slice(0, 4)) {
+    const label = g.label.trim();
+    const bodySource = g.points.length > 0 ? g.points.join(" ") : label;
+    const text = summarizeParagraph(bodySource, label ? 118 : 130);
+
+    if (label) {
+      items.push({ label, text });
     } else {
-      items.push({ text: summarizeParagraph(raw, lineMax) });
+      items.push({ label: "", text });
     }
-    if (items.length >= maxItems) break;
   }
 
   if (items.length === 0 && structured.dimensionSummary) {
     const chunks = structured.dimensionSummary
       .split(/\n+/)
-      .map((s) => s.trim())
+      .map((s) => stripMd(s.trim()))
       .filter(Boolean);
-    for (const chunk of chunks) {
-      const parsed = parseNumberedBlock(chunk);
-      if (parsed) {
+    for (const chunk of chunks.slice(0, 4)) {
+      const m = chunk.match(/^(\d+)[.、．)\]]\s*(.+?)[：:]\s*(.+)$/);
+      if (m) {
         items.push({
-          label: parsed.label,
-          text: summarizeParagraph(parsed.body || parsed.label, lineMax),
+          label: m[2].trim(),
+          text: summarizeParagraph(m[3], 118),
         });
       } else {
-        items.push({ text: summarizeParagraph(chunk, lineMax) });
+        items.push({ label: "", text: summarizeParagraph(chunk, 130) });
       }
-      if (items.length >= maxItems) break;
     }
   }
 
   return items;
 }
 
+export type PdfImprovementItem = { title: string; text: string };
+
+function summarizeOneImprovement(b: ImprovementBlock): PdfImprovementItem {
+  const title = b.title.replace(/^\d+[.、．)\]]\s*/, "").trim();
+
+  if (b.practice && b.strength) {
+    return {
+      title,
+      text: `练习：${summarizeParagraph(b.practice, 58)}；力量：${summarizeParagraph(b.strength, 48)}`,
+    };
+  }
+  if (b.practice) {
+    return { title, text: `练习：${summarizeParagraph(b.practice, 105)}` };
+  }
+  if (b.strength) {
+    return { title, text: `力量：${summarizeParagraph(b.strength, 105)}` };
+  }
+  const line = b.lines.find((l) => l.trim().length > 8);
+  if (line) {
+    return { title, text: summarizeParagraph(line, 105) };
+  }
+  return { title, text: summarizeParagraph(title, 80) };
+}
+
 export function summarizeImprovements(
   structured: StructuredReport
 ): PdfImprovementItem[] {
-  return structured.improvementBlocks.slice(0, 3).map((b) => {
-    const parts = [
-      b.practice?.trim(),
-      b.strength?.trim(),
-      ...b.lines.map((l) => l.trim()).filter(Boolean),
-    ].filter(Boolean) as string[];
-    const source = parts.join(" ") || b.title;
-    return {
-      title: b.title.replace(/^\d+[.、)\]]\s*/, "").trim(),
-      text: summarizeParagraph(source, 100),
-    };
-  });
+  const blocks = structured.improvementBlocks.slice(0, 3);
+  if (blocks.length > 0) {
+    return blocks.map(summarizeOneImprovement);
+  }
+  if (structured.improvementIntro) {
+    return [
+      {
+        title: "改进方向",
+        text: summarizeParagraph(structured.improvementIntro, 110),
+      },
+    ];
+  }
+  return [];
 }
 
 export function formatPdfVideoTime(createdAt: string): string {
@@ -117,6 +188,7 @@ export function formatPdfVideoTime(createdAt: string): string {
 
 export type PdfContent = {
   videoLabel: string;
+  timeLabel: string;
   gradeLine: string | null;
   score: number | null;
   highlight: string | null;
@@ -143,17 +215,18 @@ export function buildPdfContent(
 
   return {
     videoLabel: idx != null ? `视频 ${String(idx).padStart(2, "0")}` : "视频 —",
+    timeLabel: formatPdfVideoTime(record.createdAt),
     gradeLine: gradeParts.length > 0 ? gradeParts.join(" · ") : null,
     score: record.score ?? parsed.score,
     highlight: record.highlight
-      ? summarizeParagraph(record.highlight, 150)
+      ? summarizeParagraph(record.highlight, 140)
       : parsed.highlight
-        ? summarizeParagraph(parsed.highlight, 150)
+        ? summarizeParagraph(parsed.highlight, 140)
         : null,
     dimensions: summarizeDimensions(structured),
     improvements: summarizeImprovements(structured),
     overall: structured.overallAdvice
-      ? summarizeParagraph(structured.overallAdvice, 130)
+      ? summarizeParagraph(structured.overallAdvice, 110)
       : null,
   };
 }

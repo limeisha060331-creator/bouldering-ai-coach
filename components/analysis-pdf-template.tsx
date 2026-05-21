@@ -77,6 +77,7 @@ export const AnalysisPdfTemplate = forwardRef<HTMLDivElement, Props>(
 
     const metaLine = [
       data.videoLabel,
+      data.timeLabel,
       data.gradeLine,
       data.score != null ? `评分 ${data.score}/100` : null,
     ]
@@ -171,9 +172,10 @@ export const AnalysisPdfTemplate = forwardRef<HTMLDivElement, Props>(
             flex: 1,
             display: "flex",
             flexDirection: "column",
-            padding: "20px 36px 16px",
+            justifyContent: "flex-start",
+            padding: "18px 36px 14px",
             minHeight: 0,
-            gap: 16,
+            gap: 14,
           }}
         >
           {data.highlight && (
@@ -211,26 +213,18 @@ export const AnalysisPdfTemplate = forwardRef<HTMLDivElement, Props>(
           )}
 
           {data.dimensions.length > 0 && (
-            <section
-              style={{
-                flex: 1,
-                display: "flex",
-                flexDirection: "column",
-                minHeight: 0,
-              }}
-            >
+            <section style={{ flexShrink: 0 }}>
               <PdfSectionHeading>核心维度</PdfSectionHeading>
               <ul
                 style={{
-                  flex: 1,
                   margin: 0,
-                  padding: "14px 16px",
+                  padding: "12px 14px",
                   listStyle: "none",
                   border: `2px solid ${C.ink}`,
                   backgroundColor: C.surface,
                   display: "flex",
                   flexDirection: "column",
-                  justifyContent: "space-evenly",
+                  gap: 12,
                 }}
               >
                 {data.dimensions.map((d, i) => (
@@ -239,9 +233,7 @@ export const AnalysisPdfTemplate = forwardRef<HTMLDivElement, Props>(
                     style={{
                       display: "flex",
                       gap: 8,
-                      fontSize: 13,
-                      lineHeight: 1.42,
-                      color: C.text,
+                      alignItems: "flex-start",
                     }}
                   >
                     <span
@@ -250,20 +242,51 @@ export const AnalysisPdfTemplate = forwardRef<HTMLDivElement, Props>(
                         fontWeight: 900,
                         color: C.orange,
                         fontSize: 14,
+                        lineHeight: 1.35,
                       }}
                     >
                       ▸
                     </span>
-                    <span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
                       {d.label ? (
                         <>
-                          <span style={{ fontWeight: 900 }}>{d.label}</span>
-                          <span style={{ color: C.muted }}> — {d.text}</span>
+                          <p
+                            style={{
+                              margin: 0,
+                              fontSize: 13,
+                              fontWeight: 900,
+                              lineHeight: 1.35,
+                              color: C.text,
+                            }}
+                          >
+                            {d.label}
+                          </p>
+                          <p
+                            style={{
+                              margin: "5px 0 0",
+                              fontSize: 12,
+                              fontWeight: 400,
+                              lineHeight: 1.42,
+                              color: C.muted,
+                            }}
+                          >
+                            {d.text}
+                          </p>
                         </>
                       ) : (
-                        d.text
+                        <p
+                          style={{
+                            margin: 0,
+                            fontSize: 12,
+                            fontWeight: 400,
+                            lineHeight: 1.42,
+                            color: C.text,
+                          }}
+                        >
+                          {d.text}
+                        </p>
                       )}
-                    </span>
+                    </div>
                   </li>
                 ))}
               </ul>
@@ -271,21 +294,12 @@ export const AnalysisPdfTemplate = forwardRef<HTMLDivElement, Props>(
           )}
 
           {data.improvements.length > 0 && (
-            <section
-              style={{
-                flex: 1,
-                display: "flex",
-                flexDirection: "column",
-                minHeight: 0,
-              }}
-            >
+            <section style={{ flexShrink: 0 }}>
               <PdfSectionHeading>改进要点</PdfSectionHeading>
               <div
                 style={{
-                  flex: 1,
                   display: "flex",
                   flexDirection: "column",
-                  justifyContent: "space-evenly",
                   gap: 10,
                 }}
               >
