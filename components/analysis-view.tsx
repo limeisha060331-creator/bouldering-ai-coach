@@ -215,7 +215,11 @@ export function AnalysisView({
                 <button
                   type="button"
                   onClick={() => togglePin(i)}
-                  className="mt-3 shrink-0 rounded-lg border border-[var(--spa-border-subtle)] p-2 text-[var(--spa-text-muted)] transition hover:border-[var(--spa-border)] hover:text-[var(--spa-text)]"
+                  className={`mt-3 shrink-0 rounded-lg border p-2 transition ${
+                    pinned.has(i)
+                      ? "border-[var(--crux-accent)] bg-[#fff0e8] text-[var(--crux-accent)]"
+                      : "border-[var(--spa-border-subtle)] text-[#ff5722]/50 hover:border-[var(--crux-accent)] hover:bg-[#fff0e8] hover:text-[var(--crux-accent)]"
+                  }`}
                   aria-pressed={pinned.has(i)}
                   title={pinned.has(i) ? t.unpinSegment : t.pinSegment}
                 >

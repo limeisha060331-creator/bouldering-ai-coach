@@ -77,8 +77,13 @@ export const AnalysisPdfTemplate = forwardRef<HTMLDivElement, Props>(
   function AnalysisPdfTemplate({ record, videoIndex = null }, ref) {
     const data: PdfContent = buildPdfContent(record, videoIndex);
 
-    const metaParts = [data.videoLabel, data.timeLabel];
-    if (data.gradeLine) metaParts.push(data.gradeLine);
+    const metaLine = [
+      data.videoLabel,
+      data.gradeLine,
+      data.score != null ? `评分 ${data.score}/100` : null,
+    ]
+      .filter(Boolean)
+      .join(" · ");
 
     return (
       <div
@@ -149,34 +154,20 @@ export const AnalysisPdfTemplate = forwardRef<HTMLDivElement, Props>(
             动作解析
           </p>
 
-          <div
-            style={{
-              marginTop: 12,
-              paddingTop: 10,
-              borderTop: `1px solid ${C.ink}`,
-              borderTopColor: "rgba(26,26,26,0.22)",
-              display: "flex",
-              flexWrap: "wrap",
-              alignItems: "center",
-              gap: "6px 14px",
-              fontFamily: mono,
-              fontSize: 11,
-              fontWeight: 700,
-              color: C.ink,
-            }}
-          >
-            <span style={{ fontSize: 13, fontWeight: 900 }}>
-              {metaParts.join(" · ")}
-            </span>
-            {data.score != null && (
-              <span style={{ marginLeft: "auto", fontSize: 13, fontWeight: 900 }}>
-                评分 {data.score}
-                <span style={{ fontSize: 10, fontWeight: 700, opacity: 0.65 }}>
-                  /100
-                </span>
-              </span>
-            )}
-          </div>
+          {metaLine && (
+            <p
+              style={{
+                margin: "10px 0 0",
+                fontSize: 12,
+                fontWeight: 800,
+                letterSpacing: "0.04em",
+                color: C.ink,
+                fontFamily: mono,
+              }}
+            >
+              {metaLine}
+            </p>
+          )}
         </header>
 
         <div
@@ -184,11 +175,12 @@ export const AnalysisPdfTemplate = forwardRef<HTMLDivElement, Props>(
             flex: 1,
             display: "flex",
             flexDirection: "column",
-            padding: "14px 28px 12px",
+            justifyContent: "space-between",
+            padding: "16px 28px 14px",
             minHeight: 0,
           }}
         >
-          <div style={{ flex: 1, minHeight: 0 }}>
+          <div>
             {data.highlight && (
               <div
                 style={{
@@ -223,7 +215,7 @@ export const AnalysisPdfTemplate = forwardRef<HTMLDivElement, Props>(
             )}
 
             {data.dimensions.length > 0 && (
-              <section style={{ marginTop: 12 }}>
+              <section style={{ marginTop: 14 }}>
                 <PdfSectionHeading>核心维度</PdfSectionHeading>
                 <ul
                   style={{
@@ -272,7 +264,7 @@ export const AnalysisPdfTemplate = forwardRef<HTMLDivElement, Props>(
             )}
 
             {data.improvements.length > 0 && (
-              <section style={{ marginTop: 12 }}>
+              <section style={{ marginTop: 14 }}>
                 <PdfSectionHeading>改进要点</PdfSectionHeading>
                 <div>
                   {data.improvements.map((item, i) => (

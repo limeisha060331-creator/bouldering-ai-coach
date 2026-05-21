@@ -108,23 +108,17 @@ export async function downloadAnalysisPdf(
     const pdf = new jsPDF({ orientation: "p", unit: "mm", format: "a4" });
     const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
-    const margin = 10;
-    const contentWidth = pageWidth - margin * 2;
-    const printableHeight = pageHeight - margin * 2;
 
-    const imgHeight = (canvas.height * contentWidth) / canvas.width;
-    let heightLeft = imgHeight;
-    let position = margin;
-
-    pdf.addImage(imgData, format, margin, position, contentWidth, imgHeight);
-    heightLeft -= printableHeight;
-
-    while (heightLeft > 0) {
-      position = margin - (imgHeight - heightLeft);
-      pdf.addPage();
-      pdf.addImage(imgData, format, margin, position, contentWidth, imgHeight);
-      heightLeft -= printableHeight;
+    /* 整张模板缩放到一页 A4，禁止分页 */
+    let drawW = pageWidth;
+    let drawH = (canvas.height * drawW) / canvas.width;
+    if (drawH > pageHeight) {
+      drawH = pageHeight;
+      drawW = (canvas.width * drawH) / canvas.height;
     }
+    const drawX = (pageWidth - drawW) / 2;
+
+    pdf.addImage(imgData, format, drawX, 0, drawW, drawH);
 
     pdf.save(`${safeFileName(fileName)}-教练报告.pdf`);
   } finally {

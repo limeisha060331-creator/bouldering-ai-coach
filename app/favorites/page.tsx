@@ -43,7 +43,7 @@ export default function FavoritesPage() {
         <SiteNav uiLocale={uiLocale} />
         <header className="mb-8">
           <div className="mb-2 flex items-center gap-2">
-            <IconStar className="h-5 w-5 text-[var(--spa-text-secondary)]" filled />
+            <IconStar className="h-5 w-5 text-[var(--crux-accent)]" filled />
             <h1 className="text-xl font-black uppercase text-[var(--crux-text)] sm:text-2xl">
               {t.favoritesTitle}
             </h1>
