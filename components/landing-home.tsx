@@ -8,26 +8,8 @@ import { CountUp } from "@/components/count-up";
 import { CruxHeader } from "@/components/crux-header";
 import { listAnalysisRecords } from "@/lib/analysis-db";
 import { sumAscentMeters } from "@/lib/climbing-stats";
+import { formatSessionListMeta } from "@/lib/record-display";
 import type { AnalysisRecord } from "@/lib/types";
-
-function shortFileName(name: string): string {
-  const base = name.replace(/\.[^.]+$/, "");
-  return base.length > 20 ? `${base.slice(0, 18)}…` : base;
-}
-
-function sessionSubtitle(r: AnalysisRecord): string {
-  const date = new Date(r.createdAt).toLocaleDateString("zh-CN", {
-    month: "numeric",
-    day: "numeric",
-  });
-  const grade = r.grade ?? "未标难度";
-  const label = r.sessionNote?.trim() || shortFileName(r.fileName);
-  const ascent =
-    r.ascentMeters != null && r.ascentMeters > 0
-      ? `${r.ascentMeters % 1 === 0 ? r.ascentMeters : r.ascentMeters.toFixed(1)}m 爬升`
-      : null;
-  return [date, grade, label, ascent].filter(Boolean).join(" · ");
-}
 
 export function LandingHome() {
   const router = useRouter();
@@ -74,7 +56,7 @@ export function LandingHome() {
                     onClick={() => router.push(`/analysis/${r.id}`)}
                     className={`crux-session-item w-full px-4 py-3 text-left ${
                       activeId === r.id
-                        ? "bg-[var(--crux-text)] text-[var(--crux-surface)]"
+                        ? "bg-[var(--crux-accent)] text-[var(--crux-on-accent)]"
                         : "bg-transparent text-[var(--crux-text)]"
                     }`}
                   >
@@ -82,7 +64,7 @@ export function LandingHome() {
                       视频 {String(i + 1).padStart(2, "0")}
                     </span>
                     <span className="mt-1 block text-[11px] leading-snug opacity-90">
-                      {sessionSubtitle(r)}
+                      {formatSessionListMeta(r)}
                     </span>
                   </button>
                 </li>

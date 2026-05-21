@@ -94,7 +94,7 @@ export const STRINGS: Record<UiLocale, CopyBlock> = {
   zh: {
     brand: "CRUX 抱石",
     title: "动作解析",
-    subtitle: "上传攀爬片段，获得克制、专业的动作反馈",
+    subtitle: "上传攀爬片段，获得专业的动作反馈",
     expectTitle: "分析前说明",
     expectBody:
       "单次分析通常约 1～3 分钟，取决于视频长度与 Gemini 排队情况。异步模式下请保持本页打开直至跳转结果页。若失败，常见原因为网络波动、API 限流（429）或视频处理超时——可稍后再试或换更短片段。",

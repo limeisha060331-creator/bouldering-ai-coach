@@ -181,7 +181,7 @@ export function AnalysisView({
           type="button"
           onClick={exportPdf}
           disabled={pdfBusy}
-          className="inline-flex items-center gap-2 rounded-lg border border-[var(--spa-text)] bg-[var(--spa-text)] px-4 py-2 text-xs font-medium text-white transition hover:opacity-90 disabled:opacity-50"
+          className="inline-flex items-center gap-2 rounded-lg border border-[var(--crux-text)] bg-[var(--crux-text)] px-4 py-2 text-xs font-medium text-[var(--crux-surface)] transition hover:opacity-90 disabled:opacity-50"
         >
           <IconDownload className="h-3.5 w-3.5" />
           {pdfBusy ? (uiLocale === "zh" ? "生成中…" : "Exporting…") : t.downloadPdf}
@@ -217,8 +217,8 @@ export function AnalysisView({
                   onClick={() => togglePin(i)}
                   className={`mt-3 shrink-0 rounded-lg border p-2 transition ${
                     pinned.has(i)
-                      ? "border-[var(--crux-accent)] bg-[#fff0e8] text-[var(--crux-accent)]"
-                      : "border-[var(--spa-border-subtle)] text-[#ff5722]/50 hover:border-[var(--crux-accent)] hover:bg-[#fff0e8] hover:text-[var(--crux-accent)]"
+                      ? "border-[var(--crux-accent)] bg-[var(--crux-accent-soft)] text-[var(--crux-accent)]"
+                      : "border-[var(--spa-border-subtle)] text-[var(--crux-accent)]/50 hover:border-[var(--crux-accent)] hover:bg-[var(--crux-accent-soft)] hover:text-[var(--crux-accent)]"
                   }`}
                   aria-pressed={pinned.has(i)}
                   title={pinned.has(i) ? t.unpinSegment : t.pinSegment}

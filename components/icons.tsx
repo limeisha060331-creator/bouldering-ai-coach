@@ -12,7 +12,9 @@ import {
   Info,
   Loader2,
   Menu,
+  Moon,
   Mountain,
+  Sun,
   Printer,
   Share2,
   Sparkles,
@@ -117,4 +119,12 @@ export const IconMenu = ({ className = "h-4 w-4" }: { className?: string }) => (
 
 export const IconX = ({ className = "h-4 w-4" }: { className?: string }) => (
   <X className={`${iconClass} ${className}`} strokeWidth={1.5} aria-hidden />
+);
+
+export const IconSun = ({ className = "h-4 w-4" }: { className?: string }) => (
+  <Sun className={`${iconClass} ${className}`} strokeWidth={1.5} aria-hidden />
+);
+
+export const IconMoon = ({ className = "h-4 w-4" }: { className?: string }) => (
+  <Moon className={`${iconClass} ${className}`} strokeWidth={1.5} aria-hidden />
 );

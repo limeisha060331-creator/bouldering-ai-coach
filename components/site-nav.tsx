@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { IconBookmarkNav } from "@/components/icons";
+import { ThemeToggle } from "@/components/theme-toggle";
 import type { UiLocale } from "@/lib/strings";
 
 type Props = {
@@ -16,8 +17,8 @@ export function SiteNav({ uiLocale }: Props) {
   const linkClass = (href: string) =>
     `crux-mono inline-flex items-center gap-1.5 border-2 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider transition ${
       path === href
-        ? "border-[var(--crux-border)] bg-[var(--crux-text)] text-[var(--crux-surface)]"
-        : "border-transparent text-[var(--crux-text-muted)] hover:border-[var(--crux-border)] hover:text-[var(--crux-text)]"
+        ? "border-[var(--crux-border)] bg-[var(--crux-accent)] text-[var(--crux-on-accent)] shadow-[3px_3px_0_var(--crux-border)]"
+        : "border-transparent text-[var(--crux-text-muted)] hover:border-[var(--crux-accent)] hover:text-[var(--crux-text)]"
     }`;
 
   return (
@@ -28,7 +29,8 @@ export function SiteNav({ uiLocale }: Props) {
       >
         {zh ? "CRUX 抱石" : "CRUX Boulder"}
       </Link>
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <ThemeToggle compact />
         <Link href="/" className={linkClass("/")}>
           {zh ? "首页" : "Home"}
         </Link>

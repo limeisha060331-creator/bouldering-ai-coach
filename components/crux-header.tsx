@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { IconMenu, IconX } from "@/components/icons";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 type Props = {
   variant?: "landing" | "app";
@@ -27,7 +28,9 @@ export function CruxHeader({ variant = "app" }: Props) {
           CRUX 抱石
         </Link>
 
-        <nav className="hidden items-center gap-5 sm:flex">
+        <div className="hidden items-center gap-3 sm:flex">
+          <ThemeToggle compact />
+          <nav className="flex items-center gap-5">
           <Link
             href="/"
             className="text-xs font-semibold text-[var(--crux-text-muted)] transition hover:text-[var(--crux-text)]"
@@ -52,16 +55,20 @@ export function CruxHeader({ variant = "app" }: Props) {
           >
             收藏
           </Link>
-        </nav>
+          </nav>
+        </div>
 
+        <div className="flex items-center gap-2 sm:hidden">
+          <ThemeToggle compact />
         <button
           type="button"
-          className="flex h-9 w-9 items-center justify-center border-2 border-[var(--crux-border)] sm:hidden"
+          className="flex h-9 w-9 items-center justify-center border-2 border-[var(--crux-border)]"
           aria-label="菜单"
           onClick={() => setOpen((o) => !o)}
         >
           {open ? <IconX className="h-4 w-4" /> : <IconMenu className="h-4 w-4" />}
         </button>
+        </div>
       </div>
 
       {open && (
@@ -97,7 +104,7 @@ export function CruxHeader({ variant = "app" }: Props) {
           {variant === "landing" && (
             <Link
               href="/analyze"
-              className="mt-3 block bg-[var(--crux-orange-panel)] px-4 py-3 text-center text-sm font-bold text-[var(--crux-text)]"
+              className="mt-3 block bg-[var(--crux-orange-panel)] px-4 py-3 text-center text-sm font-bold text-[var(--crux-on-accent)]"
               onClick={() => setOpen(false)}
             >
               上传视频分析

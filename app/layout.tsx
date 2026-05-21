@@ -16,7 +16,7 @@ const jetbrains = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: "CRUX 抱石 · 动作解析",
-  description: "上传攀爬视频，获取专业、克制的 AI 动作分析与改进建议",
+  description: "上传攀爬视频，获取专业的 AI 动作分析与改进建议",
 };
 
 export default function RootLayout({
@@ -27,8 +27,17 @@ export default function RootLayout({
   return (
     <html
       lang="zh-CN"
+      suppressHydrationWarning
+      data-theme="light"
       className={`${dmSans.variable} ${jetbrains.variable} h-full antialiased`}
     >
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem("crux-theme");document.documentElement.dataset.theme=t==="dark"?"dark":"light"}catch(e){document.documentElement.dataset.theme="light"}})();`,
+          }}
+        />
+      </head>
       <body className="flex min-h-full flex-col">
         {children}
         <footer className="no-print mt-auto border-t-2 border-[var(--crux-border)] bg-[var(--crux-surface)] px-5 py-6 text-center crux-mono text-[10px] leading-relaxed text-[var(--crux-text-muted)]">

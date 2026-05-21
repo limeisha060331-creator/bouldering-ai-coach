@@ -18,7 +18,7 @@ export function PulseButton({
     <button
       type="button"
       disabled={disabled || loading}
-      className={`flex w-full items-center justify-center gap-2 border-2 border-[var(--crux-border)] bg-[var(--crux-orange-panel)] px-5 py-3.5 text-sm font-black uppercase tracking-wider text-[var(--crux-text)] shadow-[4px_4px_0_var(--crux-border)] transition hover:translate-y-[-1px] hover:shadow-[6px_6px_0_var(--crux-border)] disabled:cursor-not-allowed disabled:opacity-40 ${className}`}
+      className={`flex w-full items-center justify-center gap-2 border-2 border-[var(--crux-border)] bg-[var(--crux-orange-panel)] px-5 py-3.5 text-sm font-black uppercase tracking-wider text-[var(--crux-on-accent)] shadow-[4px_4px_0_var(--crux-border)] transition hover:translate-y-[-1px] hover:shadow-[6px_6px_0_var(--crux-border)] disabled:cursor-not-allowed disabled:opacity-40 ${className}`}
       {...props}
     >
       {loading ? (

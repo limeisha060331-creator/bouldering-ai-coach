@@ -168,7 +168,7 @@ export default function AnalyzePage() {
 
     if (selected.size > MAX_SOURCE_BYTES) {
       setError(
-        `${formatStr(t.videoTooBig, { maxMb: MAX_SOURCE_BYTES / 1024 / 1024 })} ? ${t.videoTooBigHint}`
+        `${formatStr(t.videoTooBig, { maxMb: MAX_SOURCE_BYTES / 1024 / 1024 })} \u00b7 ${t.videoTooBigHint}`
       );
       return;
     }
@@ -315,7 +315,7 @@ export default function AnalyzePage() {
           onProgress: (status, hint, sec, meta) => {
             setElapsedSec(sec);
             setPollStatus(status);
-            setProgressHint(`${hint} ? ${sec}s`);
+            setProgressHint(`${hint} \u00b7 ${sec}s`);
             if (meta?.retryAfter) {
               setRetryAfterIso(meta.retryAfter);
             } else if (status !== "rate_limited") {
@@ -351,7 +351,7 @@ export default function AnalyzePage() {
       router.push(`/analysis/${record.id}`);
     } catch (e) {
       if (e instanceof AnalysisPollError) {
-        if (e.message === "???") {
+        if (e.message === "Canceled" || e.message.includes("\u53d6\u6d88")) {
           setError(`${t.canceled} ${t.canceledHint}`);
         } else {
           setError(e.message);
@@ -361,7 +361,7 @@ export default function AnalyzePage() {
         setError(`${t.canceled} ${t.canceledHint}`);
       } else {
         const { message, retryable } = explainFetchError(e, uiLocale);
-        if (message === (uiLocale === "zh" ? "???" : "Canceled")) {
+        if (message === "Canceled" || message.includes("\u53d6\u6d88")) {
           setError(`${t.canceled} ${t.canceledHint}`);
         } else {
           setError(message);
@@ -385,7 +385,7 @@ export default function AnalyzePage() {
     <main className="crux-page">
       <div className="crux-container-narrow">
         <SiteNav uiLocale={uiLocale} />
-        <header className="mb-8 border-2 border-[var(--crux-border)] bg-[var(--crux-surface)] p-6 shadow-[4px_4px_0_var(--crux-border)]">
+        <header className="mb-8 border-2 border-[var(--crux-border)] border-l-[6px] border-l-[var(--crux-accent)] bg-[var(--crux-surface)] p-6 shadow-[4px_4px_0_var(--crux-border)]">
           <p className="spa-label mb-2">{t.brand}</p>
           <h1 className="text-2xl font-black uppercase tracking-tight text-[var(--crux-text)] sm:text-3xl">
             {t.title}
@@ -455,9 +455,7 @@ export default function AnalyzePage() {
                   type="button"
                   onClick={() => setUiLocale("zh")}
                   className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
-                    uiLocale === "zh"
-                      ? "border-[var(--spa-text)] bg-[var(--spa-focus)] text-[var(--spa-text)]"
-                      : "border-[var(--spa-border)] text-[var(--spa-text-secondary)] hover:bg-[var(--spa-elevated)]"
+                    uiLocale === "zh" ? "spa-choice-active" : "spa-choice-idle"
                   }`}
                 >
                   {t.uiLangZh}
@@ -466,9 +464,7 @@ export default function AnalyzePage() {
                   type="button"
                   onClick={() => setUiLocale("en")}
                   className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
-                    uiLocale === "en"
-                      ? "border-[var(--spa-text)] bg-[var(--spa-focus)] text-[var(--spa-text)]"
-                      : "border-[var(--spa-border)] text-[var(--spa-text-secondary)] hover:bg-[var(--spa-elevated)]"
+                    uiLocale === "en" ? "spa-choice-active" : "spa-choice-idle"
                   }`}
                 >
                   {t.uiLangEn}
@@ -482,32 +478,28 @@ export default function AnalyzePage() {
                   type="button"
                   onClick={() => setDepth("light")}
                   className={`rounded-lg border px-3 py-1.5 text-left text-xs transition ${
-                    depth === "light"
-                      ? "border-[var(--spa-text)] bg-[var(--spa-focus)]"
-                      : "border-[var(--spa-border)] hover:bg-[var(--spa-elevated)]"
+                    depth === "light" ? "spa-choice-active" : "spa-choice-idle"
                   }`}
                 >
                   <span className="font-medium text-[var(--spa-text)]">
                     {t.depthLight}
                   </span>
                   <span className="ml-1 text-[var(--spa-text-muted)]">
-                    ? {t.depthLightDesc}
+                    {"\u00b7"} {t.depthLightDesc}
                   </span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setDepth("deep")}
                   className={`rounded-lg border px-3 py-1.5 text-left text-xs transition ${
-                    depth === "deep"
-                      ? "border-[var(--spa-text)] bg-[var(--spa-focus)]"
-                      : "border-[var(--spa-border)] hover:bg-[var(--spa-elevated)]"
+                    depth === "deep" ? "spa-choice-active" : "spa-choice-idle"
                   }`}
                 >
                   <span className="font-medium text-[var(--spa-text)]">
                     {t.depthDeep}
                   </span>
                   <span className="ml-1 text-[var(--spa-text-muted)]">
-                    ? {t.depthDeepDesc}
+                    {"\u00b7"} {t.depthDeepDesc}
                   </span>
                 </button>
               </div>
@@ -520,8 +512,8 @@ export default function AnalyzePage() {
                   onClick={() => setAnalysisLocale("zh")}
                   className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
                     analysisLocale === "zh"
-                      ? "border-[var(--spa-text)] bg-[var(--spa-focus)] text-[var(--spa-text)]"
-                      : "border-[var(--spa-border)] text-[var(--spa-text-secondary)] hover:bg-[var(--spa-elevated)]"
+                      ? "spa-choice-active"
+                      : "spa-choice-idle"
                   }`}
                 >
                   {t.analysisOutputZh}
@@ -531,8 +523,8 @@ export default function AnalyzePage() {
                   onClick={() => setAnalysisLocale("en")}
                   className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
                     analysisLocale === "en"
-                      ? "border-[var(--spa-text)] bg-[var(--spa-focus)] text-[var(--spa-text)]"
-                      : "border-[var(--spa-border)] text-[var(--spa-text-secondary)] hover:bg-[var(--spa-elevated)]"
+                      ? "spa-choice-active"
+                      : "spa-choice-idle"
                   }`}
                 >
                   {t.analysisOutputEn}
@@ -549,9 +541,9 @@ export default function AnalyzePage() {
                     <div
                       className={`mx-auto mb-1.5 flex h-8 w-8 items-center justify-center rounded-full text-xs font-medium ${
                         activeStep === i
-                          ? "bg-[var(--spa-text)] text-white"
+                          ? "bg-[var(--crux-accent)] font-bold text-[var(--crux-on-accent)]"
                           : activeStep > i
-                            ? "border border-[var(--spa-border)] bg-[var(--spa-elevated)] text-[var(--spa-text-muted)]"
+                            ? "border border-[var(--crux-accent)]/40 bg-[var(--spa-focus)] text-[var(--crux-accent)]"
                             : "border border-[var(--spa-border-subtle)] text-[var(--spa-text-muted)]"
                       }`}
                     >
@@ -574,16 +566,16 @@ export default function AnalyzePage() {
             }}
             onDragLeave={() => setDragOver(false)}
             onDrop={handleDrop}
-            className={`flex min-h-[11rem] cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed px-5 py-8 transition ${
+            className={`flex min-h-[11rem] cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed px-5 py-8 transition ${
               dragOver
-                ? "border-[var(--spa-text-muted)] bg-[var(--spa-focus)]"
-                : "border-[var(--spa-border)] bg-[var(--spa-elevated)] hover:border-[var(--spa-text-muted)]/50"
+                ? "border-[var(--crux-accent)] bg-[var(--spa-focus)]"
+                : "border-[var(--crux-border-subtle)] bg-[var(--spa-elevated)] hover:border-[var(--crux-accent)]"
             } ${compressing ? "pointer-events-none opacity-50" : ""}`}
           >
             {compressing ? (
-              <IconLoader className="mb-3 h-7 w-7 text-[var(--spa-text-muted)]" />
+              <IconLoader className="mb-3 h-7 w-7 text-[var(--crux-accent)]" />
             ) : (
-              <IconUpload className="mb-3 h-7 w-7 text-[var(--spa-text-secondary)]" />
+              <IconUpload className="mb-3 h-7 w-7 text-[var(--crux-accent)]" />
             )}
             <span className="text-sm font-medium text-[var(--spa-text)]">
               {compressing ? t.uploadCompress : t.uploadIdle}
@@ -619,7 +611,7 @@ export default function AnalyzePage() {
           )}
 
           <div className="mt-5 flex gap-3 rounded-xl border border-[var(--spa-border-subtle)] bg-[var(--spa-elevated)] px-4 py-3.5">
-            <IconInfo className="mt-0.5 h-4 w-4 shrink-0 text-[var(--spa-text-muted)]" />
+            <IconInfo className="mt-0.5 h-4 w-4 shrink-0 text-[var(--crux-accent)]" />
             <div>
               <p className="text-xs font-medium text-[var(--spa-text)]">
                 {t.tipTitle}
@@ -715,7 +707,7 @@ export default function AnalyzePage() {
 
         <section className="mt-12 sm:mt-14">
           <div className="mb-5 flex items-center gap-2">
-            <IconHistory className="h-4 w-4 text-[var(--spa-text-muted)]" />
+            <IconHistory className="h-4 w-4 text-[var(--crux-accent)]" />
             <h2 className="text-sm font-medium text-[var(--spa-text)]">
               {t.historyTitle}
             </h2>
