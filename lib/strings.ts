@@ -30,6 +30,21 @@ type CopyBlock = {
   historyScoreMin: string;
   historyScoreMax: string;
   historyClearFilters: string;
+  historyDateLabel: string;
+  routeGradeLabel: string;
+  routeGradeHint: string;
+  ascentLabel: string;
+  ascentHint: string;
+  sessionNoteLabel: string;
+  sessionNotePlaceholder: string;
+  checkingVideo: string;
+  compressedFromTo: (fromMb: string, toMb: string) => string;
+  noCompressSuffix: string;
+  compressFailed: string;
+  uploading: string;
+  analysisFailed: string;
+  asyncProgress: (est: number) => string;
+  cloudKeepOpen: string;
   videoTooBig: string;
   videoTooBigHint: string;
   pickVideo: string;
@@ -107,6 +122,23 @@ export const STRINGS: Record<UiLocale, CopyBlock> = {
     historyScoreMin: "最低分",
     historyScoreMax: "最高分",
     historyClearFilters: "清除筛选",
+    historyDateLabel: "日期",
+    routeGradeLabel: "线路难度 V 级",
+    routeGradeHint: "AI 若能从视频判断难度会覆盖此项",
+    ascentLabel: "爬升高度 (m)",
+    ascentHint: "计入首页总爬升统计",
+    sessionNoteLabel: "备注",
+    sessionNotePlaceholder: "馆名、线路名…",
+    checkingVideo: "正在检查视频…",
+    compressedFromTo: (fromMb, toMb) =>
+      `已压缩：${fromMb}MB → ${toMb}MB`,
+    noCompressSuffix: "，无需压缩",
+    compressFailed: "压缩失败",
+    uploading: "正在上传…",
+    analysisFailed: "分析失败",
+    asyncProgress: (est) =>
+      `云端正处理，约 ${est} 秒，请保持本页打开`,
+    cloudKeepOpen: "分析在云端进行，请保持此页打开。",
     videoTooBig: "视频超过 {maxMb}MB",
     videoTooBigHint: "请先用剪辑软件裁短再上传。",
     pickVideo: "请选择视频文件（如 mp4、webm、mov）",
@@ -182,6 +214,23 @@ export const STRINGS: Record<UiLocale, CopyBlock> = {
     historyScoreMin: "Min score",
     historyScoreMax: "Max score",
     historyClearFilters: "Clear filters",
+    historyDateLabel: "Date",
+    routeGradeLabel: "Route grade (V)",
+    routeGradeHint: "AI may override if detected in video",
+    ascentLabel: "Ascent (m)",
+    ascentHint: "Counts toward total ascent on home",
+    sessionNoteLabel: "Note",
+    sessionNotePlaceholder: "Gym, route name…",
+    checkingVideo: "Checking video…",
+    compressedFromTo: (fromMb, toMb) =>
+      `Compressed: ${fromMb}MB → ${toMb}MB`,
+    noCompressSuffix: ", no compression needed",
+    compressFailed: "Compression failed",
+    uploading: "Uploading…",
+    analysisFailed: "Analysis failed",
+    asyncProgress: (est) =>
+      `Processing in cloud (~${est}s). Keep this tab open.`,
+    cloudKeepOpen: "Analysis runs in the cloud—keep this tab open.",
     videoTooBig: "Video exceeds {maxMb}MB",
     videoTooBigHint: "Trim in an editor, then upload again.",
     pickVideo: "Please choose a video file (e.g. mp4, webm, mov)",

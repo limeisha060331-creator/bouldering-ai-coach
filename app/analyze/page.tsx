@@ -168,14 +168,14 @@ export default function AnalyzePage() {
 
     if (selected.size > MAX_SOURCE_BYTES) {
       setError(
-        `${formatStr(t.videoTooBig, { maxMb: MAX_SOURCE_BYTES / 1024 / 1024 })}?${t.videoTooBigHint}`
+        `${formatStr(t.videoTooBig, { maxMb: MAX_SOURCE_BYTES / 1024 / 1024 })} ? ${t.videoTooBigHint}`
       );
       return;
     }
 
     setOriginalFile(selected);
     setCompressing(true);
-    setCompressHint(uiLocale === "zh" ? "?????????" : "Checking video?");
+    setCompressHint(t.checkingVideo);
 
     try {
       const result = await prepareVideoForUpload(selected, (msg, pct) => {
@@ -189,14 +189,14 @@ export default function AnalyzePage() {
 
       if (result.compressed) {
         setCompressInfo(
-          uiLocale === "zh"
-            ? `????${(result.originalSize / 1024 / 1024).toFixed(1)}MB ? ${(result.finalSize / 1024 / 1024).toFixed(1)}MB`
-            : `Compressed: ${(result.originalSize / 1024 / 1024).toFixed(1)}MB ? ${(result.finalSize / 1024 / 1024).toFixed(1)}MB`
+          t.compressedFromTo(
+            (result.originalSize / 1024 / 1024).toFixed(1),
+            (result.finalSize / 1024 / 1024).toFixed(1)
+          )
         );
       } else {
         setCompressInfo(
-          `${(result.finalSize / 1024 / 1024).toFixed(1)}MB` +
-            (uiLocale === "zh" ? "?????" : ", no compression needed")
+          `${(result.finalSize / 1024 / 1024).toFixed(1)}MB` + t.noCompressSuffix
         );
       }
     } catch (e) {
@@ -204,7 +204,7 @@ export default function AnalyzePage() {
       setOriginalFile(null);
       if (preview) URL.revokeObjectURL(preview);
       setPreview(null);
-      setError(e instanceof Error ? e.message : uiLocale === "zh" ? "????" : "Compression failed");
+      setError(e instanceof Error ? e.message : t.compressFailed);
     } finally {
       setCompressing(false);
       setCompressHint(null);
@@ -252,7 +252,7 @@ export default function AnalyzePage() {
     setLoading(true);
     setError(null);
     setRetryable(false);
-    setProgressHint(uiLocale === "zh" ? "???????" : "Uploading?");
+    setProgressHint(t.uploading);
     setElapsedSec(0);
     setPollStatus(null);
     setRetryAfterIso(null);
@@ -295,7 +295,7 @@ export default function AnalyzePage() {
       if (parsedRes.parseError || !parsedRes.ok || !parsedRes.data) {
         const { message, retryable } = errorFromFetchJson(
           parsedRes,
-          uiLocale === "zh" ? "????" : "Analysis failed"
+          t.analysisFailed
         );
         throw new AnalysisPollError(message, retryable, 0);
       }
@@ -306,10 +306,7 @@ export default function AnalyzePage() {
         setPollStatus("uploaded");
         const est = data.estimatedSeconds ?? 60;
         setProgressHint(
-          data.message ??
-            (uiLocale === "zh"
-              ? `???????? ${est} ??????????`
-              : `In progress (~${est}s). Keep this tab open.`)
+          data.message ?? t.asyncProgress(est)
         );
 
         data = await pollUntilComplete(data.jobId, {
@@ -318,7 +315,7 @@ export default function AnalyzePage() {
           onProgress: (status, hint, sec, meta) => {
             setElapsedSec(sec);
             setPollStatus(status);
-            setProgressHint(`${hint}?${sec}s?`);
+            setProgressHint(`${hint} ? ${sec}s`);
             if (meta?.retryAfter) {
               setRetryAfterIso(meta.retryAfter);
             } else if (status !== "rate_limited") {
@@ -409,9 +406,7 @@ export default function AnalyzePage() {
         <section className="spa-panel p-6 sm:p-8">
           <div className="mb-6 grid gap-4 border-2 border-[var(--crux-border-subtle)] bg-[var(--crux-elevated)] p-4 sm:grid-cols-3">
             <div>
-              <label className="spa-label mb-2 block">
-                {uiLocale === "zh" ? "???? V ?" : "Route grade"}
-              </label>
+              <label className="spa-label mb-2 block">{t.routeGradeLabel}</label>
               <select
                 value={grade}
                 onChange={(e) => setGrade(e.target.value as BoulderGrade)}
@@ -424,15 +419,11 @@ export default function AnalyzePage() {
                 ))}
               </select>
               <p className="mt-1 text-[10px] text-[var(--crux-text-muted)]">
-                {uiLocale === "zh"
-                  ? "AI ??????????????"
-                  : "AI may override if detected in video"}
+                {t.routeGradeHint}
               </p>
             </div>
             <div>
-              <label className="spa-label mb-2 block">
-                {uiLocale === "zh" ? "???? (m)" : "Ascent (m)"}
-              </label>
+              <label className="spa-label mb-2 block">{t.ascentLabel}</label>
               <input
                 type="number"
                 min={0}
@@ -442,21 +433,15 @@ export default function AnalyzePage() {
                 className="w-full border-2 border-[var(--crux-border)] bg-[var(--crux-surface)] px-3 py-2 text-sm font-bold"
               />
               <p className="mt-1 text-[10px] text-[var(--crux-text-muted)]">
-                {uiLocale === "zh"
-                  ? "?????????"
-                  : "Counts toward total ascent"}
+                {t.ascentHint}
               </p>
             </div>
             <div className="sm:col-span-1">
-              <label className="spa-label mb-2 block">
-                {uiLocale === "zh" ? "??" : "Note"}
-              </label>
+              <label className="spa-label mb-2 block">{t.sessionNoteLabel}</label>
               <input
                 value={sessionNote}
                 onChange={(e) => setSessionNote(e.target.value)}
-                placeholder={
-                  uiLocale === "zh" ? "???????" : "Gym, route name?"
-                }
+                placeholder={t.sessionNotePlaceholder}
                 className="w-full border-2 border-[var(--crux-border)] bg-[var(--crux-surface)] px-3 py-2 text-sm"
               />
             </div>
@@ -692,9 +677,7 @@ export default function AnalyzePage() {
               )}
               {elapsedSec > 10 && (
                 <p className="text-xs text-[var(--spa-text-muted)]">
-                  {uiLocale === "zh"
-                    ? "???????????????"
-                    : "Analysis runs in the cloud?keep this tab open."}
+                  {t.cloudKeepOpen}
                 </p>
               )}
             </div>
@@ -758,9 +741,7 @@ export default function AnalyzePage() {
                 />
               </div>
               <div>
-                <label className="spa-label mb-1 block">
-                  {uiLocale === "zh" ? "??" : "Date"}
-                </label>
+                <label className="spa-label mb-1 block">{t.historyDateLabel}</label>
                 <select
                   value={datePreset}
                   onChange={(e) =>
@@ -780,7 +761,7 @@ export default function AnalyzePage() {
                     type="number"
                     min={0}
                     max={100}
-                    placeholder="?"
+                    placeholder=""
                     value={scoreMin}
                     onChange={(e) => setScoreMin(e.target.value)}
                     className="w-20 rounded-lg border border-[var(--spa-border)] bg-[var(--spa-surface)] px-2 py-2 text-sm"
@@ -792,7 +773,7 @@ export default function AnalyzePage() {
                     type="number"
                     min={0}
                     max={100}
-                    placeholder="?"
+                    placeholder=""
                     value={scoreMax}
                     onChange={(e) => setScoreMax(e.target.value)}
                     className="w-20 rounded-lg border border-[var(--spa-border)] bg-[var(--spa-surface)] px-2 py-2 text-sm"
