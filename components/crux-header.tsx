@@ -40,6 +40,12 @@ export function CruxHeader({ variant = "app" }: Props) {
               Analyze
             </Link>
             <Link
+              href="/progress"
+              className="crux-mono text-[10px] font-semibold uppercase tracking-wider text-[var(--crux-text-muted)] transition hover:text-[var(--crux-text)]"
+            >
+              Progress
+            </Link>
+            <Link
               href="/favorites"
               className="crux-mono text-[10px] font-semibold uppercase tracking-wider text-[var(--crux-text-muted)] transition hover:text-[var(--crux-text)]"
             >
@@ -73,6 +79,13 @@ export function CruxHeader({ variant = "app" }: Props) {
             onClick={() => setOpen(false)}
           >
             Analyze
+          </Link>
+          <Link
+            href="/progress"
+            className="block py-2 crux-mono text-xs font-semibold uppercase"
+            onClick={() => setOpen(false)}
+          >
+            Progress
           </Link>
           <Link
             href="/favorites"

@@ -31,7 +31,13 @@ import {
 } from "@/lib/fetch-json";
 import { parseAnalysis } from "@/lib/parse-analysis";
 import { AnalysisPollError, pollUntilComplete } from "@/lib/poll-analysis";
-import type { AnalysisDepth, AnalysisLocale, AnalysisRecord } from "@/lib/types";
+import { BOULDER_GRADES } from "@/lib/bouldering-grade";
+import type {
+  AnalysisDepth,
+  AnalysisLocale,
+  AnalysisRecord,
+  BoulderGrade,
+} from "@/lib/types";
 import { PROMPT_VERSION } from "@/lib/analyze-prompt";
 import { STRINGS, formatStr } from "@/lib/strings";
 import { useUiLocale } from "@/lib/use-ui-locale";
@@ -80,6 +86,9 @@ export default function AnalyzePage() {
   const [historyDbError, setHistoryDbError] = useState(false);
   const [depth, setDepth] = useState<AnalysisDepth>("deep");
   const [analysisLocale, setAnalysisLocale] = useState<AnalysisLocale>("zh");
+  const [grade, setGrade] = useState<BoulderGrade>("V4");
+  const [ascentMeters, setAscentMeters] = useState("4");
+  const [sessionNote, setSessionNote] = useState("");
 
   const [searchQ, setSearchQ] = useState("");
   const [datePreset, setDatePreset] = useState<"all" | "7" | "30">("all");
@@ -320,6 +329,7 @@ export default function AnalyzePage() {
       }
 
       const parsed = parseAnalysis(data.analysis!);
+      const ascent = parseFloat(ascentMeters);
       const record: AnalysisRecord = {
         id: data.id ?? data.jobId!,
         createdAt: new Date().toISOString(),
@@ -333,6 +343,10 @@ export default function AnalyzePage() {
         depth,
         locale: analysisLocale,
         bookmarkedSegmentIndices: [],
+        grade: parsed.grade ?? grade,
+        ascentMeters:
+          Number.isFinite(ascent) && ascent > 0 ? ascent : undefined,
+        sessionNote: sessionNote.trim() || undefined,
       };
 
       await saveAnalysisRecord(record, file);
@@ -393,6 +407,61 @@ export default function AnalyzePage() {
         </header>
 
         <section className="spa-panel p-6 sm:p-8">
+          <div className="mb-6 grid gap-4 border-2 border-[var(--crux-border-subtle)] bg-[var(--crux-elevated)] p-4 sm:grid-cols-3">
+            <div>
+              <label className="spa-label mb-2 block">
+                {uiLocale === "zh" ? "???? V ?" : "Route grade"}
+              </label>
+              <select
+                value={grade}
+                onChange={(e) => setGrade(e.target.value as BoulderGrade)}
+                className="w-full border-2 border-[var(--crux-border)] bg-[var(--crux-surface)] px-3 py-2 text-sm font-bold"
+              >
+                {BOULDER_GRADES.map((g) => (
+                  <option key={g} value={g}>
+                    {g}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-1 text-[10px] text-[var(--crux-text-muted)]">
+                {uiLocale === "zh"
+                  ? "AI ??????????????"
+                  : "AI may override if detected in video"}
+              </p>
+            </div>
+            <div>
+              <label className="spa-label mb-2 block">
+                {uiLocale === "zh" ? "???? (m)" : "Ascent (m)"}
+              </label>
+              <input
+                type="number"
+                min={0}
+                step={0.5}
+                value={ascentMeters}
+                onChange={(e) => setAscentMeters(e.target.value)}
+                className="w-full border-2 border-[var(--crux-border)] bg-[var(--crux-surface)] px-3 py-2 text-sm font-bold"
+              />
+              <p className="mt-1 text-[10px] text-[var(--crux-text-muted)]">
+                {uiLocale === "zh"
+                  ? "?????????"
+                  : "Counts toward total ascent"}
+              </p>
+            </div>
+            <div className="sm:col-span-1">
+              <label className="spa-label mb-2 block">
+                {uiLocale === "zh" ? "??" : "Note"}
+              </label>
+              <input
+                value={sessionNote}
+                onChange={(e) => setSessionNote(e.target.value)}
+                placeholder={
+                  uiLocale === "zh" ? "???????" : "Gym, route name?"
+                }
+                className="w-full border-2 border-[var(--crux-border)] bg-[var(--crux-surface)] px-3 py-2 text-sm"
+              />
+            </div>
+          </div>
+
           <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
             <div>
               <p className="spa-label mb-2">{t.uiLangLabel}</p>

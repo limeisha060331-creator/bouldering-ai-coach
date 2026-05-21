@@ -1,4 +1,5 @@
-import type { AnalysisSegment, ParsedAnalysis } from "./types";
+import { parseGradeFromText } from "./bouldering-grade";
+import type { AnalysisSegment, BoulderGrade, ParsedAnalysis } from "./types";
 import { parseStructuredReport } from "./parse-structured-report";
 
 const LINE_TIMESTAMP =
@@ -39,6 +40,10 @@ export function parseAnalysis(raw: string): ParsedAnalysis {
       continue;
     }
 
+    if (/^难度[：:]/i.test(trimmed)) {
+      continue;
+    }
+
     const tsMatch = trimmed.match(LINE_TIMESTAMP);
     if (tsMatch) {
       const [, min, sec, content] = tsMatch;
@@ -58,6 +63,7 @@ export function parseAnalysis(raw: string): ParsedAnalysis {
   }
 
   const structured = parseStructuredReport(raw);
+  const grade = parseGradeFromText(raw);
 
   return {
     raw,
@@ -66,6 +72,7 @@ export function parseAnalysis(raw: string): ParsedAnalysis {
     segments,
     summary: otherLines.join("\n"),
     structured,
+    grade: grade ?? undefined,
   };
 }
 

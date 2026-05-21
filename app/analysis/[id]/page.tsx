@@ -119,6 +119,9 @@ function AnalysisDetailContent() {
     depth: record.depth,
     locale: record.locale,
     bookmarkedSegmentIndices: bookmarks,
+    grade: record.grade,
+    ascentMeters: record.ascentMeters,
+    sessionNote: record.sessionNote,
   };
 
   return (
@@ -136,11 +139,20 @@ function AnalysisDetailContent() {
           <h1 className="mt-4 text-xl font-black uppercase tracking-tight text-[var(--crux-text)] sm:text-2xl">
             {record.fileName}
           </h1>
-          <p className="mt-1.5 text-xs text-[var(--spa-text-muted)]">
+          <p className="mt-1.5 crux-mono text-xs text-[var(--crux-text-muted)]">
             {new Date(record.createdAt).toLocaleString(
               uiLocale === "zh" ? "zh-CN" : "en-US"
             )}
+            {record.grade ? ` · ${record.grade}` : ""}
+            {record.ascentMeters != null
+              ? ` · ${record.ascentMeters}m`
+              : ""}
           </p>
+          {record.sessionNote && (
+            <p className="mt-2 text-sm text-[var(--crux-text-secondary)]">
+              {record.sessionNote}
+            </p>
+          )}
         </header>
 
         <article className="spa-panel p-6 sm:p-8">

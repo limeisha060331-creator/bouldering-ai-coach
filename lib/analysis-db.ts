@@ -1,7 +1,7 @@
 import type { AnalysisRecord } from "./types";
 
 const DB_NAME = "bouldering-ai-coach";
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 const STORE = "analyses";
 
 function openDb(): Promise<IDBDatabase> {

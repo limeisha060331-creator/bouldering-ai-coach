@@ -35,6 +35,9 @@ export function SiteNav({ uiLocale }: Props) {
         <Link href="/analyze" className={linkClass("/analyze")}>
           {zh ? "分析" : "Analyze"}
         </Link>
+        <Link href="/progress" className={linkClass("/progress")}>
+          {zh ? "进步" : "Progress"}
+        </Link>
         <Link href="/favorites" className={linkClass("/favorites")}>
           <IconBookmarkNav className="h-3.5 w-3.5" />
           {zh ? "收藏" : "Saved"}
