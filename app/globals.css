@@ -60,6 +60,46 @@ body {
   }
 }
 
+/* 首页：铺满视口，无两侧大白边 */
+.crux-landing-shell {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+@media (min-width: 1024px) {
+  .crux-landing-shell {
+    display: grid;
+    min-height: calc(100vh - 3.5rem);
+    grid-template-columns: minmax(11rem, 14rem) minmax(0, 1fr) minmax(17rem, 24rem);
+  }
+}
+
+.crux-landing-title-crux {
+  font-size: clamp(3.5rem, 8vw, 6.5rem);
+  font-weight: 900;
+  line-height: 0.82;
+  letter-spacing: -0.05em;
+}
+
+.crux-landing-title-sub {
+  font-size: clamp(2rem, 4.5vw, 3.25rem);
+  font-weight: 900;
+  line-height: 0.95;
+  letter-spacing: -0.03em;
+}
+
+.crux-landing-title-tag {
+  font-size: clamp(1.35rem, 2.5vw, 2rem);
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: 0.12em;
+}
+
 .crux-container-narrow {
   max-width: 42rem;
   margin-inline: auto;

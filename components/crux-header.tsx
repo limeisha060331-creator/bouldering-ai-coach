@@ -13,7 +13,13 @@ export function CruxHeader({ variant = "app" }: Props) {
 
   return (
     <header className="no-print border-b-2 border-[var(--crux-border)] bg-[var(--crux-surface)]">
-      <div className="crux-container flex h-12 items-center justify-between sm:h-14">
+      <div
+        className={`flex h-12 items-center justify-between sm:h-14 ${
+          variant === "landing"
+            ? "w-full px-4 sm:px-6"
+            : "crux-container"
+        }`}
+      >
         <Link
           href="/"
           className="text-sm font-black tracking-tight text-[var(--crux-text)] sm:text-base"

@@ -49,18 +49,18 @@ export function LandingHome() {
   const totalAscentM = useMemo(() => sumAscentMeters(records), [records]);
 
   return (
-    <div className="crux-page flex min-h-screen flex-col">
+    <div className="crux-page flex min-h-screen w-full flex-col overflow-x-hidden">
       <CruxHeader variant="landing" />
 
-      <div className="crux-container flex flex-1 flex-col px-0 py-0 lg:max-w-none lg:grid lg:grid-cols-12 lg:gap-0">
-        <aside className="crux-fade-up order-2 border-2 border-[var(--crux-border)] bg-[var(--crux-surface)] lg:order-1 lg:col-span-2 lg:border-r-0 lg:border-t-0">
+      <div className="crux-landing-shell">
+        <aside className="crux-fade-up order-2 flex flex-col border-2 border-[var(--crux-border)] border-t-0 bg-[var(--crux-surface)] lg:order-1 lg:border-t-2 lg:border-r-0">
           <div className="border-b-2 border-[var(--crux-border)] p-4">
             <p className="text-[10px] text-[var(--crux-text-muted)]">训练记录</p>
             <p className="mt-2 text-sm font-black leading-tight tracking-tight">
               历史视频
             </p>
           </div>
-          <ul className="max-h-[40vh] divide-y-2 divide-[var(--crux-border)] overflow-y-auto lg:max-h-[calc(100vh-8rem)]">
+          <ul className="max-h-[40vh] flex-1 divide-y-2 divide-[var(--crux-border)] overflow-y-auto lg:max-h-none">
             {records.length === 0 ? (
               <li className="px-4 py-6 text-xs text-[var(--crux-text-muted)]">
                 暂无分析记录，完成一次分析后会出现在这里。
@@ -91,25 +91,26 @@ export function LandingHome() {
           </ul>
         </aside>
 
-        <section className="relative order-1 min-h-[48vh] overflow-hidden border-2 border-[var(--crux-border)] sm:min-h-[52vh] lg:order-2 lg:col-span-7 lg:min-h-[calc(100vh-3.5rem)] lg:border-x-0 lg:border-t-0">
-          <div className="absolute inset-0 flex items-center justify-center bg-[#141414]">
+        <section className="relative order-1 min-h-[48vh] overflow-hidden border-2 border-[var(--crux-border)] sm:min-h-[52vh] lg:order-2 lg:min-h-0 lg:border-x-0 lg:border-t-2">
+          <div className="absolute inset-0 bg-[#0f0f0f]">
             <Image
               src="/hero-climb.jpg"
               alt="抱石攀岩"
-              width={1920}
-              height={1280}
+              fill
               priority
               quality={92}
-              className="crux-hero-img h-auto max-h-full w-full object-contain object-center contrast-[1.06] saturate-[0.95]"
-              sizes="(max-width: 1024px) 100vw, 58vw"
+              className="crux-hero-img object-cover object-center contrast-[1.06] saturate-[0.95]"
+              sizes="100vw"
             />
-            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-black/25" />
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/55 via-black/5 to-black/20" />
           </div>
 
-          <div className="relative z-10 flex h-full min-h-[52vh] flex-col justify-between p-4 sm:p-6 lg:min-h-[calc(100vh-3.5rem)]">
+          <div className="relative z-10 flex h-full min-h-[48vh] flex-col justify-between p-4 sm:p-6 lg:min-h-[calc(100vh-3.5rem)]">
             <div className="crux-fade-up pt-2" style={{ animationDelay: "0.2s" }}>
-              <p className="text-[10px] font-medium text-white/75">累计爬升</p>
-              <p className="text-4xl font-black tracking-tight text-white sm:text-5xl">
+              <p className="text-[10px] font-medium tracking-wide text-white/75">
+                累计爬升
+              </p>
+              <p className="text-4xl font-black tracking-tight text-white sm:text-5xl lg:text-6xl">
                 <CountUp
                   end={totalAscentM}
                   decimals={totalAscentM % 1 === 0 ? 0 : 1}
@@ -123,29 +124,38 @@ export function LandingHome() {
             </div>
 
             <div
-              className="crux-fade-up max-w-md"
+              className="crux-fade-up max-w-lg"
               style={{ animationDelay: "0.35s" }}
             >
-              <p className="text-sm leading-relaxed text-white/85">
+              <p className="text-sm leading-relaxed text-white/85 sm:text-base">
                 上传攀爬视频，获取带时间戳的专业动作反馈，并记录难度与爬升。
               </p>
             </div>
           </div>
         </section>
 
-        <aside className="crux-panel-orange order-3 flex flex-col justify-between bg-[var(--crux-orange-panel)] p-6 sm:p-8 lg:col-span-3 lg:min-h-[calc(100vh-3.5rem)]">
-          <div className="flex flex-1 flex-col justify-center py-4">
-            <h1 className="text-[2.75rem] font-black leading-[0.88] tracking-tight text-[var(--crux-text)] sm:text-6xl lg:text-[4.25rem]">
-              CRUX 抱石
-              <br />
+        <aside className="crux-panel-orange order-3 flex min-h-[280px] flex-col justify-between border-2 border-[var(--crux-border)] border-t-0 bg-[var(--crux-orange-panel)] p-6 sm:p-8 lg:min-h-0 lg:border-t-2 lg:border-l-0 lg:px-10 lg:py-12">
+          <div className="flex flex-1 flex-col justify-center">
+            <p className="crux-mono text-[10px] font-bold tracking-[0.28em] text-[var(--crux-text)]/65">
+              BOULDERING · AI
+            </p>
+            <div className="mt-5 border-l-4 border-[var(--crux-text)] pl-5">
+              <p className="crux-landing-title-crux text-[var(--crux-text)]">
+                CRUX
+              </p>
+              <p className="crux-landing-title-sub -mt-1 text-[var(--crux-text)]">
+                抱石
+              </p>
+            </div>
+            <p className="crux-landing-title-tag mt-6 text-[var(--crux-text)]">
               动作解析
-            </h1>
-            <p className="mt-5 max-w-xs text-sm font-medium leading-relaxed text-[var(--crux-text)]/85">
+            </p>
+            <p className="mt-6 max-w-sm text-sm leading-relaxed text-[var(--crux-text)]/80">
               简洁、专业的攀爬视频分析平台
             </p>
           </div>
 
-          <div className="space-y-3">
+          <div className="mt-8 space-y-3">
             <Link
               href="/analyze"
               className="crux-cta group flex w-full items-center justify-between border-2 border-[var(--crux-border)] bg-[var(--crux-text)] px-5 py-4 text-sm font-black text-[var(--crux-surface)]"
