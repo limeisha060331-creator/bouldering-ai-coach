@@ -109,14 +109,21 @@ export async function downloadAnalysisPdf(
     const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
 
-    /* 整张模板缩放到一页 A4，禁止分页 */
+    /* 固定一页：过高则缩小，不足则放大铺满，避免留白或分页 */
     let drawW = pageWidth;
     let drawH = (canvas.height * drawW) / canvas.width;
     if (drawH > pageHeight) {
       drawH = pageHeight;
       drawW = (canvas.width * drawH) / canvas.height;
+    } else if (drawH < pageHeight * 0.98) {
+      drawH = pageHeight;
+      drawW = (canvas.width * drawH) / canvas.height;
+      if (drawW > pageWidth) {
+        drawW = pageWidth;
+        drawH = (canvas.height * drawW) / canvas.width;
+      }
     }
-    const drawX = (pageWidth - drawW) / 2;
+    const drawX = Math.max(0, (pageWidth - drawW) / 2);
 
     pdf.addImage(imgData, format, drawX, 0, drawW, drawH);
 

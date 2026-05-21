@@ -5,13 +5,23 @@ export const PDF_SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
   "https://bouldering-ai-coach.vercel.app";
 
-/** 压缩为一句摘要，避免 PDF 照搬长文 */
-export function summarizeLine(text: string, maxLen = 58): string {
+/** 摘取 1～2 句，控制长度，用于填满单页 PDF */
+export function summarizeParagraph(text: string, maxLen: number): string {
   const t = text.replace(/\s+/g, " ").trim();
   if (!t) return "";
-  const sentence = t.match(/^[^。！？.!?\n]+[。！？.!?]?/)?.[0] ?? t;
-  if (sentence.length <= maxLen) return sentence;
-  return `${sentence.slice(0, maxLen - 1)}…`;
+
+  const sentences: string[] = [];
+  const re = /[^。！？.!?\n]+[。！？.!?]?/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(t)) !== null) {
+    sentences.push(m[0].trim());
+    if (sentences.join("").length >= maxLen) break;
+  }
+
+  let out = sentences.join("");
+  if (!out) out = t;
+  if (out.length <= maxLen) return out;
+  return `${out.slice(0, maxLen - 1)}…`;
 }
 
 function parseNumberedBlock(raw: string): { label: string; body: string } | null {
@@ -40,18 +50,20 @@ export function summarizeDimensions(
   structured: StructuredReport
 ): PdfDimensionItem[] {
   const items: PdfDimensionItem[] = [];
+  const maxItems = 4;
+  const lineMax = 108;
 
   for (const raw of structured.dimensionBullets) {
     const parsed = parseNumberedBlock(raw);
     if (parsed) {
       const text = parsed.body
-        ? summarizeLine(parsed.body, 56)
-        : summarizeLine(parsed.label, 56);
+        ? summarizeParagraph(parsed.body, lineMax)
+        : summarizeParagraph(parsed.label, lineMax);
       items.push({ label: parsed.label, text });
     } else {
-      items.push({ text: summarizeLine(raw, 58) });
+      items.push({ text: summarizeParagraph(raw, lineMax) });
     }
-    if (items.length >= 3) break;
+    if (items.length >= maxItems) break;
   }
 
   if (items.length === 0 && structured.dimensionSummary) {
@@ -64,12 +76,12 @@ export function summarizeDimensions(
       if (parsed) {
         items.push({
           label: parsed.label,
-          text: summarizeLine(parsed.body || parsed.label, 68),
+          text: summarizeParagraph(parsed.body || parsed.label, lineMax),
         });
       } else {
-        items.push({ text: summarizeLine(chunk, 58) });
+        items.push({ text: summarizeParagraph(chunk, lineMax) });
       }
-      if (items.length >= 3) break;
+      if (items.length >= maxItems) break;
     }
   }
 
@@ -79,15 +91,16 @@ export function summarizeDimensions(
 export function summarizeImprovements(
   structured: StructuredReport
 ): PdfImprovementItem[] {
-  return structured.improvementBlocks.slice(0, 2).map((b) => {
-    const source =
-      b.practice?.trim() ||
-      b.strength?.trim() ||
-      b.lines.find((l) => l.trim())?.trim() ||
-      b.title;
+  return structured.improvementBlocks.slice(0, 3).map((b) => {
+    const parts = [
+      b.practice?.trim(),
+      b.strength?.trim(),
+      ...b.lines.map((l) => l.trim()).filter(Boolean),
+    ].filter(Boolean) as string[];
+    const source = parts.join(" ") || b.title;
     return {
       title: b.title.replace(/^\d+[.、)\]]\s*/, "").trim(),
-      text: summarizeLine(source, 64),
+      text: summarizeParagraph(source, 100),
     };
   });
 }
@@ -104,12 +117,12 @@ export function formatPdfVideoTime(createdAt: string): string {
 
 export type PdfContent = {
   videoLabel: string;
-  timeLabel: string;
   gradeLine: string | null;
   score: number | null;
   highlight: string | null;
   dimensions: PdfDimensionItem[];
   improvements: PdfImprovementItem[];
+  overall: string | null;
 };
 
 export function buildPdfContent(
@@ -120,25 +133,27 @@ export function buildPdfContent(
   const structured = parsed.structured;
 
   const idx =
-    videoIndex != null && videoIndex > 0
-      ? videoIndex
-      : null;
+    videoIndex != null && videoIndex > 0 ? videoIndex : null;
 
   const gradeParts: string[] = [];
   if (record.grade) gradeParts.push(record.grade);
   if (record.ascentMeters != null && record.ascentMeters > 0) {
-    gradeParts.push(`${record.ascentMeters}m`);
+    gradeParts.push(`爬升 ${record.ascentMeters}m`);
   }
 
   return {
     videoLabel: idx != null ? `视频 ${String(idx).padStart(2, "0")}` : "视频 —",
-    timeLabel: formatPdfVideoTime(record.createdAt),
     gradeLine: gradeParts.length > 0 ? gradeParts.join(" · ") : null,
     score: record.score ?? parsed.score,
     highlight: record.highlight
-      ? summarizeLine(record.highlight, 96)
-      : null,
+      ? summarizeParagraph(record.highlight, 150)
+      : parsed.highlight
+        ? summarizeParagraph(parsed.highlight, 150)
+        : null,
     dimensions: summarizeDimensions(structured),
     improvements: summarizeImprovements(structured),
+    overall: structured.overallAdvice
+      ? summarizeParagraph(structured.overallAdvice, 130)
+      : null,
   };
 }

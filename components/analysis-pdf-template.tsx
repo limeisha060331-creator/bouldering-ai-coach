@@ -8,7 +8,10 @@ import {
   type PdfContent,
 } from "@/lib/pdf-content";
 
-/** 仅 hex/rgb，供 html2canvas 使用 */
+/** A4 @ 96dpi，与 html2canvas 输出一页对齐 */
+const PAGE_W = 794;
+const PAGE_H = 1123;
+
 const C = {
   page: "#f4f0ea",
   surface: "#ffffff",
@@ -20,7 +23,6 @@ const C = {
   orangeDeep: "#e64a19",
   orangeTint: "#ffe8dc",
   ink: "#1a1a1a",
-  rule: "#d8d2c8",
 } as const;
 
 const mono = 'ui-monospace, "Consolas", "Menlo", monospace';
@@ -38,23 +40,19 @@ function PdfSectionHeading({ children }: { children: ReactNode }) {
         display: "flex",
         alignItems: "center",
         gap: 10,
-        marginBottom: 8,
+        marginBottom: 10,
+        flexShrink: 0,
       }}
     >
       <span
-        style={{
-          width: 4,
-          height: 18,
-          flexShrink: 0,
-          backgroundColor: C.orange,
-        }}
+        style={{ width: 5, height: 20, flexShrink: 0, backgroundColor: C.orange }}
       />
       <h2
         style={{
           margin: 0,
-          fontSize: 16,
+          fontSize: 18,
           fontWeight: 900,
-          letterSpacing: "0.12em",
+          letterSpacing: "0.14em",
           color: C.orangeDeep,
         }}
       >
@@ -65,7 +63,7 @@ function PdfSectionHeading({ children }: { children: ReactNode }) {
           flex: 1,
           height: 2,
           backgroundColor: C.ink,
-          opacity: 0.12,
+          opacity: 0.15,
         }}
       />
     </div>
@@ -97,8 +95,8 @@ export const AnalysisPdfTemplate = forwardRef<HTMLDivElement, Props>(
           left: 0,
           top: 0,
           zIndex: -1,
-          width: "210mm",
-          height: "297mm",
+          width: PAGE_W,
+          height: PAGE_H,
           opacity: 0,
           overflow: "hidden",
           backgroundColor: C.page,
@@ -114,13 +112,13 @@ export const AnalysisPdfTemplate = forwardRef<HTMLDivElement, Props>(
             flexShrink: 0,
             borderBottom: `2px solid ${C.ink}`,
             backgroundColor: C.orange,
-            padding: "18px 28px 16px",
+            padding: "22px 36px 18px",
           }}
         >
           <p
             style={{
               margin: 0,
-              fontSize: 8,
+              fontSize: 9,
               fontWeight: 700,
               letterSpacing: "0.34em",
               color: C.ink,
@@ -132,35 +130,33 @@ export const AnalysisPdfTemplate = forwardRef<HTMLDivElement, Props>(
           </p>
           <p
             style={{
-              margin: "6px 0 0",
-              fontSize: 34,
+              margin: "8px 0 0",
+              fontSize: 36,
               fontWeight: 900,
               lineHeight: 1,
               letterSpacing: "-0.04em",
               color: C.ink,
             }}
           >
-            CRUX<span style={{ marginLeft: 10, fontSize: 20 }}>抱石</span>
+            CRUX<span style={{ marginLeft: 12, fontSize: 22 }}>抱石</span>
           </p>
           <p
             style={{
-              margin: "2px 0 0",
-              fontSize: 16,
+              margin: "4px 0 0",
+              fontSize: 17,
               fontWeight: 900,
-              letterSpacing: "0.18em",
+              letterSpacing: "0.2em",
               color: C.ink,
             }}
           >
             动作解析
           </p>
-
           {metaLine && (
             <p
               style={{
-                margin: "10px 0 0",
-                fontSize: 12,
+                margin: "12px 0 0",
+                fontSize: 13,
                 fontWeight: 800,
-                letterSpacing: "0.04em",
                 color: C.ink,
                 fontFamily: mono,
               }}
@@ -175,143 +171,199 @@ export const AnalysisPdfTemplate = forwardRef<HTMLDivElement, Props>(
             flex: 1,
             display: "flex",
             flexDirection: "column",
-            justifyContent: "space-between",
-            padding: "16px 28px 14px",
+            padding: "20px 36px 16px",
             minHeight: 0,
+            gap: 16,
           }}
         >
-          <div>
-            {data.highlight && (
-              <div
+          {data.highlight && (
+            <div
+              style={{
+                flexShrink: 0,
+                borderLeft: `5px solid ${C.orange}`,
+                backgroundColor: C.orangeTint,
+                padding: "14px 16px 14px 18px",
+              }}
+            >
+              <p
                 style={{
-                  borderLeft: `4px solid ${C.orange}`,
-                  backgroundColor: C.orangeTint,
-                  padding: "10px 12px 10px 14px",
+                  margin: 0,
+                  fontSize: 11,
+                  fontWeight: 900,
+                  letterSpacing: "0.12em",
+                  color: C.orangeDeep,
                 }}
               >
-                <p
-                  style={{
-                    margin: 0,
-                    fontSize: 9,
-                    fontWeight: 900,
-                    letterSpacing: "0.1em",
-                    color: C.orangeDeep,
-                  }}
-                >
-                  教练金句
-                </p>
-                <p
-                  style={{
-                    margin: "5px 0 0",
-                    fontSize: 12,
-                    fontWeight: 800,
-                    lineHeight: 1.32,
-                    color: C.text,
-                  }}
-                >
-                  {data.highlight}
-                </p>
-              </div>
-            )}
+                教练金句
+              </p>
+              <p
+                style={{
+                  margin: "8px 0 0",
+                  fontSize: 14,
+                  fontWeight: 800,
+                  lineHeight: 1.45,
+                  color: C.text,
+                }}
+              >
+                {data.highlight}
+              </p>
+            </div>
+          )}
 
-            {data.dimensions.length > 0 && (
-              <section style={{ marginTop: 14 }}>
-                <PdfSectionHeading>核心维度</PdfSectionHeading>
-                <ul
-                  style={{
-                    margin: 0,
-                    padding: "10px 12px",
-                    listStyle: "none",
-                    border: `1.5px solid ${C.ink}`,
-                    backgroundColor: C.surface,
-                  }}
-                >
-                  {data.dimensions.map((d, i) => (
-                    <li
-                      key={i}
+          {data.dimensions.length > 0 && (
+            <section
+              style={{
+                flex: 1,
+                display: "flex",
+                flexDirection: "column",
+                minHeight: 0,
+              }}
+            >
+              <PdfSectionHeading>核心维度</PdfSectionHeading>
+              <ul
+                style={{
+                  flex: 1,
+                  margin: 0,
+                  padding: "14px 16px",
+                  listStyle: "none",
+                  border: `2px solid ${C.ink}`,
+                  backgroundColor: C.surface,
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "space-evenly",
+                }}
+              >
+                {data.dimensions.map((d, i) => (
+                  <li
+                    key={i}
+                    style={{
+                      display: "flex",
+                      gap: 8,
+                      fontSize: 13,
+                      lineHeight: 1.42,
+                      color: C.text,
+                    }}
+                  >
+                    <span
                       style={{
-                        display: "flex",
-                        gap: 6,
-                        fontSize: 11,
-                        lineHeight: 1.32,
+                        flexShrink: 0,
+                        fontWeight: 900,
+                        color: C.orange,
+                        fontSize: 14,
+                      }}
+                    >
+                      ▸
+                    </span>
+                    <span>
+                      {d.label ? (
+                        <>
+                          <span style={{ fontWeight: 900 }}>{d.label}</span>
+                          <span style={{ color: C.muted }}> — {d.text}</span>
+                        </>
+                      ) : (
+                        d.text
+                      )}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          {data.improvements.length > 0 && (
+            <section
+              style={{
+                flex: 1,
+                display: "flex",
+                flexDirection: "column",
+                minHeight: 0,
+              }}
+            >
+              <PdfSectionHeading>改进要点</PdfSectionHeading>
+              <div
+                style={{
+                  flex: 1,
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "space-evenly",
+                  gap: 10,
+                }}
+              >
+                {data.improvements.map((item, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      border: `2px solid ${C.ink}`,
+                      borderLeft: `6px solid ${C.orange}`,
+                      backgroundColor: C.surface,
+                      padding: "12px 14px",
+                    }}
+                  >
+                    <p
+                      style={{
+                        margin: 0,
+                        fontSize: 13,
+                        fontWeight: 900,
                         color: C.text,
-                        marginTop: i > 0 ? 6 : 0,
                       }}
                     >
-                      <span
-                        style={{
-                          flexShrink: 0,
-                          fontWeight: 900,
-                          color: C.orange,
-                        }}
-                      >
-                        ▸
-                      </span>
-                      <span>
-                        {d.label ? (
-                          <>
-                            <span style={{ fontWeight: 800 }}>{d.label}</span>
-                            <span style={{ color: C.muted }}> — {d.text}</span>
-                          </>
-                        ) : (
-                          d.text
-                        )}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            )}
-
-            {data.improvements.length > 0 && (
-              <section style={{ marginTop: 14 }}>
-                <PdfSectionHeading>改进要点</PdfSectionHeading>
-                <div>
-                  {data.improvements.map((item, i) => (
-                    <div
-                      key={i}
+                      {item.title}
+                    </p>
+                    <p
                       style={{
-                        marginTop: i > 0 ? 6 : 0,
-                        border: `1.5px solid ${C.ink}`,
-                        borderLeft: `5px solid ${C.orange}`,
-                        backgroundColor: C.surface,
-                        padding: "8px 10px",
+                        margin: "6px 0 0",
+                        fontSize: 12,
+                        lineHeight: 1.42,
+                        color: C.muted,
                       }}
                     >
-                      <p
-                        style={{
-                          margin: 0,
-                          fontSize: 11,
-                          fontWeight: 900,
-                          color: C.text,
-                        }}
-                      >
-                        {item.title}
-                      </p>
-                      <p
-                        style={{
-                          margin: "3px 0 0",
-                          fontSize: 10,
-                          lineHeight: 1.32,
-                          color: C.muted,
-                        }}
-                      >
-                        {item.text}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            )}
-          </div>
+                      {item.text}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
 
-          <div style={{ flexShrink: 0, paddingTop: 10 }}>
+          {data.overall && (
+            <div
+              style={{
+                flexShrink: 0,
+                border: `2px solid ${C.ink}`,
+                backgroundColor: C.surface,
+                padding: "12px 14px",
+              }}
+            >
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: 11,
+                  fontWeight: 900,
+                  color: C.orangeDeep,
+                }}
+              >
+                整体建议
+              </p>
+              <p
+                style={{
+                  margin: "6px 0 0",
+                  fontSize: 12,
+                  lineHeight: 1.42,
+                  color: C.text,
+                }}
+              >
+                {data.overall}
+              </p>
+            </div>
+          )}
+
+          <div style={{ flexShrink: 0, marginTop: "auto", paddingTop: 4 }}>
             <p
               style={{
                 margin: 0,
                 textAlign: "center",
-                fontSize: 8,
-                letterSpacing: "0.06em",
+                fontSize: 9,
+                letterSpacing: "0.08em",
                 color: C.faint,
               }}
             >
@@ -319,9 +371,9 @@ export const AnalysisPdfTemplate = forwardRef<HTMLDivElement, Props>(
             </p>
             <p
               style={{
-                margin: "2px 0 0",
+                margin: "3px 0 0",
                 textAlign: "center",
-                fontSize: 7,
+                fontSize: 8,
                 color: C.faint2,
               }}
             >
