@@ -11,6 +11,7 @@ import {
   History,
   Info,
   Loader2,
+  Menu,
   Mountain,
   Printer,
   Share2,
@@ -108,6 +109,10 @@ export const IconPrinter = ({ className = "h-4 w-4" }: { className?: string }) =
 
 export const IconChevronDown = ({ className = "h-4 w-4" }: { className?: string }) => (
   <ChevronDown className={`${iconClass} ${className}`} strokeWidth={1.5} aria-hidden />
+);
+
+export const IconMenu = ({ className = "h-4 w-4" }: { className?: string }) => (
+  <Menu className={`${iconClass} ${className}`} strokeWidth={2} aria-hidden />
 );
 
 export const IconX = ({ className = "h-4 w-4" }: { className?: string }) => (

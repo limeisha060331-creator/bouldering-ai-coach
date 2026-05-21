@@ -80,7 +80,7 @@ function AnalysisDetailContent() {
 
   if (loading) {
     return (
-      <main className="spa-page flex min-h-screen items-center justify-center">
+      <main className="crux-page flex min-h-screen items-center justify-center">
         <p className="flex items-center gap-2 text-sm text-[var(--spa-text-muted)]">
           <IconLoader className="h-4 w-4" />
           {t.detailLoading}
@@ -91,12 +91,12 @@ function AnalysisDetailContent() {
 
   if (notFound || !record) {
     return (
-      <main className="spa-page flex min-h-screen flex-col items-center justify-center gap-5 px-5">
+      <main className="crux-page flex min-h-screen flex-col items-center justify-center gap-5 px-5">
         <p className="text-sm text-[var(--spa-text-secondary)]">
           {t.detailNotFound}
         </p>
         <Link
-          href="/"
+          href="/analyze"
           className="inline-flex items-center gap-2 text-sm font-medium text-[var(--spa-text)] underline-offset-4 hover:underline"
         >
           <IconArrowLeft className="h-4 w-4" />
@@ -122,18 +122,18 @@ function AnalysisDetailContent() {
   };
 
   return (
-    <main className="spa-page">
-      <div className="spa-container">
+    <main className="crux-page">
+      <div className="crux-container-narrow">
         <SiteNav uiLocale={uiLocale} />
         <header className="mb-6">
           <Link
-            href="/"
+            href="/analyze"
             className="inline-flex items-center gap-1.5 text-xs text-[var(--spa-text-muted)] transition hover:text-[var(--spa-text-secondary)]"
           >
             <IconArrowLeft className="h-3.5 w-3.5" />
             {uiLocale === "zh" ? "返回" : "Back"}
           </Link>
-          <h1 className="mt-4 text-xl font-medium tracking-tight text-[var(--spa-text)] sm:text-2xl">
+          <h1 className="mt-4 text-xl font-black uppercase tracking-tight text-[var(--crux-text)] sm:text-2xl">
             {record.fileName}
           </h1>
           <p className="mt-1.5 text-xs text-[var(--spa-text-muted)]">
@@ -171,7 +171,7 @@ export default function AnalysisDetailPage() {
   return (
     <Suspense
       fallback={
-        <main className="spa-page flex min-h-screen items-center justify-center">
+        <main className="crux-page flex min-h-screen items-center justify-center">
           <p className="text-sm text-[var(--spa-text-muted)]">加载中…</p>
         </main>
       }

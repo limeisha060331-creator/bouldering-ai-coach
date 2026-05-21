@@ -38,13 +38,13 @@ export default function FavoritesPage() {
   }, [load]);
 
   return (
-    <main className="spa-page">
-      <div className="spa-container">
+    <main className="crux-page">
+      <div className="crux-container-narrow">
         <SiteNav uiLocale={uiLocale} />
         <header className="mb-8">
           <div className="mb-2 flex items-center gap-2">
             <IconStar className="h-5 w-5 text-[var(--spa-text-secondary)]" filled />
-            <h1 className="text-xl font-medium text-[var(--spa-text)] sm:text-2xl">
+            <h1 className="text-xl font-black uppercase text-[var(--crux-text)] sm:text-2xl">
               {t.favoritesTitle}
             </h1>
           </div>

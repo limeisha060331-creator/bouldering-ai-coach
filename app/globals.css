@@ -1,45 +1,181 @@
 @import "tailwindcss";
 
 :root {
-  --spa-bg: #f6f4f0;
-  --spa-surface: #ffffff;
-  --spa-elevated: #faf9f7;
-  --spa-border: #e8e4dc;
-  --spa-border-subtle: #f0ede6;
-  --spa-text: #1a1917;
-  --spa-text-secondary: #5c5852;
-  --spa-text-muted: #8a857c;
-  --spa-accent: #2a2826;
-  --spa-accent-hover: #3d3a36;
-  --spa-focus: rgba(42, 40, 38, 0.08);
-  --spa-shadow: 0 1px 2px rgba(26, 25, 23, 0.04), 0 8px 24px rgba(26, 25, 23, 0.06);
-  --spa-shadow-lg: 0 2px 4px rgba(26, 25, 23, 0.04), 0 16px 40px rgba(26, 25, 23, 0.08);
+  --crux-bg: #f5f3ef;
+  --crux-surface: #ffffff;
+  --crux-elevated: #faf8f5;
+  --crux-border: #1a1917;
+  --crux-border-subtle: #e5e2dc;
+  --crux-text: #0a0a0a;
+  --crux-text-secondary: #3d3a36;
+  --crux-text-muted: #6b6560;
+  --crux-accent: #ff5c1a;
+  --crux-accent-hover: #e84f0f;
+  --crux-orange-panel: #ff5c1a;
+  --crux-mono: ui-monospace, "SFMono-Regular", "Menlo", monospace;
+
+  /* legacy aliases */
+  --spa-bg: var(--crux-bg);
+  --spa-surface: var(--crux-surface);
+  --spa-elevated: var(--crux-elevated);
+  --spa-border: var(--crux-border-subtle);
+  --spa-border-subtle: var(--crux-border-subtle);
+  --spa-text: var(--crux-text);
+  --spa-text-secondary: var(--crux-text-secondary);
+  --spa-text-muted: var(--crux-text-muted);
+  --spa-accent: var(--crux-text);
+  --spa-accent-hover: var(--crux-text-secondary);
+  --spa-focus: rgba(10, 10, 10, 0.06);
+  --spa-shadow: 0 4px 24px rgba(10, 10, 10, 0.08);
+  --spa-shadow-lg: 0 12px 40px rgba(10, 10, 10, 0.12);
 }
 
 @theme inline {
   --font-sans: var(--font-dm-sans), ui-sans-serif, system-ui, "PingFang SC", sans-serif;
-  --color-spa-bg: var(--spa-bg);
-  --color-spa-surface: var(--spa-surface);
-  --color-spa-border: var(--spa-border);
-  --color-spa-text: var(--spa-text);
-  --color-spa-muted: var(--spa-text-muted);
+  --font-mono: var(--font-jetbrains), var(--crux-mono);
 }
 
 body {
-  background: var(--spa-bg);
-  color: var(--spa-text);
+  background: var(--crux-bg);
+  color: var(--crux-text);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
 }
 
+.crux-page {
+  min-height: 100vh;
+  background: var(--crux-bg);
+}
+
+.crux-container {
+  width: 100%;
+  max-width: 90rem;
+  margin-inline: auto;
+  padding-inline: 1rem;
+}
+
+@media (min-width: 640px) {
+  .crux-container {
+    padding-inline: 1.5rem;
+  }
+}
+
+.crux-container-narrow {
+  max-width: 42rem;
+  margin-inline: auto;
+  padding-inline: 1.25rem;
+  padding-block: 2rem;
+}
+
+@media (min-width: 640px) {
+  .crux-container-narrow {
+    padding-block: 2.5rem;
+  }
+}
+
+.crux-panel {
+  background: var(--crux-surface);
+  border: 2px solid var(--crux-border);
+  box-shadow: 4px 4px 0 var(--crux-border);
+}
+
+.crux-label {
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--crux-text-muted);
+}
+
+.crux-mono {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.06em;
+}
+
+/* Landing */
+@keyframes crux-ken-burns {
+  0% {
+    transform: scale(1.02) translate(0, 0);
+  }
+  100% {
+    transform: scale(1.08) translate(-1%, -0.5%);
+  }
+}
+
+@keyframes crux-slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(2rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes crux-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(1rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes crux-scrub-pulse {
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.crux-hero-img {
+  animation: crux-ken-burns 18s ease-in-out infinite alternate;
+}
+
+.crux-panel-orange {
+  animation: crux-slide-in-right 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.15s both;
+}
+
+.crux-fade-up {
+  animation: crux-fade-up 0.6s ease-out both;
+}
+
+.crux-session-item {
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.crux-session-item:hover {
+  background: var(--crux-text);
+  color: var(--crux-surface);
+  transform: translateX(4px);
+}
+
+.crux-cta {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.crux-cta:hover {
+  transform: translateY(-2px);
+  box-shadow: 6px 6px 0 var(--crux-border);
+}
+
+.crux-cta:active {
+  transform: translateY(0);
+  box-shadow: 2px 2px 0 var(--crux-border);
+}
+
+/* spa compat */
 .spa-page {
   min-height: 100vh;
-  background-color: var(--spa-bg);
-  background-image: radial-gradient(
-    ellipse 120% 80% at 50% -30%,
-    rgba(255, 255, 255, 0.9),
-    transparent 55%
-  );
+  background: var(--crux-bg);
 }
 
 .spa-container {
@@ -50,58 +186,23 @@ body {
   padding-block: 2.5rem;
 }
 
-@media (min-width: 640px) {
-  .spa-container {
-    padding-inline: 1.5rem;
-    padding-block: 3.5rem;
-  }
-}
-
 .spa-panel {
-  background: var(--spa-surface);
-  border: 1px solid var(--spa-border);
-  border-radius: 1rem;
-  box-shadow: var(--spa-shadow);
+  background: var(--crux-surface);
+  border: 2px solid var(--crux-border);
+  border-radius: 0;
+  box-shadow: 4px 4px 0 var(--crux-border);
 }
 
 .spa-panel-inset {
-  background: var(--spa-elevated);
-  border: 1px solid var(--spa-border-subtle);
-  border-radius: 0.75rem;
+  background: var(--crux-elevated);
+  border: 1px solid var(--crux-border-subtle);
 }
 
 .spa-label {
-  font-size: 0.6875rem;
-  font-weight: 500;
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--spa-text-muted);
-}
-
-.spa-divider {
-  height: 1px;
-  background: var(--spa-border);
-  border: none;
-  margin: 0;
-}
-
-@media print {
-  .no-print {
-    display: none !important;
-  }
-
-  .spa-page {
-    background: white !important;
-    background-image: none !important;
-  }
-
-  body {
-    background: white !important;
-    color: #1a1917 !important;
-  }
-
-  #analysis-print-root {
-    box-shadow: none !important;
-    border: none !important;
-  }
+  color: var(--crux-text-muted);
 }

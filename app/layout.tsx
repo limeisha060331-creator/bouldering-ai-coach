@@ -1,10 +1,16 @@
 import type { Metadata } from "next";
-import { DM_Sans } from "next/font/google";
+import { DM_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
 const dmSans = DM_Sans({
   subsets: ["latin"],
   variable: "--font-dm-sans",
+  display: "swap",
+});
+
+const jetbrains = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-jetbrains",
   display: "swap",
 });
 
@@ -19,10 +25,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="zh-CN" className={`${dmSans.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col">
+    <html
+      lang="zh-CN"
+      className={`${dmSans.variable} ${jetbrains.variable} h-full antialiased`}
+    >
+      <body className="flex min-h-full flex-col">
         {children}
-        <footer className="no-print mt-auto border-t border-[var(--spa-border)] bg-[var(--spa-elevated)] px-5 py-6 text-center text-[11px] leading-relaxed text-[var(--spa-text-muted)]">
+        <footer className="no-print mt-auto border-t-2 border-[var(--crux-border)] bg-[var(--crux-surface)] px-5 py-6 text-center crux-mono text-[10px] leading-relaxed text-[var(--crux-text-muted)]">
           <p>
             本服务仅供训练参考，不构成医疗、康复或现场保护建议；请在安全环境下攀爬并自行承担风险。
           </p>
