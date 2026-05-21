@@ -1,6 +1,6 @@
 import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
-import type { AnalysisRecord } from "./types";
+import { sanitizePdfClone } from "./pdf-html2canvas-fix";
 
 /** 单张 canvas 最长边上限，避免浏览器/移动端内存溢出 */
 const MAX_CANVAS_EDGE = 11_000;
@@ -48,13 +48,6 @@ function pinElementForCapture(el: HTMLElement): () => void {
   };
 }
 
-function stripUnsupportedStyles(root: HTMLElement): void {
-  root.style.boxShadow = "none";
-  root.querySelectorAll<HTMLElement>("*").forEach((node) => {
-    node.style.boxShadow = "none";
-  });
-}
-
 /** 将隐藏的 PDF 模板 DOM 导出为 A4 PDF */
 export async function downloadAnalysisPdf(
   element: HTMLElement,
@@ -91,9 +84,8 @@ export async function downloadAnalysisPdf(
       scrollY: 0,
       onclone: (doc) => {
         const root =
-          doc.querySelector<HTMLElement>("[data-pdf-root]") ??
-          doc.body;
-        stripUnsupportedStyles(root);
+          doc.querySelector<HTMLElement>("[data-pdf-root]") ?? doc.body;
+        sanitizePdfClone(root, doc);
       },
     });
 

@@ -8,6 +8,24 @@ import {
   type PdfContent,
 } from "@/lib/pdf-content";
 
+/** html2canvas 不支持 Tailwind v4 的 oklab，PDF 仅用 hex 内联样式 */
+const C = {
+  bg: "#f5f3ef",
+  surface: "#ffffff",
+  text: "#0a0a0a",
+  muted: "#3d3a36",
+  faint: "#9a948c",
+  faint2: "#b5afa6",
+  orange: "#ff5c1a",
+  orangeBg: "#fff0e8",
+  black: "#0a0a0a",
+  white: "#ffffff",
+  whiteSoft: "#e8e8e8",
+} as const;
+
+const mono = 'ui-monospace, "Consolas", "Menlo", monospace';
+const sans = '"PingFang SC", "Microsoft YaHei", system-ui, sans-serif';
+
 type Props = {
   record: AnalysisRecord;
   videoIndex?: number | null;
@@ -15,9 +33,19 @@ type Props = {
 
 function PdfSectionHeading({ children }: { children: ReactNode }) {
   return (
-    <div className="flex items-stretch gap-0">
-      <div className="w-1.5 shrink-0 bg-[#ff5c1a]" />
-      <h2 className="bg-[#0a0a0a] px-4 py-2 text-[15px] font-black tracking-wide text-[#ff5c1a]">
+    <div style={{ display: "flex", alignItems: "stretch" }}>
+      <div style={{ width: 6, flexShrink: 0, backgroundColor: C.orange }} />
+      <h2
+        style={{
+          margin: 0,
+          padding: "8px 16px",
+          backgroundColor: C.black,
+          color: C.orange,
+          fontSize: 15,
+          fontWeight: 900,
+          letterSpacing: "0.06em",
+        }}
+      >
         {children}
       </h2>
     </div>
@@ -33,87 +61,214 @@ export const AnalysisPdfTemplate = forwardRef<HTMLDivElement, Props>(
       <div
         ref={ref}
         data-pdf-root
-        className="pointer-events-none fixed left-0 top-0 z-[-1] w-[210mm] opacity-0 bg-[#f5f3ef] text-[#0a0a0a]"
-        style={{
-          fontFamily: '"PingFang SC", "Microsoft YaHei", system-ui, sans-serif',
-          maxHeight: "297mm",
-        }}
+        data-pdf-safe-colors
         aria-hidden
+        style={{
+          pointerEvents: "none",
+          position: "fixed",
+          left: 0,
+          top: 0,
+          zIndex: -1,
+          width: "210mm",
+          opacity: 0,
+          maxHeight: "297mm",
+          backgroundColor: C.bg,
+          color: C.text,
+          fontFamily: sans,
+          boxSizing: "border-box",
+        }}
       >
-        {/* 顶栏标题 */}
-        <header className="border-b-2 border-[#0a0a0a] bg-[#ff5c1a] px-8 py-6">
+        <header
+          style={{
+            borderBottom: `2px solid ${C.black}`,
+            backgroundColor: C.orange,
+            padding: "24px 32px",
+          }}
+        >
           <p
-            className="text-[9px] font-bold tracking-[0.32em] text-[#0a0a0a]"
-            style={{ fontFamily: 'ui-monospace, "Consolas", monospace' }}
+            style={{
+              margin: 0,
+              fontSize: 9,
+              fontWeight: 700,
+              letterSpacing: "0.32em",
+              color: C.text,
+              fontFamily: mono,
+            }}
           >
             BOULDERING · AI
           </p>
-          <div className="mt-3 flex items-end justify-between gap-4">
+          <div
+            style={{
+              marginTop: 12,
+              display: "flex",
+              alignItems: "flex-end",
+              justifyContent: "space-between",
+              gap: 16,
+            }}
+          >
             <div>
-              <p className="text-[2.4rem] font-black leading-none tracking-[-0.05em] text-[#0a0a0a]">
-                CRUX<span className="ml-3 text-[1.35rem] tracking-tight">抱石</span>
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: 38,
+                  fontWeight: 900,
+                  lineHeight: 1,
+                  letterSpacing: "-0.05em",
+                  color: C.text,
+                }}
+              >
+                CRUX
+                <span style={{ marginLeft: 12, fontSize: 22 }}>抱石</span>
               </p>
-              <p className="mt-1 text-[1.15rem] font-black tracking-[0.2em] text-[#0a0a0a]">
+              <p
+                style={{
+                  margin: "4px 0 0",
+                  fontSize: 18,
+                  fontWeight: 900,
+                  letterSpacing: "0.2em",
+                  color: C.text,
+                }}
+              >
                 动作解析
               </p>
             </div>
             <p
-              className="shrink-0 border-2 border-[#0a0a0a] bg-[#0a0a0a] px-3 py-1 text-[10px] font-black text-[#ff5c1a]"
-              style={{ fontFamily: 'ui-monospace, "Consolas", monospace' }}
+              style={{
+                margin: 0,
+                flexShrink: 0,
+                border: `2px solid ${C.black}`,
+                backgroundColor: C.black,
+                color: C.orange,
+                padding: "4px 12px",
+                fontSize: 10,
+                fontWeight: 900,
+                fontFamily: mono,
+              }}
             >
               教练报告
             </p>
           </div>
         </header>
 
-        <div className="px-8 py-5">
-          {/* 视频序号 + 时间 */}
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-2 border-[#0a0a0a] bg-[#0a0a0a] px-4 py-2.5 text-white">
-            <span className="text-sm font-black text-[#ff5c1a]">
+        <div style={{ padding: "20px 32px" }}>
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              alignItems: "center",
+              gap: "8px 16px",
+              border: `2px solid ${C.black}`,
+              backgroundColor: C.black,
+              padding: "10px 16px",
+              color: C.white,
+            }}
+          >
+            <span
+              style={{ fontSize: 14, fontWeight: 900, color: C.orange }}
+            >
               {data.videoLabel}
             </span>
-            <span className="text-[11px] font-medium text-white/90">
+            <span style={{ fontSize: 11, fontWeight: 500, color: C.whiteSoft }}>
               {data.timeLabel}
             </span>
             {data.gradeLine && (
-              <span className="text-[11px] font-bold text-white">{data.gradeLine}</span>
+              <span style={{ fontSize: 11, fontWeight: 700, color: C.white }}>
+                {data.gradeLine}
+              </span>
             )}
             {data.score != null && (
-              <span className="ml-auto text-sm font-black tabular-nums text-[#ff5c1a]">
+              <span
+                style={{
+                  marginLeft: "auto",
+                  fontSize: 14,
+                  fontWeight: 900,
+                  color: C.orange,
+                  fontVariantNumeric: "tabular-nums",
+                }}
+              >
                 {data.score}
-                <span className="text-[10px] font-bold text-white/80"> / 100</span>
+                <span
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 700,
+                    color: C.whiteSoft,
+                  }}
+                >
+                  {" "}
+                  / 100
+                </span>
               </span>
             )}
           </div>
 
-          {/* 教练金句：无框，左侧橙条强调 */}
           {data.highlight && (
-            <div className="mt-5 border-l-4 border-[#ff5c1a] bg-[#fff0e8] py-3 pl-4 pr-2">
-              <p className="text-[10px] font-black tracking-wider text-[#ff5c1a]">
+            <div
+              style={{
+                marginTop: 20,
+                borderLeft: `4px solid ${C.orange}`,
+                backgroundColor: C.orangeBg,
+                padding: "12px 12px 12px 16px",
+              }}
+            >
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: 10,
+                  fontWeight: 900,
+                  letterSpacing: "0.08em",
+                  color: C.orange,
+                }}
+              >
                 教练金句
               </p>
-              <p className="mt-1.5 text-[13px] font-black leading-snug text-[#0a0a0a]">
+              <p
+                style={{
+                  margin: "6px 0 0",
+                  fontSize: 13,
+                  fontWeight: 900,
+                  lineHeight: 1.35,
+                  color: C.text,
+                }}
+              >
                 {data.highlight}
               </p>
             </div>
           )}
 
-          {/* 核心维度 */}
           {data.dimensions.length > 0 && (
-            <section className="mt-5">
+            <section style={{ marginTop: 20 }}>
               <PdfSectionHeading>核心维度</PdfSectionHeading>
-              <ul className="mt-3 space-y-2 border-2 border-[#0a0a0a] bg-white p-3">
+              <ul
+                style={{
+                  margin: "12px 0 0",
+                  padding: 12,
+                  listStyle: "none",
+                  border: `2px solid ${C.black}`,
+                  backgroundColor: C.surface,
+                }}
+              >
                 {data.dimensions.map((d, i) => (
                   <li
                     key={i}
-                    className="flex gap-2 text-[12px] leading-snug text-[#0a0a0a]"
+                    style={{
+                      display: "flex",
+                      gap: 8,
+                      fontSize: 12,
+                      lineHeight: 1.35,
+                      color: C.text,
+                      marginTop: i > 0 ? 8 : 0,
+                    }}
                   >
-                    <span className="shrink-0 font-black text-[#ff5c1a]">▸</span>
+                    <span
+                      style={{ flexShrink: 0, fontWeight: 900, color: C.orange }}
+                    >
+                      ▸
+                    </span>
                     <span>
                       {d.label ? (
                         <>
-                          <span className="font-black">{d.label}</span>
-                          <span className="text-[#3d3a36]"> — {d.text}</span>
+                          <span style={{ fontWeight: 900 }}>{d.label}</span>
+                          <span style={{ color: C.muted }}> — {d.text}</span>
                         </>
                       ) : (
                         d.text
@@ -125,20 +280,39 @@ export const AnalysisPdfTemplate = forwardRef<HTMLDivElement, Props>(
             </section>
           )}
 
-          {/* 改进要点 */}
           {data.improvements.length > 0 && (
-            <section className="mt-5">
+            <section style={{ marginTop: 20 }}>
               <PdfSectionHeading>改进要点</PdfSectionHeading>
-              <div className="mt-3 space-y-2">
+              <div style={{ marginTop: 12 }}>
                 {data.improvements.map((item, i) => (
                   <div
                     key={i}
-                    className="border-2 border-[#0a0a0a] border-l-[6px] border-l-[#ff5c1a] bg-white px-3 py-2.5"
+                    style={{
+                      marginTop: i > 0 ? 8 : 0,
+                      border: `2px solid ${C.black}`,
+                      borderLeft: `6px solid ${C.orange}`,
+                      backgroundColor: C.surface,
+                      padding: "10px 12px",
+                    }}
                   >
-                    <p className="text-[12px] font-black text-[#0a0a0a]">
+                    <p
+                      style={{
+                        margin: 0,
+                        fontSize: 12,
+                        fontWeight: 900,
+                        color: C.text,
+                      }}
+                    >
                       {item.title}
                     </p>
-                    <p className="mt-1 text-[11px] leading-snug text-[#3d3a36]">
+                    <p
+                      style={{
+                        margin: "4px 0 0",
+                        fontSize: 11,
+                        lineHeight: 1.35,
+                        color: C.muted,
+                      }}
+                    >
                       {item.text}
                     </p>
                   </div>
@@ -147,10 +321,25 @@ export const AnalysisPdfTemplate = forwardRef<HTMLDivElement, Props>(
             </section>
           )}
 
-          <p className="mt-6 text-center text-[9px] tracking-wide text-[#9a948c]">
+          <p
+            style={{
+              margin: "24px 0 0",
+              textAlign: "center",
+              fontSize: 9,
+              letterSpacing: "0.04em",
+              color: C.faint,
+            }}
+          >
             {PDF_SITE_URL.replace(/^https?:\/\//, "")}
           </p>
-          <p className="mt-0.5 text-center text-[8px] text-[#b5afa6]">
+          <p
+            style={{
+              margin: "2px 0 0",
+              textAlign: "center",
+              fontSize: 8,
+              color: C.faint2,
+            }}
+          >
             仅供训练参考 · CRUX 抱石 AI 教练
           </p>
         </div>
