@@ -16,7 +16,7 @@ export async function downloadAnalysisPdf(
   const canvas = await html2canvas(element, {
     scale: 2,
     useCORS: true,
-    backgroundColor: "#f6f4f0",
+    backgroundColor: "#f5f3ef",
     logging: false,
   });
 
