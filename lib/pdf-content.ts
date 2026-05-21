@@ -6,7 +6,7 @@ export const PDF_SITE_URL =
   "https://bouldering-ai-coach.vercel.app";
 
 /** 压缩为一句摘要，避免 PDF 照搬长文 */
-export function summarizeLine(text: string, maxLen = 72): string {
+export function summarizeLine(text: string, maxLen = 58): string {
   const t = text.replace(/\s+/g, " ").trim();
   if (!t) return "";
   const sentence = t.match(/^[^。！？.!?\n]+[。！？.!?]?/)?.[0] ?? t;
@@ -45,11 +45,11 @@ export function summarizeDimensions(
     const parsed = parseNumberedBlock(raw);
     if (parsed) {
       const text = parsed.body
-        ? summarizeLine(parsed.body, 68)
-        : summarizeLine(parsed.label, 68);
+        ? summarizeLine(parsed.body, 56)
+        : summarizeLine(parsed.label, 56);
       items.push({ label: parsed.label, text });
     } else {
-      items.push({ text: summarizeLine(raw, 75) });
+      items.push({ text: summarizeLine(raw, 58) });
     }
     if (items.length >= 3) break;
   }
@@ -67,7 +67,7 @@ export function summarizeDimensions(
           text: summarizeLine(parsed.body || parsed.label, 68),
         });
       } else {
-        items.push({ text: summarizeLine(chunk, 75) });
+        items.push({ text: summarizeLine(chunk, 58) });
       }
       if (items.length >= 3) break;
     }
@@ -87,7 +87,7 @@ export function summarizeImprovements(
       b.title;
     return {
       title: b.title.replace(/^\d+[.、)\]]\s*/, "").trim(),
-      text: summarizeLine(source, 80),
+      text: summarizeLine(source, 64),
     };
   });
 }
@@ -136,7 +136,7 @@ export function buildPdfContent(
     gradeLine: gradeParts.length > 0 ? gradeParts.join(" · ") : null,
     score: record.score ?? parsed.score,
     highlight: record.highlight
-      ? summarizeLine(record.highlight, 120)
+      ? summarizeLine(record.highlight, 96)
       : null,
     dimensions: summarizeDimensions(structured),
     improvements: summarizeImprovements(structured),

@@ -73,7 +73,7 @@ export async function downloadAnalysisPdf(
       scale,
       useCORS: true,
       allowTaint: true,
-      backgroundColor: "#f5f3ef",
+      backgroundColor: "#f4f0ea",
       logging: false,
       foreignObjectRendering: false,
       width,
