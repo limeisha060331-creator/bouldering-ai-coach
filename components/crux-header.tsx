@@ -18,7 +18,7 @@ export function CruxHeader({ variant = "app" }: Props) {
           href="/"
           className="text-sm font-black tracking-tight text-[var(--crux-text)] sm:text-base"
         >
-          抱石 AI 教练
+          CRUX 抱石
         </Link>
 
         <nav className="hidden items-center gap-5 sm:flex">

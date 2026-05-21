@@ -92,8 +92,8 @@ type CopyBlock = {
 
 export const STRINGS: Record<UiLocale, CopyBlock> = {
   zh: {
-    brand: "Bouldering · AI Coach",
-    title: "抱石分析",
+    brand: "CRUX 抱石",
+    title: "动作解析",
     subtitle: "上传攀爬片段，获得克制、专业的动作反馈",
     expectTitle: "分析前说明",
     expectBody:
@@ -184,8 +184,8 @@ export const STRINGS: Record<UiLocale, CopyBlock> = {
     steps: ["本地处理", "上传云端", "Gemini 处理", "生成分析"],
   },
   en: {
-    brand: "Bouldering · AI Coach",
-    title: "Boulder analysis",
+    brand: "CRUX Boulder",
+    title: "Movement analysis",
     subtitle: "Upload a short climb clip for structured, professional feedback.",
     expectTitle: "Before you start",
     expectBody:

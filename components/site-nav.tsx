@@ -26,7 +26,7 @@ export function SiteNav({ uiLocale }: Props) {
         href="/"
         className="text-sm font-black uppercase tracking-tight text-[var(--crux-text)]"
       >
-        {zh ? "抱石 AI Coach" : "Boulder AI Coach"}
+        {zh ? "CRUX 抱石" : "CRUX Boulder"}
       </Link>
       <div className="flex flex-wrap gap-2">
         <Link href="/" className={linkClass("/")}>

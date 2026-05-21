@@ -15,7 +15,7 @@ const jetbrains = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "抱石分析 · AI Coach",
+  title: "CRUX 抱石 · 动作解析",
   description: "上传攀爬视频，获取专业、克制的 AI 动作分析与改进建议",
 };
 

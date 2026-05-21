@@ -25,7 +25,7 @@ export const AnalysisPdfTemplate = forwardRef<HTMLDivElement, Props>(
       >
         <div className="border-b border-[#e8e4dc] pb-4">
           <p className="text-[10px] uppercase tracking-[0.2em] text-[#8a857c]">
-            Bouldering · AI Coach
+            CRUX 抱石 · 动作解析
           </p>
           <h1 className="mt-2 text-xl font-semibold leading-tight">
             {data.title}

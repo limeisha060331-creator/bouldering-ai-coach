@@ -52,7 +52,7 @@ export function LandingHome() {
     <div className="crux-page flex min-h-screen flex-col">
       <CruxHeader variant="landing" />
 
-      <div className="crux-container flex flex-1 flex-col py-4 lg:grid lg:grid-cols-12 lg:gap-0 lg:py-0">
+      <div className="crux-container flex flex-1 flex-col px-0 py-0 lg:max-w-none lg:grid lg:grid-cols-12 lg:gap-0">
         <aside className="crux-fade-up order-2 border-2 border-[var(--crux-border)] bg-[var(--crux-surface)] lg:order-1 lg:col-span-2 lg:border-r-0 lg:border-t-0">
           <div className="border-b-2 border-[var(--crux-border)] p-4">
             <p className="text-[10px] text-[var(--crux-text-muted)]">训练记录</p>
@@ -91,18 +91,19 @@ export function LandingHome() {
           </ul>
         </aside>
 
-        <section className="relative order-1 min-h-[52vh] overflow-hidden border-2 border-[var(--crux-border)] lg:order-2 lg:col-span-7 lg:min-h-[calc(100vh-3.5rem)] lg:border-x-0 lg:border-t-0">
-          <div className="absolute inset-0">
+        <section className="relative order-1 min-h-[48vh] overflow-hidden border-2 border-[var(--crux-border)] sm:min-h-[52vh] lg:order-2 lg:col-span-7 lg:min-h-[calc(100vh-3.5rem)] lg:border-x-0 lg:border-t-0">
+          <div className="absolute inset-0 flex items-center justify-center bg-[#141414]">
             <Image
               src="/hero-climb.jpg"
               alt="抱石攀岩"
-              fill
+              width={1920}
+              height={1280}
               priority
               quality={92}
-              className="crux-hero-img object-cover object-[center_30%] contrast-[1.08] saturate-[0.95]"
-              sizes="(max-width: 1024px) 100vw, 70vw"
+              className="crux-hero-img h-auto max-h-full w-full object-contain object-center contrast-[1.06] saturate-[0.95]"
+              sizes="(max-width: 1024px) 100vw, 58vw"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/15 to-black/30" />
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-black/25" />
           </div>
 
           <div className="relative z-10 flex h-full min-h-[52vh] flex-col justify-between p-4 sm:p-6 lg:min-h-[calc(100vh-3.5rem)]">
@@ -135,9 +136,9 @@ export function LandingHome() {
         <aside className="crux-panel-orange order-3 flex flex-col justify-between bg-[var(--crux-orange-panel)] p-6 sm:p-8 lg:col-span-3 lg:min-h-[calc(100vh-3.5rem)]">
           <div className="flex flex-1 flex-col justify-center py-4">
             <h1 className="text-[2.75rem] font-black leading-[0.88] tracking-tight text-[var(--crux-text)] sm:text-6xl lg:text-[4.25rem]">
-              抱石
+              CRUX 抱石
               <br />
-              AI 教练
+              动作解析
             </h1>
             <p className="mt-5 max-w-xs text-sm font-medium leading-relaxed text-[var(--crux-text)]/85">
               简洁、专业的攀爬视频分析平台

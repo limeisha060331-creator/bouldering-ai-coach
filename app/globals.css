@@ -137,7 +137,16 @@ body {
 }
 
 .crux-hero-img {
-  animation: crux-ken-burns 18s ease-in-out infinite alternate;
+  animation: crux-ken-burns-subtle 22s ease-in-out infinite alternate;
+}
+
+@keyframes crux-ken-burns-subtle {
+  0% {
+    transform: scale(1);
+  }
+  100% {
+    transform: scale(1.03);
+  }
 }
 
 .crux-panel-orange {
