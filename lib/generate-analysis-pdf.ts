@@ -1,8 +1,6 @@
 import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
 import type { AnalysisRecord } from "./types";
-import type { StructuredReport } from "./types";
-import { parseAnalysis } from "./parse-analysis";
 
 /** 单张 canvas 最长边上限，避免浏览器/移动端内存溢出 */
 const MAX_CANVAS_EDGE = 11_000;
@@ -142,52 +140,3 @@ export async function downloadAnalysisPdf(
   }
 }
 
-export function buildPdfSummaryLines(
-  record: AnalysisRecord,
-  structured: StructuredReport
-): {
-  title: string;
-  score: string | null;
-  highlight: string | null;
-  dimensionPoints: string[];
-  improvementTitles: string[];
-  overall: string | null;
-  timelineTop: { time: string; text: string }[];
-} {
-  const parsed = parseAnalysis(record.analysis);
-  const segments = record.segments?.length
-    ? record.segments
-    : parsed.segments;
-
-  const dimensionPoints =
-    structured.dimensionBullets.length > 0
-      ? structured.dimensionBullets.slice(0, 5)
-      : structured.dimensionSummary
-        ? structured.dimensionSummary
-            .split(/\n+/)
-            .map((s) => s.trim())
-            .filter(Boolean)
-            .slice(0, 5)
-        : [];
-
-  const improvementTitles = structured.improvementBlocks
-    .map((b) => b.title)
-    .slice(0, 4);
-
-  const timelineTop = segments.slice(0, 4).map((s) => ({
-    time: s.timestamp,
-    text: s.content.slice(0, 120),
-  }));
-
-  return {
-    title: record.fileName,
-    score: record.score != null ? `${record.score} / 100` : null,
-    highlight: record.highlight,
-    dimensionPoints,
-    improvementTitles,
-    overall: structured.overallAdvice
-      ? structured.overallAdvice.slice(0, 400)
-      : null,
-    timelineTop,
-  };
-}

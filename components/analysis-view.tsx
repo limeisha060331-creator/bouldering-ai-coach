@@ -14,6 +14,7 @@ import type { AnalysisRecord, AnalysisSegment } from "@/lib/types";
 import { parseAnalysis } from "@/lib/parse-analysis";
 import { analysisToMarkdown, downloadTextFile } from "@/lib/export-analysis";
 import { downloadAnalysisPdf } from "@/lib/generate-analysis-pdf";
+import { listAnalysisRecords } from "@/lib/analysis-db";
 import { STRINGS, type UiLocale } from "@/lib/strings";
 
 type Props = {
@@ -44,6 +45,7 @@ export function AnalysisView({
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [showFullRaw, setShowFullRaw] = useState(false);
   const [pdfBusy, setPdfBusy] = useState(false);
+  const [pdfVideoIndex, setPdfVideoIndex] = useState<number | null>(null);
   const t = STRINGS[uiLocale];
   const parsed = parseAnalysis(analysis);
   const segments = presetSegments?.length ? presetSegments : parsed.segments;
@@ -55,6 +57,13 @@ export function AnalysisView({
       setActiveIndex(initialSegmentIndex);
     }
   }, [initialSegmentIndex, segments]);
+
+  useEffect(() => {
+    void listAnalysisRecords().then((list) => {
+      const i = list.findIndex((r) => r.id === record.id);
+      setPdfVideoIndex(i >= 0 ? i + 1 : null);
+    });
+  }, [record.id]);
 
   useEffect(() => {
     const sec =
@@ -114,7 +123,11 @@ export function AnalysisView({
 
   return (
     <div className="flex flex-col gap-8">
-      <AnalysisPdfTemplate ref={pdfRef} record={{ ...record, segments }} />
+      <AnalysisPdfTemplate
+        ref={pdfRef}
+        record={{ ...record, segments }}
+        videoIndex={pdfVideoIndex}
+      />
 
       {videoUrl && (
         <div className="overflow-hidden rounded-xl border border-[var(--spa-border)] bg-[var(--spa-elevated)]">
