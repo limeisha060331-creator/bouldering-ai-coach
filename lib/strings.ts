@@ -88,6 +88,25 @@ type CopyBlock = {
   metaDepth: string;
   metaAiLang: string;
   steps: [string, string, string, string];
+  authLogin: string;
+  authRegister: string;
+  authLogout: string;
+  authLoginTitle: string;
+  authLoginSubtitle: string;
+  authRegisterTitle: string;
+  authRegisterSubtitle: string;
+  authEmail: string;
+  authPassword: string;
+  authPasswordHint: string;
+  authDisplayName: string;
+  authDisplayNamePlaceholder: string;
+  authLoginSubmit: string;
+  authRegisterSubmit: string;
+  authHasAccount: string;
+  authNoAccount: string;
+  authGenericError: string;
+  authNotConfiguredTitle: string;
+  authNotConfiguredBody: string;
 };
 
 export const STRINGS: Record<UiLocale, CopyBlock> = {
@@ -182,6 +201,26 @@ export const STRINGS: Record<UiLocale, CopyBlock> = {
     metaDepth: "深度",
     metaAiLang: "AI 语言",
     steps: ["本地处理", "上传云端", "Gemini 处理", "生成分析"],
+    authLogin: "登录",
+    authRegister: "注册",
+    authLogout: "退出",
+    authLoginTitle: "登录",
+    authLoginSubtitle: "登录后可跨设备同步账户信息（分析记录仍保存在本机浏览器）。",
+    authRegisterTitle: "注册",
+    authRegisterSubtitle: "创建账户以保存个人资料；视频分析历史默认存在本机 IndexedDB。",
+    authEmail: "邮箱",
+    authPassword: "密码",
+    authPasswordHint: "至少 8 位",
+    authDisplayName: "昵称（可选）",
+    authDisplayNamePlaceholder: "显示名称",
+    authLoginSubmit: "登录",
+    authRegisterSubmit: "创建账户",
+    authHasAccount: "已有账户？",
+    authNoAccount: "还没有账户？",
+    authGenericError: "操作失败，请稍后重试",
+    authNotConfiguredTitle: "注册功能尚未启用",
+    authNotConfiguredBody:
+      "管理员需在 Vercel 连接 Postgres 并配置 POSTGRES_URL、AUTH_SECRET 环境变量后，注册与登录才会可用。",
   },
   en: {
     brand: "CRUX Boulder",
@@ -274,6 +313,28 @@ export const STRINGS: Record<UiLocale, CopyBlock> = {
     metaDepth: "Depth",
     metaAiLang: "AI language",
     steps: ["Local prep", "Upload", "Gemini", "Analysis"],
+    authLogin: "Log in",
+    authRegister: "Sign up",
+    authLogout: "Log out",
+    authLoginTitle: "Log in",
+    authLoginSubtitle:
+      "Sign in to associate your account. Analysis history stays in this browser's IndexedDB.",
+    authRegisterTitle: "Create account",
+    authRegisterSubtitle:
+      "Register to save your profile. Video analyses remain stored locally in IndexedDB by default.",
+    authEmail: "Email",
+    authPassword: "Password",
+    authPasswordHint: "At least 8 characters",
+    authDisplayName: "Display name (optional)",
+    authDisplayNamePlaceholder: "Your name",
+    authLoginSubmit: "Log in",
+    authRegisterSubmit: "Create account",
+    authHasAccount: "Already have an account?",
+    authNoAccount: "New here?",
+    authGenericError: "Something went wrong. Try again.",
+    authNotConfiguredTitle: "Accounts not enabled",
+    authNotConfiguredBody:
+      "An admin must connect Vercel Postgres and set POSTGRES_URL and AUTH_SECRET before sign-up works.",
   },
 };
 

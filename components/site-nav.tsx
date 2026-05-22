@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { IconBookmarkNav } from "@/components/icons";
+import { AuthNav } from "@/components/auth-nav";
 import { ThemeToggle } from "@/components/theme-toggle";
 import type { UiLocale } from "@/lib/strings";
 
@@ -30,6 +31,7 @@ export function SiteNav({ uiLocale }: Props) {
         {zh ? "CRUX 抱石" : "CRUX Boulder"}
       </Link>
       <div className="flex flex-wrap items-center gap-2">
+        <AuthNav uiLocale={uiLocale} compact />
         <ThemeToggle compact />
         <Link href="/" className={linkClass("/")}>
           {zh ? "首页" : "Home"}

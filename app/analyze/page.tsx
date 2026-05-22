@@ -40,6 +40,7 @@ import type {
 } from "@/lib/types";
 import { PROMPT_VERSION } from "@/lib/analyze-prompt";
 import { STRINGS, formatStr } from "@/lib/strings";
+import { useAuth } from "@/lib/use-auth";
 import { useUiLocale } from "@/lib/use-ui-locale";
 import { SiteNav } from "@/components/site-nav";
 
@@ -63,6 +64,7 @@ function pipelineStep(
 export default function AnalyzePage() {
   const router = useRouter();
   const [uiLocale, setUiLocale] = useUiLocale();
+  const { user: authUser } = useAuth();
   const t = STRINGS[uiLocale];
   const inputRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -344,6 +346,7 @@ export default function AnalyzePage() {
         ascentMeters:
           Number.isFinite(ascent) && ascent > 0 ? ascent : undefined,
         sessionNote: sessionNote.trim() || undefined,
+        userId: authUser?.id,
       };
 
       await saveAnalysisRecord(record, file);

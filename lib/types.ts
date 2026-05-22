@@ -81,4 +81,6 @@ export interface AnalysisRecord {
   grade?: BoulderGrade;
   /** 用户备注 */
   sessionNote?: string;
+  /** 登录用户 ID（可选，用于日后云端同步） */
+  userId?: string;
 }

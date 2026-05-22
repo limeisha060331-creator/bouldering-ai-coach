@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { useUiLocale } from "@/lib/use-ui-locale";
 import { IconMenu, IconX } from "@/components/icons";
+import { AuthNav } from "@/components/auth-nav";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 type Props = {
@@ -10,6 +12,7 @@ type Props = {
 };
 
 export function CruxHeader({ variant = "app" }: Props) {
+  const [uiLocale] = useUiLocale();
   const [open, setOpen] = useState(false);
 
   return (
@@ -29,6 +32,7 @@ export function CruxHeader({ variant = "app" }: Props) {
         </Link>
 
         <div className="hidden items-center gap-3 sm:flex">
+          <AuthNav uiLocale={uiLocale} compact />
           <ThemeToggle compact />
           <nav className="flex items-center gap-5">
           <Link
@@ -59,6 +63,7 @@ export function CruxHeader({ variant = "app" }: Props) {
         </div>
 
         <div className="flex items-center gap-2 sm:hidden">
+          <AuthNav uiLocale={uiLocale} compact />
           <ThemeToggle compact />
         <button
           type="button"
