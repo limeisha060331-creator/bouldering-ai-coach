@@ -16,7 +16,7 @@ export function SiteNav({ uiLocale }: Props) {
   const zh = uiLocale === "zh";
 
   const linkClass = (href: string) =>
-    `crux-mono inline-flex items-center gap-1.5 border-2 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider transition ${
+    `crux-mono inline-flex items-center gap-1.5 border-2 px-3 py-1.5 text-[11px] font-extrabold uppercase tracking-wider transition ${
       path === href
         ? "border-[var(--crux-border)] bg-[var(--crux-accent)] text-[var(--crux-on-accent)] shadow-[3px_3px_0_var(--crux-border)]"
         : "border-transparent text-[var(--crux-text-muted)] hover:border-[var(--crux-accent)] hover:text-[var(--crux-text)]"

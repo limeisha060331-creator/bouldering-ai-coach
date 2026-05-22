@@ -3,9 +3,9 @@
 :root,
 [data-theme="light"] {
   color-scheme: light;
-  --crux-bg: #f5f3ef;
-  --crux-surface: #ffffff;
-  --crux-elevated: #faf8f5;
+  --crux-bg: #e8e5df;
+  --crux-surface: #f7f5f1;
+  --crux-elevated: #efece6;
   --crux-border: #1a1917;
   --crux-border-subtle: #e5e2dc;
   --crux-text: #0a0a0a;
@@ -156,12 +156,12 @@ body {
 }
 
 .crux-label {
-  font-family: var(--font-mono);
-  font-size: 0.625rem;
-  font-weight: 600;
-  letter-spacing: 0.14em;
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--crux-text-muted);
+  color: var(--crux-accent);
 }
 
 .crux-mono {
@@ -275,36 +275,76 @@ body {
   background: var(--crux-surface);
   border: 2px solid var(--crux-border);
   border-radius: 0;
-  box-shadow: 4px 4px 0 var(--crux-border);
+  box-shadow: 5px 5px 0 var(--crux-border);
 }
 
 .spa-panel-inset {
   background: var(--crux-elevated);
-  border: 1px solid var(--crux-border-subtle);
+  border: 2px solid var(--crux-border-subtle);
 }
 
 .spa-label {
-  font-family: var(--font-mono);
-  font-size: 0.625rem;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1.25;
   color: var(--crux-accent);
 }
 
-.spa-choice-active {
-  border-color: var(--crux-accent);
-  background: var(--spa-focus);
-  color: var(--crux-text);
+.spa-field-hint {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--crux-text-muted);
+}
+
+.spa-chip {
+  display: inline-flex;
+  align-items: center;
+  border: 2px solid var(--crux-border-subtle);
+  padding: 0.5rem 0.875rem;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  line-height: 1.25;
+  border-radius: 0;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    box-shadow 0.15s ease,
+    color 0.15s ease;
+}
+
+.spa-input {
+  border: 2px solid var(--crux-border);
+  border-radius: 0;
+  background: var(--crux-surface);
+  font-size: 0.875rem;
   font-weight: 600;
 }
 
+.spa-input:focus {
+  outline: none;
+  border-color: var(--crux-accent);
+  box-shadow: 2px 2px 0 var(--crux-border);
+}
+
+.spa-choice-active {
+  border: 2px solid var(--crux-accent);
+  background: var(--crux-accent-soft);
+  color: var(--crux-text);
+  font-weight: 800;
+  box-shadow: 3px 3px 0 var(--crux-border);
+}
+
 .spa-choice-idle {
-  border-color: var(--crux-border-subtle);
+  border: 2px solid var(--crux-border-subtle);
   color: var(--crux-text-secondary);
+  font-weight: 700;
 }
 
 .spa-choice-idle:hover {
-  border-color: color-mix(in srgb, var(--crux-accent) 45%, var(--crux-border-subtle));
+  border-color: var(--crux-accent);
   background: var(--crux-accent-soft);
+  color: var(--crux-text);
 }

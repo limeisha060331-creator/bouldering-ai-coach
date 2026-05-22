@@ -17,8 +17,8 @@ type Props = {
 export function HistoryList({ records, emptyTitle, emptyHint }: Props) {
   if (records.length === 0) {
     return (
-      <div className="rounded-xl border border-dashed border-[var(--spa-border)] bg-[var(--spa-elevated)] px-6 py-12 text-center">
-        <p className="text-sm font-medium text-[var(--spa-text-secondary)]">
+      <div className="border-2 border-dashed border-[var(--crux-border-subtle)] bg-[var(--spa-elevated)] px-6 py-12 text-center">
+        <p className="text-sm font-bold text-[var(--spa-text-secondary)]">
           {emptyTitle}
         </p>
         <p className="mt-2 text-xs leading-relaxed text-[var(--spa-text-muted)]">

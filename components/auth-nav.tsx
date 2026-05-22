@@ -30,7 +30,7 @@ export function AuthNav({ uiLocale, compact = false }: Props) {
     return (
       <div className={`flex items-center gap-2 ${compact ? "" : "flex-wrap"}`}>
         <span
-          className="crux-mono max-w-[8rem] truncate text-[10px] font-bold uppercase text-[var(--crux-accent)]"
+          className="max-w-[8rem] truncate text-xs font-extrabold text-[var(--crux-accent)]"
           title={user.email}
         >
           {label}

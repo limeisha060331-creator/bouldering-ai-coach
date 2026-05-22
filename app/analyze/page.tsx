@@ -393,13 +393,11 @@ export default function AnalyzePage() {
           <h1 className="text-2xl font-black uppercase tracking-tight text-[var(--crux-text)] sm:text-3xl">
             {t.title}
           </h1>
-          <p className="mt-3 max-w-md text-sm leading-relaxed text-[var(--crux-text-muted)]">
+          <p className="mt-3 max-w-md text-sm font-semibold leading-relaxed text-[var(--crux-text-secondary)]">
             {t.subtitle}
           </p>
-          <div className="mt-5 border-2 border-[var(--crux-border-subtle)] bg-[var(--crux-elevated)] px-4 py-3">
-            <p className="text-xs font-bold uppercase text-[var(--crux-text)]">
-              {t.expectTitle}
-            </p>
+          <div className="mt-5 border-2 border-[var(--crux-border)] bg-[var(--crux-elevated)] px-4 py-3">
+            <p className="spa-label">{t.expectTitle}</p>
             <p className="mt-2 text-xs leading-relaxed text-[var(--crux-text-muted)]">
               {t.expectBody}
             </p>
@@ -421,9 +419,7 @@ export default function AnalyzePage() {
                   </option>
                 ))}
               </select>
-              <p className="mt-1 text-[10px] text-[var(--crux-text-muted)]">
-                {t.routeGradeHint}
-              </p>
+              <p className="spa-field-hint mt-1.5">{t.routeGradeHint}</p>
             </div>
             <div>
               <label className="spa-label mb-2 block">{t.ascentLabel}</label>
@@ -435,9 +431,7 @@ export default function AnalyzePage() {
                 onChange={(e) => setAscentMeters(e.target.value)}
                 className="w-full border-2 border-[var(--crux-border)] bg-[var(--crux-surface)] px-3 py-2 text-sm font-bold"
               />
-              <p className="mt-1 text-[10px] text-[var(--crux-text-muted)]">
-                {t.ascentHint}
-              </p>
+              <p className="spa-field-hint mt-1.5">{t.ascentHint}</p>
             </div>
             <div className="sm:col-span-1">
               <label className="spa-label mb-2 block">{t.sessionNoteLabel}</label>
@@ -457,7 +451,7 @@ export default function AnalyzePage() {
                 <button
                   type="button"
                   onClick={() => setUiLocale("zh")}
-                  className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
+                  className={`spa-chip transition ${
                     uiLocale === "zh" ? "spa-choice-active" : "spa-choice-idle"
                   }`}
                 >
@@ -466,7 +460,7 @@ export default function AnalyzePage() {
                 <button
                   type="button"
                   onClick={() => setUiLocale("en")}
-                  className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
+                  className={`spa-chip transition ${
                     uiLocale === "en" ? "spa-choice-active" : "spa-choice-idle"
                   }`}
                 >
@@ -480,28 +474,28 @@ export default function AnalyzePage() {
                 <button
                   type="button"
                   onClick={() => setDepth("light")}
-                  className={`rounded-lg border px-3 py-1.5 text-left text-xs transition ${
+                  className={`spa-chip text-left transition ${
                     depth === "light" ? "spa-choice-active" : "spa-choice-idle"
                   }`}
                 >
-                  <span className="font-medium text-[var(--spa-text)]">
+                  <span className="font-extrabold text-[var(--spa-text)]">
                     {t.depthLight}
                   </span>
-                  <span className="ml-1 text-[var(--spa-text-muted)]">
+                  <span className="ml-1 font-semibold text-[var(--spa-text-muted)]">
                     {"\u00b7"} {t.depthLightDesc}
                   </span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setDepth("deep")}
-                  className={`rounded-lg border px-3 py-1.5 text-left text-xs transition ${
+                  className={`spa-chip text-left transition ${
                     depth === "deep" ? "spa-choice-active" : "spa-choice-idle"
                   }`}
                 >
-                  <span className="font-medium text-[var(--spa-text)]">
+                  <span className="font-extrabold text-[var(--spa-text)]">
                     {t.depthDeep}
                   </span>
-                  <span className="ml-1 text-[var(--spa-text-muted)]">
+                  <span className="ml-1 font-semibold text-[var(--spa-text-muted)]">
                     {"\u00b7"} {t.depthDeepDesc}
                   </span>
                 </button>
@@ -513,7 +507,7 @@ export default function AnalyzePage() {
                 <button
                   type="button"
                   onClick={() => setAnalysisLocale("zh")}
-                  className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
+                  className={`spa-chip transition ${
                     analysisLocale === "zh"
                       ? "spa-choice-active"
                       : "spa-choice-idle"
@@ -524,7 +518,7 @@ export default function AnalyzePage() {
                 <button
                   type="button"
                   onClick={() => setAnalysisLocale("en")}
-                  className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
+                  className={`spa-chip transition ${
                     analysisLocale === "en"
                       ? "spa-choice-active"
                       : "spa-choice-idle"
@@ -542,17 +536,17 @@ export default function AnalyzePage() {
                 {t.steps.map((label, i) => (
                   <li key={label}>
                     <div
-                      className={`mx-auto mb-1.5 flex h-8 w-8 items-center justify-center rounded-full text-xs font-medium ${
+                      className={`mx-auto mb-1.5 flex h-9 w-9 items-center justify-center border-2 text-xs font-extrabold ${
                         activeStep === i
-                          ? "bg-[var(--crux-accent)] font-bold text-[var(--crux-on-accent)]"
+                          ? "border-[var(--crux-border)] bg-[var(--crux-accent)] text-[var(--crux-on-accent)] shadow-[2px_2px_0_var(--crux-border)]"
                           : activeStep > i
-                            ? "border border-[var(--crux-accent)]/40 bg-[var(--spa-focus)] text-[var(--crux-accent)]"
-                            : "border border-[var(--spa-border-subtle)] text-[var(--spa-text-muted)]"
+                            ? "border-[var(--crux-accent)] bg-[var(--spa-focus)] text-[var(--crux-accent)]"
+                            : "border-[var(--crux-border-subtle)] bg-[var(--crux-elevated)] text-[var(--spa-text-muted)]"
                       }`}
                     >
                       {i + 1}
                     </div>
-                    <span className="text-[10px] leading-tight text-[var(--spa-text-muted)] sm:text-xs">
+                    <span className="text-[11px] font-bold leading-tight text-[var(--crux-text-secondary)] sm:text-xs">
                       {label}
                     </span>
                   </li>
@@ -569,7 +563,7 @@ export default function AnalyzePage() {
             }}
             onDragLeave={() => setDragOver(false)}
             onDrop={handleDrop}
-            className={`flex min-h-[11rem] cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed px-5 py-8 transition ${
+            className={`flex min-h-[11rem] cursor-pointer flex-col items-center justify-center border-2 border-dashed px-5 py-8 transition ${
               dragOver
                 ? "border-[var(--crux-accent)] bg-[var(--spa-focus)]"
                 : "border-[var(--crux-border-subtle)] bg-[var(--spa-elevated)] hover:border-[var(--crux-accent)]"
@@ -580,7 +574,7 @@ export default function AnalyzePage() {
             ) : (
               <IconUpload className="mb-3 h-7 w-7 text-[var(--crux-accent)]" />
             )}
-            <span className="text-sm font-medium text-[var(--spa-text)]">
+            <span className="text-sm font-extrabold uppercase tracking-wide text-[var(--spa-text)]">
               {compressing ? t.uploadCompress : t.uploadIdle}
             </span>
             <span className="mt-2 text-xs text-[var(--spa-text-muted)]">
@@ -613,12 +607,10 @@ export default function AnalyzePage() {
             </p>
           )}
 
-          <div className="mt-5 flex gap-3 rounded-xl border border-[var(--spa-border-subtle)] bg-[var(--spa-elevated)] px-4 py-3.5">
+          <div className="mt-5 flex gap-3 border-2 border-[var(--crux-border-subtle)] bg-[var(--spa-elevated)] px-4 py-3.5">
             <IconInfo className="mt-0.5 h-4 w-4 shrink-0 text-[var(--crux-accent)]" />
             <div>
-              <p className="text-xs font-medium text-[var(--spa-text)]">
-                {t.tipTitle}
-              </p>
+              <p className="spa-label text-[var(--crux-text)]">{t.tipTitle}</p>
               <p className="mt-1 text-xs leading-relaxed text-[var(--spa-text-secondary)]">
                 {t.tipBody}
               </p>
@@ -711,7 +703,7 @@ export default function AnalyzePage() {
         <section className="mt-12 sm:mt-14">
           <div className="mb-5 flex items-center gap-2">
             <IconHistory className="h-4 w-4 text-[var(--crux-accent)]" />
-            <h2 className="text-sm font-medium text-[var(--spa-text)]">
+            <h2 className="text-base font-black uppercase tracking-tight text-[var(--spa-text)]">
               {t.historyTitle}
             </h2>
           </div>
@@ -726,13 +718,13 @@ export default function AnalyzePage() {
           )}
 
           {!historyDbError && history.length > 0 && (
-            <div className="mb-4 flex flex-col gap-3 rounded-xl border border-[var(--spa-border-subtle)] bg-[var(--spa-elevated)] p-4 sm:flex-row sm:flex-wrap sm:items-end">
+            <div className="mb-4 flex flex-col gap-3 border-2 border-[var(--crux-border-subtle)] bg-[var(--spa-elevated)] p-4 sm:flex-row sm:flex-wrap sm:items-end">
               <div className="min-w-0 flex-1">
                 <label className="spa-label mb-1 block">{t.historySearch}</label>
                 <input
                   value={searchQ}
                   onChange={(e) => setSearchQ(e.target.value)}
-                  className="w-full rounded-lg border border-[var(--spa-border)] bg-[var(--spa-surface)] px-3 py-2 text-sm text-[var(--spa-text)] outline-none focus:border-[var(--spa-text-muted)]"
+                  className="spa-input w-full px-3 py-2 text-[var(--spa-text)]"
                 />
               </div>
               <div>
@@ -742,7 +734,7 @@ export default function AnalyzePage() {
                   onChange={(e) =>
                     setDatePreset(e.target.value as "all" | "7" | "30")
                   }
-                  className="rounded-lg border border-[var(--spa-border)] bg-[var(--spa-surface)] px-3 py-2 text-sm text-[var(--spa-text)]"
+                  className="spa-input px-3 py-2 text-[var(--spa-text)]"
                 >
                   <option value="all">{t.historyDateAll}</option>
                   <option value="7">{t.historyDate7}</option>
@@ -759,7 +751,7 @@ export default function AnalyzePage() {
                     placeholder=""
                     value={scoreMin}
                     onChange={(e) => setScoreMin(e.target.value)}
-                    className="w-20 rounded-lg border border-[var(--spa-border)] bg-[var(--spa-surface)] px-2 py-2 text-sm"
+                    className="spa-input w-20 px-2 py-2"
                   />
                 </div>
                 <div>
@@ -771,7 +763,7 @@ export default function AnalyzePage() {
                     placeholder=""
                     value={scoreMax}
                     onChange={(e) => setScoreMax(e.target.value)}
-                    className="w-20 rounded-lg border border-[var(--spa-border)] bg-[var(--spa-surface)] px-2 py-2 text-sm"
+                    className="spa-input w-20 px-2 py-2"
                   />
                 </div>
               </div>
@@ -783,7 +775,7 @@ export default function AnalyzePage() {
                   setScoreMin("");
                   setScoreMax("");
                 }}
-                className="rounded-lg border border-[var(--spa-border)] px-3 py-2 text-xs font-medium text-[var(--spa-text-secondary)] hover:bg-[var(--spa-surface)]"
+                className="spa-chip spa-choice-idle px-3 py-2 hover:bg-[var(--spa-surface)]"
               >
                 {t.historyClearFilters}
               </button>
