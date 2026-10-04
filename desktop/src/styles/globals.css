@@ -1,0 +1,326 @@
+@import "tailwindcss";
+
+:root,
+[data-theme="light"] {
+  color-scheme: light;
+  --crux-bg: #e8e5df;
+  --crux-surface: #f7f5f1;
+  --crux-elevated: #efece6;
+  --crux-border: #1a1917;
+  --crux-border-subtle: #e5e2dc;
+  --crux-text: #0a0a0a;
+  --crux-text-secondary: #3d3a36;
+  --crux-text-muted: #6b6560;
+  --crux-accent: #ff5c1a;
+  --crux-accent-hover: #e84f0f;
+  --crux-accent-soft: #fff0e8;
+  --crux-orange-panel: #ff5c1a;
+  --crux-on-accent: #ffffff;
+  --crux-mono: ui-monospace, "SFMono-Regular", "Menlo", monospace;
+
+  /* legacy aliases */
+  --spa-bg: var(--crux-bg);
+  --spa-surface: var(--crux-surface);
+  --spa-elevated: var(--crux-elevated);
+  --spa-border: var(--crux-border-subtle);
+  --spa-border-subtle: var(--crux-border-subtle);
+  --spa-text: var(--crux-text);
+  --spa-text-secondary: var(--crux-text-secondary);
+  --spa-text-muted: var(--crux-text-muted);
+  --spa-accent: var(--crux-accent);
+  --spa-accent-hover: var(--crux-accent-hover);
+  --spa-focus: rgba(255, 92, 26, 0.12);
+  --spa-shadow: 0 4px 24px rgba(10, 10, 10, 0.08);
+  --spa-shadow-lg: 0 12px 40px rgba(10, 10, 10, 0.12);
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+  --crux-bg: #0f0e0d;
+  --crux-surface: #1a1917;
+  --crux-elevated: #242220;
+  --crux-border: #e5e2dc;
+  --crux-border-subtle: #3d3a36;
+  --crux-text: #f5f3ef;
+  --crux-text-secondary: #c9c4bc;
+  --crux-text-muted: #8a857c;
+  --crux-accent: #ff6b2e;
+  --crux-accent-hover: #ff5c1a;
+  --crux-accent-soft: rgba(255, 92, 26, 0.18);
+  --crux-orange-panel: #e84f0f;
+  --crux-on-accent: #0f0e0d;
+
+  --spa-bg: var(--crux-bg);
+  --spa-surface: var(--crux-surface);
+  --spa-elevated: var(--crux-elevated);
+  --spa-border: var(--crux-border-subtle);
+  --spa-border-subtle: var(--crux-border-subtle);
+  --spa-text: var(--crux-text);
+  --spa-text-secondary: var(--crux-text-secondary);
+  --spa-text-muted: var(--crux-text-muted);
+  --spa-accent: var(--crux-accent);
+  --spa-accent-hover: var(--crux-accent-hover);
+  --spa-focus: rgba(255, 107, 46, 0.2);
+  --spa-shadow: 0 4px 24px rgba(0, 0, 0, 0.45);
+  --spa-shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.55);
+}
+
+@theme inline {
+  --font-sans: "DM Sans", ui-sans-serif, system-ui, "PingFang SC",
+    "Microsoft YaHei", sans-serif;
+  --font-mono: "JetBrains Mono", var(--crux-mono);
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  background: var(--crux-bg);
+  color: var(--crux-text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+.crux-page {
+  min-height: 100vh;
+  background: var(--crux-bg);
+}
+
+.crux-container {
+  width: 100%;
+  max-width: 90rem;
+  margin-inline: auto;
+  padding-inline: 1rem;
+}
+
+@media (min-width: 640px) {
+  .crux-container {
+    padding-inline: 1.5rem;
+  }
+}
+
+/* 首页：铺满视口，无两侧大白边 */
+.crux-landing-shell {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+@media (min-width: 1024px) {
+  .crux-landing-shell {
+    display: grid;
+    min-height: calc(100vh - 3.5rem);
+    grid-template-columns: minmax(11rem, 14rem) minmax(0, 1fr) minmax(17rem, 24rem);
+  }
+}
+
+.crux-landing-title-crux {
+  font-size: clamp(3.5rem, 8vw, 6.5rem);
+  font-weight: 900;
+  line-height: 0.82;
+  letter-spacing: -0.05em;
+}
+
+.crux-landing-title-sub {
+  font-size: clamp(2rem, 4.5vw, 3.25rem);
+  font-weight: 900;
+  line-height: 0.95;
+  letter-spacing: -0.03em;
+}
+
+.crux-landing-title-tag {
+  font-size: clamp(1.35rem, 2.5vw, 2rem);
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: 0.12em;
+}
+
+.crux-container-narrow {
+  width: 100%;
+  max-width: min(72rem, 100%);
+  margin-inline: auto;
+  padding-inline: clamp(1rem, 2.5vw, 2rem);
+  padding-block: 2rem;
+}
+
+@media (min-width: 640px) {
+  .crux-container-narrow {
+    padding-block: 2.5rem;
+  }
+}
+
+.crux-panel {
+  background: var(--crux-surface);
+  border: 2px solid var(--crux-border);
+  box-shadow: 4px 4px 0 var(--crux-border);
+}
+
+.crux-label {
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--crux-accent);
+}
+
+.crux-mono {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.06em;
+}
+
+/* Landing */
+@keyframes crux-ken-burns-subtle {
+  0% {
+    transform: scale(1);
+  }
+  100% {
+    transform: scale(1.03);
+  }
+}
+
+@keyframes crux-slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(2rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes crux-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(1rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.crux-hero-img {
+  animation: crux-ken-burns-subtle 22s ease-in-out infinite alternate;
+}
+
+.crux-panel-orange {
+  animation: crux-slide-in-right 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.15s both;
+}
+
+.crux-fade-up {
+  animation: crux-fade-up 0.6s ease-out both;
+}
+
+.crux-session-item {
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.crux-session-item:hover {
+  background: var(--crux-accent);
+  color: var(--crux-on-accent);
+  transform: translateX(4px);
+}
+
+.crux-cta {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.crux-cta:hover {
+  transform: translateY(-2px);
+  box-shadow: 6px 6px 0 var(--crux-border);
+}
+
+.crux-cta:active {
+  transform: translateY(0);
+  box-shadow: 2px 2px 0 var(--crux-border);
+}
+
+/* spa compat */
+.spa-panel {
+  background: var(--crux-surface);
+  border: 2px solid var(--crux-border);
+  border-radius: 0;
+  box-shadow: 5px 5px 0 var(--crux-border);
+}
+
+.spa-label {
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1.25;
+  color: var(--crux-accent);
+}
+
+.spa-field-hint {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--crux-text-muted);
+}
+
+.spa-chip {
+  display: inline-flex;
+  align-items: center;
+  border: 2px solid var(--crux-border-subtle);
+  padding: 0.5rem 0.875rem;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  line-height: 1.25;
+  border-radius: 0;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    box-shadow 0.15s ease,
+    color 0.15s ease;
+}
+
+.spa-input {
+  border: 2px solid var(--crux-border);
+  border-radius: 0;
+  background: var(--crux-surface);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.spa-input:focus {
+  outline: none;
+  border-color: var(--crux-accent);
+  box-shadow: 2px 2px 0 var(--crux-border);
+}
+
+.spa-choice-active {
+  border: 2px solid var(--crux-accent);
+  background: var(--crux-accent-soft);
+  color: var(--crux-text);
+  font-weight: 800;
+  box-shadow: 3px 3px 0 var(--crux-border);
+}
+
+.spa-choice-idle {
+  border: 2px solid var(--crux-border-subtle);
+  color: var(--crux-text-secondary);
+  font-weight: 700;
+}
+
+.spa-choice-idle:hover {
+  border-color: var(--crux-accent);
+  background: var(--crux-accent-soft);
+  color: var(--crux-text);
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+}

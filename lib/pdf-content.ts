@@ -1,9 +1,18 @@
 import type { AnalysisRecord, ImprovementBlock, StructuredReport } from "./types";
 import { parseAnalysis } from "./parse-analysis";
 
+const envSiteUrl = (() => {
+  try {
+    return typeof process !== "undefined"
+      ? process.env?.NEXT_PUBLIC_SITE_URL?.trim()
+      : undefined;
+  } catch {
+    return undefined;
+  }
+})();
+
 export const PDF_SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
-  "https://bouldering-ai-coach.vercel.app";
+  envSiteUrl || "https://bouldering-ai-coach.vercel.app";
 
 function stripMd(s: string): string {
   return s.replace(/\*\*/g, "").trim();

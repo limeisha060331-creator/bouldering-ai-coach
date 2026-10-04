@@ -49,10 +49,9 @@ function pinElementForCapture(el: HTMLElement): () => void {
 }
 
 /** 将隐藏的 PDF 模板 DOM 导出为 A4 PDF */
-export async function downloadAnalysisPdf(
-  element: HTMLElement,
-  fileName: string
-): Promise<void> {
+async function renderAnalysisPdf(
+  element: HTMLElement
+): Promise<{ pdf: jsPDF; fileBaseName: string }> {
   const restorePosition = pinElementForCapture(element);
 
   await new Promise<void>((resolve) => {
@@ -127,9 +126,26 @@ export async function downloadAnalysisPdf(
 
     pdf.addImage(imgData, format, drawX, 0, drawW, drawH);
 
-    pdf.save(`${safeFileName(fileName)}-教练报告.pdf`);
+    return { pdf, fileBaseName: "教练报告" };
   } finally {
     restorePosition();
   }
+}
+
+/** 生成 A4 PDF 字节（桌面端走系统「另存为」对话框时使用） */
+export async function buildAnalysisPdfBytes(
+  element: HTMLElement
+): Promise<Uint8Array> {
+  const { pdf } = await renderAnalysisPdf(element);
+  return new Uint8Array(pdf.output("arraybuffer") as ArrayBuffer);
+}
+
+/** 浏览器直接下载 A4 PDF */
+export async function downloadAnalysisPdf(
+  element: HTMLElement,
+  fileName: string
+): Promise<void> {
+  const { pdf, fileBaseName } = await renderAnalysisPdf(element);
+  pdf.save(`${safeFileName(fileName)}-${fileBaseName}.pdf`);
 }
 
