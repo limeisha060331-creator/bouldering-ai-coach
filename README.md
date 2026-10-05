@@ -132,7 +132,7 @@ npm run test:e2e # 11 个 Electron 端到端用例（含真实抽帧与打包产
 
 - 桌面客户端详细说明：**[desktop/README.md](./desktop/README.md)**
 - Supabase 数据库接入：**[supabase/README.md](./supabase/README.md)**
-- 产品需求：**[docs/PRD.md](./docs/PRD.md)**
+- 产品需求：**[PRD.md](./PRD.md)**
 - 设计说明：**[docs/DESIGN.md](./docs/DESIGN.md)**
 
 ## 免责声明
