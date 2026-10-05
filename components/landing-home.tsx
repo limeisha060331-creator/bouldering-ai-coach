@@ -44,8 +44,16 @@ export function LandingHome() {
           </div>
           <ul className="max-h-[40vh] flex-1 divide-y-2 divide-[var(--crux-border)] overflow-y-auto lg:max-h-none">
             {records.length === 0 ? (
-              <li className="px-4 py-6 text-xs text-[var(--crux-text-muted)]">
-                暂无分析记录，完成一次分析后会出现在这里。
+              <li className="flex h-full flex-col items-center justify-center gap-4 px-6 py-12 text-center">
+                <p className="text-xs leading-relaxed text-[var(--crux-text-muted)]">
+                  暂无分析记录，完成一次分析后会出现在这里。
+                </p>
+                <Link
+                  href="/analyze"
+                  className="crux-mono border-2 border-[var(--crux-border)] px-3 py-2 text-[10px] font-bold tracking-wider transition hover:bg-[var(--crux-accent)] hover:text-[var(--crux-on-accent)]"
+                >
+                  上传第一个视频
+                </Link>
               </li>
             ) : (
               records.map((r, i) => (
@@ -82,14 +90,14 @@ export function LandingHome() {
               priority
               quality={92}
               className="crux-hero-img object-cover object-center contrast-[1.06] saturate-[0.95]"
-              sizes="100vw"
+              sizes="(min-width: 1024px) 65vw, 100vw"
             />
-            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/55 via-black/5 to-black/20" />
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/65 via-black/15 to-black/60" />
           </div>
 
           <div className="relative z-10 flex h-full min-h-[48vh] flex-col justify-between p-4 sm:p-6 lg:min-h-[calc(100vh-3.5rem)]">
             <div className="crux-fade-up pt-2" style={{ animationDelay: "0.2s" }}>
-              <p className="text-[10px] font-medium tracking-wide text-white/75">
+              <p className="text-[11px] font-semibold tracking-[0.14em] text-white/85">
                 累计爬升
               </p>
               <p className="text-4xl font-black tracking-tight text-white sm:text-5xl lg:text-6xl">
@@ -100,7 +108,7 @@ export function LandingHome() {
                 />
                 <span className="ml-2 text-2xl sm:text-3xl">米</span>
               </p>
-              <p className="mt-2 text-[10px] text-white/60">
+              <p className="mt-2 text-[11px] text-white/75">
                 来自各次分析中填写的爬升高度
               </p>
             </div>
@@ -109,7 +117,7 @@ export function LandingHome() {
               className="crux-fade-up max-w-lg"
               style={{ animationDelay: "0.35s" }}
             >
-              <p className="text-sm leading-relaxed text-white/85 sm:text-base">
+              <p className="text-sm leading-relaxed text-white sm:text-base">
                 上传攀爬视频，获取带时间戳的专业动作反馈，并记录难度与爬升。
               </p>
             </div>
@@ -118,21 +126,18 @@ export function LandingHome() {
 
         <aside className="crux-panel-orange order-3 flex min-h-[280px] flex-col justify-between border-2 border-[var(--crux-border)] border-t-0 bg-[var(--crux-orange-panel)] p-6 sm:p-8 lg:min-h-0 lg:border-t-2 lg:border-l-0 lg:px-10 lg:py-12">
           <div className="flex flex-1 flex-col justify-center">
-            <p className="crux-mono text-[10px] font-bold tracking-[0.28em] text-[var(--crux-text)]/65">
-              BOULDERING · AI
-            </p>
-            <div className="mt-5 border-l-4 border-[var(--crux-text)] pl-5">
-              <p className="crux-landing-title-crux text-[var(--crux-text)]">
+            <div>
+              <p className="crux-landing-title-crux text-[var(--crux-on-accent)]">
                 CRUX
               </p>
-              <p className="crux-landing-title-sub -mt-1 text-[var(--crux-text)]">
+              <p className="crux-landing-title-sub -mt-1 text-[var(--crux-on-accent)]">
                 抱石
               </p>
             </div>
-            <p className="crux-landing-title-tag mt-6 text-[var(--crux-text)]">
+            <p className="crux-landing-title-tag mt-6 text-[var(--crux-on-accent)]">
               动作解析
             </p>
-            <p className="mt-6 max-w-sm text-sm leading-relaxed text-[var(--crux-text)]/80">
+            <p className="crux-on-panel-soft mt-6 max-w-sm text-sm leading-relaxed">
               简洁、专业的攀爬视频分析平台
             </p>
           </div>

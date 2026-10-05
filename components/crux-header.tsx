@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { useUiLocale } from "@/lib/use-ui-locale";
 import { IconMenu, IconX } from "@/components/icons";
@@ -14,6 +15,19 @@ type Props = {
 export function CruxHeader({ variant = "app" }: Props) {
   const [uiLocale] = useUiLocale();
   const [open, setOpen] = useState(false);
+  const path = usePathname();
+
+  const activeClass =
+    "text-[var(--crux-text)] underline decoration-[var(--crux-accent)] decoration-2 underline-offset-4";
+  const idleClass =
+    "text-[var(--crux-text-muted)] hover:text-[var(--crux-text)]";
+
+  const navItems = [
+    { href: "/", label: uiLocale === "zh" ? "首页" : "Home" },
+    { href: "/analyze", label: uiLocale === "zh" ? "分析" : "Analyze" },
+    { href: "/progress", label: uiLocale === "zh" ? "进步" : "Progress" },
+    { href: "/favorites", label: uiLocale === "zh" ? "收藏" : "Saved" },
+  ];
 
   return (
     <header className="no-print border-b-2 border-[var(--crux-border)] bg-[var(--crux-surface)]">
@@ -35,30 +49,18 @@ export function CruxHeader({ variant = "app" }: Props) {
           <AuthNav uiLocale={uiLocale} compact />
           <ThemeToggle compact />
           <nav className="flex items-center gap-5">
-          <Link
-            href="/"
-            className="text-xs font-semibold text-[var(--crux-text-muted)] transition hover:text-[var(--crux-text)]"
-          >
-            首页
-          </Link>
-          <Link
-            href="/analyze"
-            className="text-xs font-semibold text-[var(--crux-text-muted)] transition hover:text-[var(--crux-text)]"
-          >
-            分析
-          </Link>
-          <Link
-            href="/progress"
-            className="text-xs font-semibold text-[var(--crux-text-muted)] transition hover:text-[var(--crux-text)]"
-          >
-            进步
-          </Link>
-          <Link
-            href="/favorites"
-            className="text-xs font-semibold text-[var(--crux-text-muted)] transition hover:text-[var(--crux-text)]"
-          >
-            收藏
-          </Link>
+            {navItems.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                aria-current={path === item.href ? "page" : undefined}
+                className={`text-xs font-semibold transition ${
+                  path === item.href ? activeClass : idleClass
+                }`}
+              >
+                {item.label}
+              </Link>
+            ))}
           </nav>
         </div>
 
@@ -78,38 +80,23 @@ export function CruxHeader({ variant = "app" }: Props) {
 
       {open && (
         <nav className="border-t-2 border-[var(--crux-border)] bg-[var(--crux-surface)] px-4 py-3 sm:hidden">
-          <Link
-            href="/"
-            className="block py-2 text-xs font-semibold"
-            onClick={() => setOpen(false)}
-          >
-            首页
-          </Link>
-          <Link
-            href="/analyze"
-            className="block py-2 text-xs font-semibold"
-            onClick={() => setOpen(false)}
-          >
-            分析
-          </Link>
-          <Link
-            href="/progress"
-            className="block py-2 text-xs font-semibold"
-            onClick={() => setOpen(false)}
-          >
-            进步
-          </Link>
-          <Link
-            href="/favorites"
-            className="block py-2 text-xs font-semibold"
-            onClick={() => setOpen(false)}
-          >
-            收藏
-          </Link>
+          {navItems.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              aria-current={path === item.href ? "page" : undefined}
+              className={`block py-2 text-xs font-semibold ${
+                path === item.href ? activeClass : idleClass
+              }`}
+              onClick={() => setOpen(false)}
+            >
+              {item.label}
+            </Link>
+          ))}
           {variant === "landing" && (
             <Link
               href="/analyze"
-              className="mt-3 block bg-[var(--crux-orange-panel)] px-4 py-3 text-center text-sm font-bold text-[var(--crux-on-accent)]"
+              className="mt-3 block border-2 border-[var(--crux-border)] bg-[var(--crux-text)] px-4 py-3 text-center text-sm font-bold text-[var(--crux-surface)]"
               onClick={() => setOpen(false)}
             >
               上传视频分析
