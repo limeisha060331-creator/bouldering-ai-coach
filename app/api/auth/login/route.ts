@@ -5,7 +5,7 @@ import { loginUser } from "@/lib/auth-server";
 export async function POST(req: Request) {
   if (!isAuthConfigured()) {
     return NextResponse.json(
-      { error: "账户服务未配置（需 POSTGRES_URL 与 AUTH_SECRET）" },
+      { error: "账户服务未配置（需 Supabase 或 POSTGRES_URL 与 AUTH_SECRET）" },
       { status: 503 }
     );
   }

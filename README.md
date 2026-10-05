@@ -68,10 +68,32 @@ npm run dev
 GEMINI_API_KEY=你的密钥
 # 可选：异步任务（生产环境建议）
 BLOB_READ_WRITE_TOKEN=...
-# 可选：注册登录
-POSTGRES_URL=...
+# 可选：注册登录 + 分析记录云端同步（Supabase）
+NEXT_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+SUPABASE_SERVICE_ROLE_KEY=...
 AUTH_SECRET=...
 ```
+
+## 数据库（Supabase）
+
+网页版的账户与云端数据存在 Supabase（Postgres）上，共两张表：
+
+| 表 | 用途 |
+| --- | --- |
+| `users` | 注册用户（邮箱 + bcrypt 密码哈希） |
+| `analyses` | 每次视频分析记录（时间轴、评分、难度、收藏下标等） |
+
+接入三步（详见 **[supabase/README.md](./supabase/README.md)**）：
+
+1. 在 <https://supabase.com/dashboard> 新建项目。
+2. 打开 **SQL Editor**，执行 `supabase/migrations/0001_init.sql` 建表。
+3. 在 **Project Settings → API** 复制 `Project URL`、`anon`、`service_role`，
+   填入 `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` / `SUPABASE_SERVICE_ROLE_KEY`。
+
+数据流是「本地优先」：视频与分析记录先写浏览器 IndexedDB（离线可用、含视频 Blob），
+登录后自动镜像到 Supabase，换设备登录即可拉回；未登录时只保留在本地。
+`service_role` 只在本服务的 Route Handler 中使用，浏览器端不直连数据库。
 
 ## 技术栈
 
@@ -80,7 +102,7 @@ AUTH_SECRET=...
 | 界面 | React 19 + TypeScript + Tailwind 4 + Vite | React 19 + TypeScript + Tailwind 4 |
 | 运行时 | Electron 主进程（Node） | Next.js 16 App Router |
 | AI | DeepSeek `deepseek-flash` / Gemini `gemini-2.5-flash` | Gemini `gemini-2.5-flash` |
-| 本地存储 | IndexedDB + 应用数据目录配置 | IndexedDB + Vercel Postgres（可选账户） |
+| 本地存储 | IndexedDB + 应用数据目录配置 | IndexedDB（本地优先）+ Supabase（账户与云端同步） |
 | 测试 | Vitest + Playwright（Electron） | — |
 
 ## 项目结构
@@ -90,6 +112,7 @@ AUTH_SECRET=...
 ├─ components/      网页版 UI 组件
 ├─ lib/             两端共用的核心逻辑（Prompt、Gemini 调用、解析、统计、PDF）
 ├─ docs/            产品需求、设计说明
+├─ supabase/        数据库迁移脚本与接入说明
 └─ desktop/         桌面客户端
    ├─ electron/     主进程：任务状态机、DeepSeek/Gemini 调用、设置与本地账户
    ├─ shared/       主进程与渲染进程共享的类型契约
@@ -108,6 +131,7 @@ npm run test:e2e # 11 个 Electron 端到端用例（含真实抽帧与打包产
 ## 更多文档
 
 - 桌面客户端详细说明：**[desktop/README.md](./desktop/README.md)**
+- Supabase 数据库接入：**[supabase/README.md](./supabase/README.md)**
 - 产品需求：**[docs/PRD.md](./docs/PRD.md)**
 - 设计说明：**[docs/DESIGN.md](./docs/DESIGN.md)**
 

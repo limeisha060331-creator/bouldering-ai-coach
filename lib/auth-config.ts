@@ -1,3 +1,5 @@
+import { isSupabaseConfigured } from "./supabase/config";
+
 export const SESSION_COOKIE = "crux_session";
 export const SESSION_MAX_AGE_SEC = 60 * 60 * 24 * 30;
 
@@ -11,7 +13,10 @@ export function getDatabaseUrl(): string | undefined {
 }
 
 export function isAuthConfigured(): boolean {
-  return Boolean(getDatabaseUrl() && process.env.AUTH_SECRET?.trim());
+  return Boolean(
+    process.env.AUTH_SECRET?.trim() &&
+      (isSupabaseConfigured() || getDatabaseUrl())
+  );
 }
 
 export function getAuthSecret(): string {
