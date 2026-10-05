@@ -74,7 +74,7 @@ Gemini 纯文本
 - 早期以教练「叙述体」为主，时间轴行是自然格式；  
 - 结构化块由二次解析兜底，降低模型偶发 JSON 破损导致全页失败的风险。  
 
-**可改进**：要求模型输出固定 JSON schema，再用 zod 校验（简历可写「规划项」）。
+**可改进**：要求模型输出固定 JSON schema，再用 zod 校验。
 
 ---
 
@@ -115,7 +115,7 @@ interface AnalyzeProvider {
 }
 ```
 
-实现 `GeminiProvider`、`OpenAIProvider`（抽帧 + vision）、`QwenVLProvider` 等，用 `ANALYZE_PROVIDER` 环境变量切换——**简历上的「可扩展」一条即可，不必全部实现**。
+实现 `GeminiProvider`、`OpenAIProvider`（抽帧 + vision）、`QwenVLProvider` 等，用 `ANALYZE_PROVIDER` 环境变量切换——**先抽象接口即可，不必全部实现**。
 
 ---
 

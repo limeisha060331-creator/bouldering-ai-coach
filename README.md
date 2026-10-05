@@ -89,7 +89,7 @@ AUTH_SECRET=...
 ├─ app/             网页版路由与 API（Next.js）
 ├─ components/      网页版 UI 组件
 ├─ lib/             两端共用的核心逻辑（Prompt、Gemini 调用、解析、统计、PDF）
-├─ docs/            产品需求、设计说明、简历材料
+├─ docs/            产品需求、设计说明
 └─ desktop/         桌面客户端
    ├─ electron/     主进程：任务状态机、DeepSeek/Gemini 调用、设置与本地账户
    ├─ shared/       主进程与渲染进程共享的类型契约
@@ -110,7 +110,6 @@ npm run test:e2e # 11 个 Electron 端到端用例（含真实抽帧与打包产
 - 桌面客户端详细说明：**[desktop/README.md](./desktop/README.md)**
 - 产品需求：**[docs/PRD.md](./docs/PRD.md)**
 - 设计说明：**[docs/DESIGN.md](./docs/DESIGN.md)**
-- 简历 / 面试材料：**[docs/RESUME-AI.md](./docs/RESUME-AI.md)**
 
 ## 免责声明
 
