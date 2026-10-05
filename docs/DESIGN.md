@@ -1,6 +1,5 @@
 # 技术设计 · AI 应用向说明
 
-本文档用于面试时讲解：**如何把「多模态大模型」嵌进可上线的 Serverless 产品**，而不是只调一次 Chat API。
 
 ---
 
@@ -56,7 +55,6 @@
 | 版本 | `PROMPT_VERSION = "2026-02-1"` 写入分析记录，便于 A/B 与回归 |
 | 输出上限 | `getMaxOutputTokens(depth)`：light 4096 / deep 8192 |
 
-**面试话术**：Prompt 不是写在 UI 里的字符串，而是**独立模块 + 版本号 + 与深度/语言正交配置**，方便迭代而不改前端。
 
 ---
 
@@ -90,7 +88,6 @@ Gemini 纯文本
 | 后台卡死 | `STALE_*` 超时检测，跨轮询重新 `waitUntil` 推进 |
 | 管道并发 | `PIPELINE_LOCK_MS` 避免同一 job 重复推进 |
 
-**面试话术**：LLM 应用的核心不是「能调通 API」，而是**错误 taxonomy + 状态机 + 用户可理解的等待/重试**。
 
 ---
 
@@ -119,20 +116,3 @@ interface AnalyzeProvider {
 
 ---
 
-## 8. 国内与合规（口述即可）
-
-- 用户访问：Vercel 境外节点，国内不稳定  
-- 模型：Gemini 需境外 API；落地国内需换国产 VL + 国内云函数  
-- 内容安全：Gemini safety settings（`lib/gemini-safety.ts`）  
-
----
-
-## 9. 面试 3 分钟讲解顺序（建议背诵大纲）
-
-1. **场景**：抱石视频 → AI 教练报告  
-2. **架构图**：异步 Job + 轮询 + IndexedDB  
-3. **Prompt**：版本、双语、深浅、输出格式契约  
-4. **难点 1**：Serverless 超时 → Blob + waitUntil  
-5. **难点 2**：429 分类与状态机重试  
-6. **难点 3**：非 JSON 输出 → 解析器 + 结构化报告  
-7. **后续**：Provider 抽象、记录上云、国内模型  
