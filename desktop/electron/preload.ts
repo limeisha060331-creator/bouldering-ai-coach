@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer } from "electron";
 import type {
+  AnalysisProvider,
   AnalyzeProgressEvent,
   AnalyzeStartPayload,
   CruxApi,
@@ -8,8 +9,12 @@ import type {
 const api: CruxApi = {
   settings: {
     get: () => ipcRenderer.invoke("settings:get"),
-    setApiKey: (apiKey: string) => ipcRenderer.invoke("settings:setApiKey", apiKey),
-    setModel: (model: string) => ipcRenderer.invoke("settings:setModel", model),
+    setProvider: (provider: AnalysisProvider) =>
+      ipcRenderer.invoke("settings:setProvider", provider),
+    setApiKey: (provider: AnalysisProvider, apiKey: string) =>
+      ipcRenderer.invoke("settings:setApiKey", provider, apiKey),
+    setModel: (provider: AnalysisProvider, model: string) =>
+      ipcRenderer.invoke("settings:setModel", provider, model),
   },
   analyze: {
     start: (payload: AnalyzeStartPayload) =>

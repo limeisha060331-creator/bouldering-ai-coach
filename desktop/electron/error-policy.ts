@@ -12,6 +12,10 @@ import {
   parseGeminiRetrySeconds,
 } from "@lib/gemini-retry";
 import { isRetryLaterError } from "./errors";
+import {
+  isDeepSeekApiError,
+  isDeepSeekEmptyAnalysisError,
+} from "./deepseek-analyze";
 
 export type ErrorDecision = {
   message: string;
@@ -30,6 +34,24 @@ export function classifyAnalysisError(err: unknown): ErrorDecision {
       message: err.message,
       retryable: true,
       waitSeconds: err.waitSeconds,
+      dailyQuotaExhausted: false,
+    };
+  }
+
+  if (isDeepSeekApiError(err)) {
+    return {
+      message: err.message,
+      retryable: err.retryable,
+      waitSeconds: err.waitSeconds,
+      dailyQuotaExhausted: false,
+    };
+  }
+
+  if (isDeepSeekEmptyAnalysisError(err)) {
+    return {
+      message: err.message,
+      retryable: true,
+      waitSeconds: 8,
       dailyQuotaExhausted: false,
     };
   }

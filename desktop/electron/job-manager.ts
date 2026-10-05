@@ -3,6 +3,8 @@ import { PROMPT_VERSION } from "@lib/analyze-prompt";
 import type {
   AnalysisDepth,
   AnalysisLocale,
+  AnalysisProvider,
+  AnalyzeFrame,
   AnalyzeProgressEvent,
   AnalyzeStartPayload,
   AnalyzeStartResult,
@@ -14,6 +16,7 @@ import { classifyAnalysisError, type ErrorDecision } from "./error-policy";
 export type AnalysisJob = {
   id: string;
   status: JobStatus;
+  provider: AnalysisProvider;
   createdAt: string;
   updatedAt: string;
   fileName: string;
@@ -23,6 +26,7 @@ export type AnalysisJob = {
   originalSize: number;
   compressedSize: number;
   videoBuffer: Buffer;
+  frames: AnalyzeFrame[];
   promptVersion: string;
   analysisAttempt: number;
   geminiFileName?: string;
@@ -101,6 +105,7 @@ export class JobManager {
     const job: AnalysisJob = {
       id,
       status: "uploaded",
+      provider: payload.provider,
       createdAt: nowIso,
       updatedAt: nowIso,
       fileName: payload.fileName,
@@ -110,6 +115,7 @@ export class JobManager {
       originalSize: payload.originalSize,
       compressedSize: payload.compressedSize,
       videoBuffer: Buffer.from(payload.data),
+      frames: payload.frames ?? [],
       promptVersion: PROMPT_VERSION,
       analysisAttempt: 1,
       logs: [],

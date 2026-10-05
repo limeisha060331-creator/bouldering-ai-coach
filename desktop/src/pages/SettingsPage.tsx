@@ -2,7 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import { SiteNav } from "@/components/site-nav";
 import { IconInfo, IconLoader, IconSettings } from "@/components/icons";
 import { useUiLocale } from "@/lib/use-ui-locale";
-import type { AppInfo, SettingsSnapshot } from "@shared/ipc";
+import type { AppInfo, ProviderSettings, SettingsSnapshot } from "@shared/ipc";
+import { PROVIDERS, type AnalysisProvider } from "@shared/providers";
 
 export function SettingsPage() {
   const [uiLocale] = useUiLocale();
@@ -14,30 +15,44 @@ export function SettingsPage() {
   const [apiKeyInput, setApiKeyInput] = useState("");
   const [modelInput, setModelInput] = useState("");
   const [status, setStatus] = useState<string | null>(null);
-  const [saving, setSaving] = useState<"key" | "model" | null>(null);
+  const [saving, setSaving] = useState<"key" | "model" | "provider" | null>(null);
 
-  const refresh = useCallback(async () => {
-    const next = await window.crux.settings.get();
+  const provider: AnalysisProvider = snapshot?.provider ?? "deepseek";
+  const active: ProviderSettings | undefined = snapshot?.providers[provider];
+
+  const applySnapshot = useCallback((next: SettingsSnapshot) => {
     setSnapshot(next);
-    setModelInput(next.model);
+    setModelInput(next.providers[next.provider].model);
   }, []);
 
   useEffect(() => {
     void (async () => {
-      await refresh();
+      applySnapshot(await window.crux.settings.get());
       setInfo(await window.crux.app.info());
     })();
-  }, [refresh]);
+  }, [applySnapshot]);
+
+  async function switchProvider(next: AnalysisProvider) {
+    if (next === provider) return;
+    setSaving("provider");
+    setStatus(null);
+    setApiKeyInput("");
+    try {
+      applySnapshot(await window.crux.settings.setProvider(next));
+    } finally {
+      setSaving(null);
+    }
+  }
 
   async function saveApiKey() {
     setSaving("key");
     setStatus(null);
     try {
-      const next = await window.crux.settings.setApiKey(apiKeyInput);
-      setSnapshot(next);
+      const next = await window.crux.settings.setApiKey(provider, apiKeyInput);
+      applySnapshot(next);
       setApiKeyInput("");
       setStatus(
-        next.hasApiKey
+        next.providers[provider].hasApiKey
           ? t("API Key 已保存。", "API key saved.")
           : t("API Key 已清空。", "API key cleared.")
       );
@@ -48,11 +63,23 @@ export function SettingsPage() {
     }
   }
 
+  async function clearApiKey() {
+    setSaving("key");
+    setStatus(null);
+    setApiKeyInput("");
+    try {
+      applySnapshot(await window.crux.settings.setApiKey(provider, ""));
+      setStatus(t("API Key 已清空。", "API key cleared."));
+    } finally {
+      setSaving(null);
+    }
+  }
+
   async function saveModel() {
     setSaving("model");
     setStatus(null);
     try {
-      setSnapshot(await window.crux.settings.setModel(modelInput));
+      applySnapshot(await window.crux.settings.setModel(provider, modelInput));
       setStatus(t("模型已保存。", "Model saved."));
     } catch (err) {
       setStatus(err instanceof Error ? err.message : t("保存失败", "Save failed"));
@@ -61,7 +88,7 @@ export function SettingsPage() {
     }
   }
 
-  const masked = snapshot?.maskedApiKey ?? "";
+  const masked = active?.maskedApiKey ?? "";
 
   return (
     <main className="crux-page">
@@ -76,14 +103,14 @@ export function SettingsPage() {
             </h1>
             <p className="mt-1 text-xs text-[var(--crux-text-muted)]">
               {t(
-                "桌面端直接调用 Gemini，密钥只保存在本机。",
-                "The desktop app calls Gemini directly; your key stays on this machine."
+                "选择分析后端并填写对应密钥，密钥只保存在本机。",
+                "Pick the analysis backend and store its key locally."
               )}
             </p>
           </div>
         </header>
 
-        {!snapshot ? (
+        {!snapshot || !active ? (
           <p className="flex items-center gap-2 text-sm text-[var(--crux-text-muted)]">
             <IconLoader className="h-4 w-4" />
             {t("加载中…", "Loading…")}
@@ -91,18 +118,68 @@ export function SettingsPage() {
         ) : (
           <div className="flex flex-col gap-6">
             <section className="spa-panel p-6">
+              <h2 className="spa-label mb-3">{t("分析后端", "Backend")}</h2>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {PROVIDERS.map((candidate) => {
+                  const item = snapshot.providers[candidate];
+                  const selected = candidate === provider;
+                  return (
+                    <button
+                      key={candidate}
+                      type="button"
+                      onClick={() => void switchProvider(candidate)}
+                      disabled={saving === "provider"}
+                      data-testid={`provider-${candidate}`}
+                      aria-pressed={selected}
+                      className={`border-2 p-4 text-left transition ${
+                        selected
+                          ? "border-[var(--crux-accent)] bg-[var(--crux-accent-soft)] shadow-[3px_3px_0_var(--crux-border)]"
+                          : "border-[var(--crux-border-subtle)] bg-[var(--crux-surface)] hover:border-[var(--crux-accent)]"
+                      }`}
+                    >
+                      <span className="flex items-center justify-between gap-2">
+                        <span className="text-sm font-black text-[var(--crux-text)]">
+                          {item.label}
+                        </span>
+                        <span
+                          className={`crux-mono text-[10px] font-bold ${
+                            item.hasApiKey
+                              ? "text-[var(--crux-accent)]"
+                              : "text-[var(--crux-text-muted)]"
+                          }`}
+                        >
+                          {item.hasApiKey
+                            ? t("已配置", "Ready")
+                            : t("未配置", "No key")}
+                        </span>
+                      </span>
+                      <span className="mt-2 block text-[11px] leading-snug text-[var(--crux-text-muted)]">
+                        {item.supportsVideo
+                          ? t("直接上传视频做动作理解", "Understands the video directly")
+                          : t(
+                              "官方 API 仅支持图像，将自动抽取关键帧",
+                              "Image-only API; the app samples key frames"
+                            )}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+
+            <section className="spa-panel p-6">
               <h2 className="spa-label mb-3">
-                {t("Gemini API Key", "Gemini API key")}
+                {active.label} · {t("API Key", "API key")}
               </h2>
               <p className="text-xs leading-relaxed text-[var(--crux-text-muted)]">
-                {snapshot.fromEnv
+                {active.fromEnv
                   ? t(
-                      "当前使用环境变量 GEMINI_API_KEY（优先级高于此处设置）。",
-                      "Currently using the GEMINI_API_KEY environment variable (takes precedence)."
+                      "当前使用环境变量中的 Key（优先级高于此处设置）。",
+                      "Currently using an environment variable key (takes precedence)."
                     )
                   : t(
-                      "在 Google AI Studio 免费申请后粘贴到这里，仅保存在本机 userData 目录。",
-                      "Get a free key from Google AI Studio and paste it here. It is stored only in this machine's userData folder."
+                      "只有保存在本机 userData 目录里的这一个 Key，不会上传到任何服务器。",
+                      "Stored only in this machine's userData folder; never uploaded anywhere."
                     )}
               </p>
 
@@ -114,7 +191,7 @@ export function SettingsPage() {
                   placeholder={
                     masked
                       ? t(`当前：${masked}`, `Current: ${masked}`)
-                      : "AIza..."
+                      : "sk-..."
                   }
                   className="spa-input flex-1 px-3 py-2"
                   data-testid="api-key-input"
@@ -130,18 +207,8 @@ export function SettingsPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    setApiKeyInput("");
-                    setSaving("key");
-                    void window.crux.settings
-                      .setApiKey("")
-                      .then((next) => {
-                        setSnapshot(next);
-                        setStatus(t("API Key 已清空。", "API key cleared."));
-                      })
-                      .finally(() => setSaving(null));
-                  }}
-                  disabled={saving === "key" || !snapshot.hasApiKey}
+                  onClick={() => void clearApiKey()}
+                  disabled={saving === "key" || !active.hasApiKey}
                   className="border-2 border-[var(--crux-border-subtle)] bg-[var(--crux-surface)] px-5 py-2 text-sm font-bold text-[var(--crux-text)] transition hover:border-[var(--crux-accent)] disabled:opacity-40"
                   data-testid="clear-api-key"
                 >
@@ -152,26 +219,25 @@ export function SettingsPage() {
               <div className="mt-4 flex flex-wrap items-center gap-4">
                 <span
                   className={`crux-mono text-[11px] font-bold ${
-                    snapshot.hasApiKey
+                    active.hasApiKey
                       ? "text-[var(--crux-accent)]"
                       : "text-[var(--crux-text-muted)]"
                   }`}
                   data-testid="api-key-status"
                 >
-                  {snapshot.hasApiKey
+                  {active.hasApiKey
                     ? t("已配置 Key", "Key configured")
                     : t("未配置 Key", "No key configured")}
                 </span>
                 <button
                   type="button"
-                  onClick={() =>
-                    void window.crux.app.openExternal(
-                      "https://aistudio.google.com/apikey"
-                    )
-                  }
+                  onClick={() => void window.crux.app.openExternal(active.homepage)}
                   className="crux-mono text-[11px] font-bold text-[var(--crux-accent)] underline underline-offset-4"
                 >
-                  {t("前往 Google AI Studio 获取 Key", "Get a key from Google AI Studio")}
+                  {t(
+                    `前往 ${active.label} 获取 Key`,
+                    `Get a key from ${active.label}`
+                  )}
                 </button>
               </div>
             </section>
@@ -183,7 +249,7 @@ export function SettingsPage() {
                   type="text"
                   value={modelInput}
                   onChange={(e) => setModelInput(e.target.value)}
-                  placeholder={snapshot.defaultModel}
+                  placeholder={active.defaultModel}
                   className="spa-input flex-1 px-3 py-2"
                   data-testid="model-input"
                 />
@@ -199,10 +265,15 @@ export function SettingsPage() {
                 </button>
               </div>
               <p className="mt-3 text-xs text-[var(--crux-text-muted)]">
-                {t(
-                  `默认 ${snapshot.defaultModel}（免费额度通常只对该模型开放）。`,
-                  `Default ${snapshot.defaultModel} (the free tier usually only covers this model).`
-                )}
+                {provider === "deepseek"
+                  ? t(
+                      `默认 ${active.defaultModel}，接口地址 https://api.deepseek.com（OpenAI 兼容）。`,
+                      `Default ${active.defaultModel}, endpoint https://api.deepseek.com (OpenAI-compatible).`
+                    )
+                  : t(
+                      `默认 ${active.defaultModel}（免费额度通常只对该模型开放）。`,
+                      `Default ${active.defaultModel} (the free tier usually only covers this model).`
+                    )}
               </p>
             </section>
 
@@ -237,9 +308,7 @@ export function SettingsPage() {
                     <dd>{info.node}</dd>
                   </div>
                   <div className="sm:col-span-2 min-w-0">
-                    <dt className="font-bold">
-                      {t("数据目录", "Data folder")}
-                    </dt>
+                    <dt className="font-bold">{t("数据目录", "Data folder")}</dt>
                     <dd className="break-all">{info.userDataPath}</dd>
                   </div>
                 </dl>

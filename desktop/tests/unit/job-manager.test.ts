@@ -5,6 +5,7 @@ import type { AnalyzeStartPayload, AnalyzeProgressEvent } from "@shared/ipc";
 
 function payload(): AnalyzeStartPayload {
   return {
+    provider: "gemini",
     fileName: "crux.mp4",
     mimeType: "video/mp4",
     depth: "deep",
@@ -12,6 +13,7 @@ function payload(): AnalyzeStartPayload {
     originalSize: 1024,
     compressedSize: 1024,
     data: new Uint8Array([1, 2, 3, 4]),
+    frames: [],
   };
 }
 

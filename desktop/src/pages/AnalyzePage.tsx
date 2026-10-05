@@ -36,8 +36,11 @@ import { useAuth } from "@/lib/use-auth";
 import { useUiLocale } from "@/lib/use-ui-locale";
 import { SiteNav } from "@/components/site-nav";
 import { AnalysisCanceledError, analyzeVideo } from "@/lib/analyze-client";
+import { extractFrames } from "@/lib/extract-frames";
+import type { AnalysisProvider, AnalyzeFrame } from "@shared/ipc";
 
 function pipelineStep(
+  provider: AnalysisProvider,
   compressing: boolean,
   loading: boolean,
   pollStatus: string | null
@@ -45,11 +48,18 @@ function pipelineStep(
   if (compressing) return 0;
   if (!loading) return -1;
   if (!pollStatus || pollStatus === "uploaded") return 1;
+  if (provider === "deepseek") return pollStatus === "analyzing" ? 2 : 3;
   if (pollStatus === "gemini_uploading" || pollStatus === "gemini_processing") {
     return 2;
   }
   return 3;
 }
+
+/** 抽帧后端没有「上传视频」这一步，用一套更贴切的步骤文案 */
+const FRAME_STEPS: Record<"zh" | "en", [string, string, string, string]> = {
+  zh: ["本地抽帧", "提交请求", "AI 分析", "生成报告"],
+  en: ["Local frames", "Request", "AI analysis", "Report"],
+};
 
 function isCanceledMessage(message: string): boolean {
   return message === "Canceled" || message.includes("取消");
@@ -79,6 +89,9 @@ export function AnalyzePage() {
   const [retryable, setRetryable] = useState(false);
   const [needsApiKey, setNeedsApiKey] = useState(false);
   const [hasApiKey, setHasApiKey] = useState<boolean | null>(null);
+  const [provider, setProvider] = useState<AnalysisProvider>("deepseek");
+  const [providerLabel, setProviderLabel] = useState("DeepSeek");
+  const [frames, setFrames] = useState<AnalyzeFrame[]>([]);
   const [dragOver, setDragOver] = useState(false);
   const [history, setHistory] = useState<AnalysisRecord[]>([]);
   const [historyDbError, setHistoryDbError] = useState(false);
@@ -107,9 +120,29 @@ export function AnalyzePage() {
     void loadHistory();
     void window.crux.settings
       .get()
-      .then((s) => setHasApiKey(s.hasApiKey))
+      .then((s) => {
+        setProvider(s.provider);
+        setProviderLabel(s.active.label);
+        setHasApiKey(s.active.hasApiKey);
+      })
       .catch(() => setHasApiKey(null));
   }, [loadHistory]);
+
+  // 从「设置」页切回时同步最新的后端与 Key 状态
+  useEffect(() => {
+    const sync = () => {
+      void window.crux.settings
+        .get()
+        .then((s) => {
+          setProvider(s.provider);
+          setProviderLabel(s.active.label);
+          setHasApiKey(s.active.hasApiKey);
+        })
+        .catch(() => undefined);
+    };
+    window.addEventListener("focus", sync);
+    return () => window.removeEventListener("focus", sync);
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -155,13 +188,16 @@ export function AnalyzePage() {
     });
   }, [history, searchQ, datePreset, scoreMin, scoreMax]);
 
-  const activeStep = pipelineStep(compressing, loading, pollStatus);
+  const activeStep = pipelineStep(provider, compressing, loading, pollStatus);
+  const frameBackend = provider === "deepseek";
+  const stepLabels = frameBackend ? FRAME_STEPS[uiLocale] : t.steps;
 
   async function processSelectedFile(selected: File) {
     setError(null);
     setRetryable(false);
     setNeedsApiKey(false);
     setCompressInfo(null);
+    setFrames([]);
 
     if (!selected.type.startsWith("video/")) {
       setError(t.pickVideo);
@@ -177,36 +213,75 @@ export function AnalyzePage() {
 
     setOriginalFile(selected);
     setCompressing(true);
-    setCompressHint(t.checkingVideo);
+    setCompressHint(
+      frameBackend
+        ? uiLocale === "zh"
+          ? "正在抽取关键帧…"
+          : "Extracting key frames…"
+        : t.checkingVideo
+    );
 
     try {
-      const result = await prepareVideoForUpload(selected, (msg, pct) => {
-        setCompressHint(pct != null ? `${msg} (${Math.round(pct)}%)` : msg);
-      });
+      if (frameBackend) {
+        // DeepSeek 只吃图像：跳过视频压缩，直接本地抽帧
+        setFile(selected);
+        setPreview((prev) => {
+          if (prev) URL.revokeObjectURL(prev);
+          return URL.createObjectURL(selected);
+        });
 
-      setFile(result.file);
-      setPreview((prev) => {
-        if (prev) URL.revokeObjectURL(prev);
-        return URL.createObjectURL(result.file);
-      });
+        const extracted = await extractFrames(selected, {
+          onProgress: (done, total) => {
+            setCompressHint(
+              uiLocale === "zh"
+                ? `正在抽取关键帧… ${done}/${total}`
+                : `Extracting key frames… ${done}/${total}`
+            );
+          },
+        });
+        setFrames(extracted);
+        setCompressInfo(
+          `${(selected.size / 1024 / 1024).toFixed(1)}MB` +
+            (uiLocale === "zh"
+              ? ` · 已抽取 ${extracted.length} 张关键帧`
+              : ` · ${extracted.length} key frames`)
+        );
+      } else {
+        const result = await prepareVideoForUpload(selected, (msg, pct) => {
+          setCompressHint(pct != null ? `${msg} (${Math.round(pct)}%)` : msg);
+        });
 
-      setCompressInfo(
-        result.compressed
-          ? t.compressedFromTo(
-              (result.originalSize / 1024 / 1024).toFixed(1),
-              (result.finalSize / 1024 / 1024).toFixed(1)
-            )
-          : `${(result.finalSize / 1024 / 1024).toFixed(1)}MB` +
-              t.noCompressSuffix
-      );
+        setFile(result.file);
+        setPreview((prev) => {
+          if (prev) URL.revokeObjectURL(prev);
+          return URL.createObjectURL(result.file);
+        });
+
+        setCompressInfo(
+          result.compressed
+            ? t.compressedFromTo(
+                (result.originalSize / 1024 / 1024).toFixed(1),
+                (result.finalSize / 1024 / 1024).toFixed(1)
+              )
+            : `${(result.finalSize / 1024 / 1024).toFixed(1)}MB` +
+                t.noCompressSuffix
+        );
+      }
     } catch (e) {
       setFile(null);
       setOriginalFile(null);
+      setFrames([]);
       setPreview((prev) => {
         if (prev) URL.revokeObjectURL(prev);
         return null;
       });
-      setError(e instanceof Error ? e.message : t.compressFailed);
+      setError(
+        e instanceof Error
+          ? e.message
+          : uiLocale === "zh"
+            ? "视频处理失败"
+            : t.compressFailed
+      );
     } finally {
       setCompressing(false);
       setCompressHint(null);
@@ -217,6 +292,7 @@ export function AnalyzePage() {
     if (!selected) {
       setFile(null);
       setOriginalFile(null);
+      setFrames([]);
       setPreview((prev) => {
         if (prev) URL.revokeObjectURL(prev);
         return null;
@@ -248,8 +324,17 @@ export function AnalyzePage() {
       return;
     }
 
-    if (file.size > MAX_ANALYZE_BYTES) {
+    if (!frameBackend && file.size > MAX_ANALYZE_BYTES) {
       setError(formatStr(t.stillLarge, { analyzeMb: MAX_ANALYZE_MB }));
+      return;
+    }
+
+    if (frameBackend && frames.length === 0) {
+      setError(
+        uiLocale === "zh"
+          ? "关键帧尚未准备完成，请重新选择视频。"
+          : "Key frames are not ready yet; pick the video again."
+      );
       return;
     }
 
@@ -266,11 +351,14 @@ export function AnalyzePage() {
     abortRef.current = new AbortController();
 
     try {
-      const data = new Uint8Array(await file.arrayBuffer());
+      const data = frameBackend
+        ? new Uint8Array(0)
+        : new Uint8Array(await file.arrayBuffer());
 
       const [result, thumbnail] = await Promise.all([
         analyzeVideo(
           {
+            provider,
             fileName: originalFile?.name ?? file.name,
             mimeType: file.type || "video/mp4",
             depth,
@@ -278,6 +366,7 @@ export function AnalyzePage() {
             originalSize: originalFile?.size ?? file.size,
             compressedSize: file.size,
             data,
+            frames,
           },
           {
             signal: abortRef.current.signal,
@@ -375,8 +464,8 @@ export function AnalyzePage() {
           >
             <p className="text-sm font-bold text-[var(--crux-text)]">
               {uiLocale === "zh"
-                ? "尚未配置 Gemini API Key，配置后才能开始分析。"
-                : "No Gemini API key configured yet."}
+                ? `尚未配置 ${providerLabel} API Key，配置后才能开始分析。`
+                : `No ${providerLabel} API key configured yet.`}
             </p>
             <Link
               to="/settings"
@@ -518,7 +607,7 @@ export function AnalyzePage() {
           {activeStep >= 0 && (
             <div className="mb-6 no-print">
               <ol className="grid grid-cols-4 gap-2 text-center">
-                {t.steps.map((label, i) => (
+                {stepLabels.map((label, i) => (
                   <li key={label}>
                     <div
                       className={`mx-auto mb-1.5 flex h-9 w-9 items-center justify-center border-2 text-xs font-extrabold ${
@@ -565,10 +654,14 @@ export function AnalyzePage() {
               {compressing ? t.uploadCompress : t.uploadIdle}
             </span>
             <span className="mt-2 text-xs text-[var(--spa-text-muted)]">
-              {formatStr(t.uploadHint, {
-                maxMb: MAX_SOURCE_BYTES / 1024 / 1024,
-                analyzeMb: MAX_ANALYZE_MB,
-              })}
+              {frameBackend
+                ? uiLocale === "zh"
+                  ? `最大 ${MAX_SOURCE_BYTES / 1024 / 1024}MB · 本地抽取关键帧后提交`
+                  : `Up to ${MAX_SOURCE_BYTES / 1024 / 1024}MB · sampled into key frames locally`
+                : formatStr(t.uploadHint, {
+                    maxMb: MAX_SOURCE_BYTES / 1024 / 1024,
+                    analyzeMb: MAX_ANALYZE_MB,
+                  })}
             </span>
           </label>
           <input

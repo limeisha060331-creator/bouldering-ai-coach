@@ -21,6 +21,7 @@ function baseJob(patch: Partial<AnalysisJob> = {}): AnalysisJob {
   return {
     id: "job-1",
     status: "uploaded",
+    provider: "gemini",
     createdAt: new Date(0).toISOString(),
     updatedAt: new Date(0).toISOString(),
     fileName: "crux.mp4",
@@ -30,6 +31,7 @@ function baseJob(patch: Partial<AnalysisJob> = {}): AnalysisJob {
     originalSize: 10,
     compressedSize: 10,
     videoBuffer: Buffer.from([1, 2, 3]),
+    frames: [],
     promptVersion: "test",
     analysisAttempt: 1,
     logs: [],

@@ -144,8 +144,9 @@ MIT
 
 除网页版外，仓库还提供 Windows 桌面客户端，见 **[desktop/](./desktop/README.md)**。它把 Next.js 的服务端能力搬到 Electron 主进程：
 
-- **无需部署、直连 Gemini**：不依赖 Vercel，国内网络也能稳定使用
-- **API Key 本机保存**：应用内「设置」页填写，只写入本机 `userData`
+- **默认接入 DeepSeek**：走 `deepseek-flash` 图像理解，国内直连、不依赖 Vercel，也无需代理；可在设置里一键切回 Google Gemini（直接上传视频）
+- **DeepSeek 不支持视频 → 本地抽帧**：客户端按时间均匀抽取关键帧并给每帧打上 `[MM:SS]` 时间戳，因此仍能产出时间轴级别的教练点评
+- **API Key 本机保存**：应用内「设置」页填写，只写入本机 `userData`；两家的 Key 与模型分别保存
 - **能力对齐网页版**：上传压缩、四阶段进度、限流自动重试、结构化报告、时间轴收藏、PDF / Markdown 导出、深浅色主题、中英界面
 - **复用同一份核心逻辑**：直接引用根目录 `lib/` 的 Prompt、Gemini 调用、解析与统计模块
 

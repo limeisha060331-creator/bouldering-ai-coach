@@ -1,5 +1,9 @@
 /** 主进程 ⇄ 渲染进程的共享类型契约（不依赖 electron，可被单测直接引用） */
 
+import type { AnalysisProvider } from "./providers";
+
+export type { AnalysisProvider, ProviderCapability } from "./providers";
+
 export type UiLocale = "zh" | "en";
 export type AnalysisDepth = "light" | "deep";
 export type AnalysisLocale = "zh" | "en";
@@ -14,14 +18,26 @@ export type JobStatus =
   | "failed";
 
 export type AnalyzeStartPayload = {
+  provider: AnalysisProvider;
   fileName: string;
   mimeType: string;
   depth: AnalysisDepth;
   locale: AnalysisLocale;
   originalSize: number;
   compressedSize: number;
-  /** 压缩/转码后的视频字节 */
+  /** 视频字节；Gemini 直接分析视频，DeepSeek 不使用 */
   data: Uint8Array;
+  /** 本地抽取的关键帧；DeepSeek 依赖它，Gemini 忽略 */
+  frames: AnalyzeFrame[];
+};
+
+export type AnalyzeFrame = {
+  /** 距视频起点的秒数 */
+  seconds: number;
+  /** MM:SS */
+  timestamp: string;
+  /** data:image/jpeg;base64,... */
+  dataUrl: string;
 };
 
 export type AnalyzeStartResult = {
@@ -41,15 +57,25 @@ export type AnalyzeProgressEvent = {
   analysis?: string;
 };
 
-export type SettingsSnapshot = {
-  /** 是否已配置可用 API Key */
+export type ProviderSettings = {
   hasApiKey: boolean;
-  /** 掩码后的 Key，便于用户确认当前值 */
   maskedApiKey: string;
   model: string;
   defaultModel: string;
   /** 是否来自环境变量（只读，用户改不了） */
   fromEnv: boolean;
+  needsFrames: boolean;
+  supportsVideo: boolean;
+  label: string;
+  homepage: string;
+};
+
+export type SettingsSnapshot = {
+  /** 当前生效的后端 */
+  provider: AnalysisProvider;
+  /** 当前后端的视图，渲染层最常用 */
+  active: ProviderSettings;
+  providers: Record<AnalysisProvider, ProviderSettings>;
 };
 
 export type PublicUser = {
@@ -95,8 +121,15 @@ export type AppInfo = {
 export type CruxApi = {
   settings: {
     get(): Promise<SettingsSnapshot>;
-    setApiKey(apiKey: string): Promise<SettingsSnapshot>;
-    setModel(model: string): Promise<SettingsSnapshot>;
+    setProvider(provider: AnalysisProvider): Promise<SettingsSnapshot>;
+    setApiKey(
+      provider: AnalysisProvider,
+      apiKey: string
+    ): Promise<SettingsSnapshot>;
+    setModel(
+      provider: AnalysisProvider,
+      model: string
+    ): Promise<SettingsSnapshot>;
   };
   analyze: {
     start(payload: AnalyzeStartPayload): Promise<AnalyzeStartResult>;
