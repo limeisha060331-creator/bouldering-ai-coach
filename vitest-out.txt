@@ -1,9 +1,0 @@
-﻿
- RUN  v5.0.3 D:/my-bouldering-ai/desktop
-
-
- Test Files  17 passed (17)
-      Tests  103 passed (103)
-   Start at  19:02:51
-   Duration  3.89s (environment 71%, setup 16%, tests 6%, transform 5%, import 2%, worker 1%)
-
