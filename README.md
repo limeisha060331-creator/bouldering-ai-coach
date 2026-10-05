@@ -137,3 +137,23 @@ npm run dev
 ## License
 
 MIT
+
+---
+
+## 桌面客户端（Electron + React + TypeScript）
+
+除网页版外，仓库还提供 Windows 桌面客户端，见 **[desktop/](./desktop/README.md)**。它把 Next.js 的服务端能力搬到 Electron 主进程：
+
+- **无需部署、直连 Gemini**：不依赖 Vercel，国内网络也能稳定使用
+- **API Key 本机保存**：应用内「设置」页填写，只写入本机 `userData`
+- **能力对齐网页版**：上传压缩、四阶段进度、限流自动重试、结构化报告、时间轴收藏、PDF / Markdown 导出、深浅色主题、中英界面
+- **复用同一份核心逻辑**：直接引用根目录 `lib/` 的 Prompt、Gemini 调用、解析与统计模块
+
+```bash
+cd desktop
+npm install
+npm run dev          # 开发模式
+npm test             # 单元 / 组件 / 流程集成测试
+npm run test:e2e     # 真实 Electron 端到端测试
+npm run dist         # 打包 Windows 安装包
+```
