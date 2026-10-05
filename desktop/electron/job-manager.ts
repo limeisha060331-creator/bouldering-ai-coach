@@ -55,6 +55,12 @@ export type JobManagerOptions = {
 };
 
 const MAX_LOGS = 40;
+const CANCELED_MESSAGE = "已取消分析。";
+
+type RunOutcome =
+  | { type: "done"; analysis: string }
+  | { type: "error"; error: unknown }
+  | { type: "cancelled" };
 
 function defaultSleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -67,6 +73,10 @@ function defaultSleep(ms: number): Promise<void> {
 export class JobManager {
   private readonly jobs = new Map<string, AnalysisJob>();
   private readonly cancelled = new Set<string>();
+  private readonly cancelSignals = new Map<
+    string,
+    { promise: Promise<RunOutcome>; resolve: (outcome: RunOutcome) => void }
+  >();
   private readonly now: () => number;
   private readonly sleep: (ms: number) => Promise<void>;
   private readonly maxAttempts: number;
@@ -105,6 +115,7 @@ export class JobManager {
       logs: [],
     };
     this.jobs.set(id, job);
+    this.cancelSignals.set(id, this.createCancelSignal());
     this.emit(job);
     void this.execute(job);
 
@@ -119,6 +130,7 @@ export class JobManager {
 
   cancel(jobId: string): void {
     this.cancelled.add(jobId);
+    this.cancelSignals.get(jobId)?.resolve({ type: "cancelled" });
   }
 
   isCancelled(jobId: string): boolean {
@@ -167,11 +179,10 @@ export class JobManager {
 
   private async execute(job: AnalysisJob): Promise<void> {
     const hooks = this.hooks(job);
-    const startedAt = this.now();
 
     for (let attempt = 1; attempt <= this.maxAttempts; attempt++) {
       if (this.cancelled.has(job.id)) {
-        this.finish(job, "failed", "已取消分析。");
+        this.finish(job, "failed", CANCELED_MESSAGE);
         return;
       }
 
@@ -179,43 +190,49 @@ export class JobManager {
       job.error = undefined;
       job.retryAfter = undefined;
 
-      try {
-        const analysis = await this.options.run(job, hooks);
-        if (this.cancelled.has(job.id)) {
-          this.finish(job, "failed", "已取消分析。");
-          return;
-        }
-        job.analysis = analysis;
+      const outcome = await this.runWithCancelSignal(job, hooks);
+
+      if (outcome.type === "cancelled") {
+        this.finish(job, "failed", CANCELED_MESSAGE);
+        return;
+      }
+
+      if (outcome.type === "done") {
+        job.analysis = outcome.analysis;
         this.setStatus(job, "completed");
         this.options.onFinished?.(job);
+        this.cleanup(job.id);
         return;
-      } catch (err) {
-        const decision: ErrorDecision = classifyAnalysisError(err);
-
-        if (!decision.retryable || attempt >= this.maxAttempts) {
-          job.dailyQuotaExhausted = decision.dailyQuotaExhausted;
-          this.finish(job, "failed", decision.message);
-          return;
-        }
-
-        job.retryAfter = new Date(
-          this.now() + decision.waitSeconds * 1000
-        ).toISOString();
-        this.setStatus(job, "rate_limited", { error: decision.message });
-        await this.sleep(decision.waitSeconds * 1000);
-
-        if (this.cancelled.has(job.id)) {
-          this.finish(job, "failed", "已取消分析。");
-          return;
-        }
-        hooks.log(
-          `第 ${attempt} 次尝试失败后重试（已等待 ${decision.waitSeconds}s）：${decision.message}`
-        );
       }
+
+      const decision: ErrorDecision = classifyAnalysisError(outcome.error);
+
+      if (!decision.retryable || attempt >= this.maxAttempts) {
+        job.dailyQuotaExhausted = decision.dailyQuotaExhausted;
+        this.finish(job, "failed", decision.message);
+        return;
+      }
+
+      job.retryAfter = new Date(
+        this.now() + decision.waitSeconds * 1000
+      ).toISOString();
+      this.setStatus(job, "rate_limited", { error: decision.message });
+      await this.sleep(decision.waitSeconds * 1000);
+
+      if (this.cancelled.has(job.id)) {
+        this.finish(job, "failed", CANCELED_MESSAGE);
+        return;
+      }
+      hooks.log(
+        `第 ${attempt} 次尝试失败后重试（已等待 ${decision.waitSeconds}s）：${decision.message}`
+      );
     }
 
-    const totalSec = Math.round((this.now() - startedAt) / 1000);
-    this.finish(job, "failed", `分析多次失败（共 ${totalSec}s），请稍后重试。`);
+    this.finish(
+      job,
+      "failed",
+      `分析多次失败（已尝试 ${this.maxAttempts} 次），请稍后重试。`
+    );
   }
 
   private finish(job: AnalysisJob, status: JobStatus, error: string): void {
@@ -223,5 +240,35 @@ export class JobManager {
     job.retryAfter = undefined;
     this.setStatus(job, status);
     this.options.onFinished?.(job);
+    this.cleanup(job.id);
+  }
+
+  private createCancelSignal(): {
+    promise: Promise<RunOutcome>;
+    resolve: (outcome: RunOutcome) => void;
+  } {
+    let resolve!: (outcome: RunOutcome) => void;
+    const promise = new Promise<RunOutcome>((r) => {
+      resolve = r;
+    });
+    return { promise, resolve };
+  }
+
+  /** 取消要能立刻生效：不必等 Gemini 请求自然结束 */
+  private runWithCancelSignal(
+    job: AnalysisJob,
+    hooks: JobHooks
+  ): Promise<RunOutcome> {
+    const runPromise: Promise<RunOutcome> = this.options.run(job, hooks).then(
+      (analysis) => ({ type: "done", analysis }),
+      (error) => ({ type: "error", error })
+    );
+    const signal = this.cancelSignals.get(job.id);
+    if (!signal) return runPromise;
+    return Promise.race([runPromise, signal.promise]);
+  }
+
+  private cleanup(jobId: string): void {
+    this.cancelSignals.delete(jobId);
   }
 }

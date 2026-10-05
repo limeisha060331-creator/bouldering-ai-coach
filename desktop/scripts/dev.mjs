@@ -22,10 +22,14 @@ async function main() {
   await mainCtx.watch();
   await preloadCtx.watch();
 
+  /* 某些 IDE/终端会注入 ELECTRON_RUN_AS_NODE，会让 electron 退化成 node，必须剔除 */
+  const electronEnv = { ...process.env };
+  delete electronEnv.ELECTRON_RUN_AS_NODE;
+
   const child = spawn(electronPath, [desktopDir], {
     stdio: "inherit",
     env: {
-      ...process.env,
+      ...electronEnv,
       NODE_ENV: "development",
       VITE_DEV_SERVER_URL: devUrl,
     },

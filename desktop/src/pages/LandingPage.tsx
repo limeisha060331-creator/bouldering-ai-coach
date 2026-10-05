@@ -1,0 +1,153 @@
+import { Link, useNavigate } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { CountUp } from "@/components/count-up";
+import { CruxHeader } from "@/components/crux-header";
+import { listAnalysisRecords } from "@lib/analysis-db";
+import { sumAscentMeters } from "@lib/climbing-stats";
+import { formatSessionListMeta } from "@lib/record-display";
+import type { AnalysisRecord } from "@lib/types";
+
+export function LandingPage() {
+  const navigate = useNavigate();
+  const [records, setRecords] = useState<AnalysisRecord[]>([]);
+  const [activeId, setActiveId] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    const list = await listAnalysisRecords();
+    setRecords(list);
+    setActiveId((prev) =>
+      prev && list.some((r) => r.id === prev) ? prev : (list[0]?.id ?? null)
+    );
+  }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const totalAscentM = useMemo(() => sumAscentMeters(records), [records]);
+
+  return (
+    <div className="crux-page flex min-h-screen w-full flex-col overflow-x-hidden">
+      <CruxHeader variant="landing" />
+
+      <div className="crux-landing-shell">
+        <aside className="crux-fade-up order-2 flex flex-col border-2 border-[var(--crux-border)] border-t-0 bg-[var(--crux-surface)] lg:order-1 lg:border-t-2 lg:border-r-0">
+          <div className="border-b-2 border-[var(--crux-border)] p-4">
+            <p className="text-[10px] text-[var(--crux-text-muted)]">训练记录</p>
+            <p className="mt-2 text-sm font-black leading-tight tracking-tight">
+              历史视频
+            </p>
+          </div>
+          <ul className="max-h-[40vh] flex-1 divide-y-2 divide-[var(--crux-border)] overflow-y-auto lg:max-h-none">
+            {records.length === 0 ? (
+              <li className="px-4 py-6 text-xs text-[var(--crux-text-muted)]">
+                暂无分析记录，完成一次分析后会出现在这里。
+              </li>
+            ) : (
+              records.map((r, i) => (
+                <li key={r.id}>
+                  <button
+                    type="button"
+                    onMouseEnter={() => setActiveId(r.id)}
+                    onClick={() => navigate(`/analysis/${r.id}`)}
+                    className={`crux-session-item w-full px-4 py-3 text-left ${
+                      activeId === r.id
+                        ? "bg-[var(--crux-accent)] text-[var(--crux-on-accent)]"
+                        : "bg-transparent text-[var(--crux-text)]"
+                    }`}
+                  >
+                    <span className="text-lg font-black">
+                      视频 {String(i + 1).padStart(2, "0")}
+                    </span>
+                    <span className="mt-1 block text-[11px] leading-snug opacity-90">
+                      {formatSessionListMeta(r)}
+                    </span>
+                  </button>
+                </li>
+              ))
+            )}
+          </ul>
+        </aside>
+
+        <section className="relative order-1 min-h-[48vh] overflow-hidden border-2 border-[var(--crux-border)] sm:min-h-[52vh] lg:order-2 lg:min-h-0 lg:border-x-0 lg:border-t-2">
+          <div className="absolute inset-0 bg-[#0f0f0f]">
+            <img
+              src="/hero-climb.jpg"
+              alt="抱石攀岩"
+              className="crux-hero-img absolute inset-0 h-full w-full object-cover object-center contrast-[1.06] saturate-[0.95]"
+            />
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/55 via-black/5 to-black/20" />
+          </div>
+
+          <div className="relative z-10 flex h-full min-h-[48vh] flex-col justify-between p-4 sm:p-6 lg:min-h-[calc(100vh-3.5rem)]">
+            <div className="crux-fade-up pt-2" style={{ animationDelay: "0.2s" }}>
+              <p className="text-[10px] font-medium tracking-wide text-white/75">
+                累计爬升
+              </p>
+              <p className="text-4xl font-black tracking-tight text-white sm:text-5xl lg:text-6xl">
+                <CountUp
+                  end={totalAscentM}
+                  decimals={totalAscentM % 1 === 0 ? 0 : 1}
+                  durationMs={1800}
+                />
+                <span className="ml-2 text-2xl sm:text-3xl">米</span>
+              </p>
+              <p className="mt-2 text-[10px] text-white/60">
+                来自各次分析中填写的爬升高度
+              </p>
+            </div>
+
+            <div
+              className="crux-fade-up max-w-lg"
+              style={{ animationDelay: "0.35s" }}
+            >
+              <p className="text-sm leading-relaxed text-white/85 sm:text-base">
+                上传攀爬视频，获取带时间戳的专业动作反馈，并记录难度与爬升。
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <aside className="crux-panel-orange order-3 flex min-h-[280px] flex-col justify-between border-2 border-[var(--crux-border)] border-t-0 bg-[var(--crux-orange-panel)] p-6 sm:p-8 lg:min-h-0 lg:border-t-2 lg:border-l-0 lg:px-10 lg:py-12">
+          <div className="flex flex-1 flex-col justify-center">
+            <p className="crux-mono text-[10px] font-bold tracking-[0.28em] text-[var(--crux-text)]/65">
+              BOULDERING · AI
+            </p>
+            <div className="mt-5 border-l-4 border-[var(--crux-text)] pl-5">
+              <p className="crux-landing-title-crux text-[var(--crux-text)]">
+                CRUX
+              </p>
+              <p className="crux-landing-title-sub -mt-1 text-[var(--crux-text)]">
+                抱石
+              </p>
+            </div>
+            <p className="crux-landing-title-tag mt-6 text-[var(--crux-text)]">
+              动作解析
+            </p>
+            <p className="mt-6 max-w-sm text-sm leading-relaxed text-[var(--crux-text)]/80">
+              简洁、专业的攀爬视频分析平台
+            </p>
+          </div>
+
+          <div className="mt-8 space-y-3">
+            <Link
+              to="/analyze"
+              className="crux-cta group flex w-full items-center justify-between border-2 border-[var(--crux-border)] bg-[var(--crux-text)] px-5 py-4 text-sm font-black text-[var(--crux-surface)]"
+            >
+              <span>上传视频分析</span>
+              <span className="text-xs transition group-hover:translate-x-1">
+                →
+              </span>
+            </Link>
+            <Link
+              to="/progress"
+              className="flex w-full items-center justify-center border-2 border-[var(--crux-border)] bg-[var(--crux-surface)] px-5 py-3 text-xs font-black text-[var(--crux-text)]"
+            >
+              查看进步曲线
+            </Link>
+          </div>
+        </aside>
+      </div>
+    </div>
+  );
+}

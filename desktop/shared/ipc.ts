@@ -123,5 +123,6 @@ export type CruxApi = {
   };
   app: {
     info(): Promise<AppInfo>;
+    openExternal(url: string): Promise<void>;
   };
 };

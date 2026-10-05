@@ -20,6 +20,5 @@ export default defineConfig({
     setupFiles: [path.join(desktopDir, "tests", "setup.ts")],
     include: ["tests/unit/**/*.test.{ts,tsx}"],
     css: false,
-    restoreMocks: true,
   },
 });

@@ -39,6 +39,7 @@ const api: CruxApi = {
   },
   app: {
     info: () => ipcRenderer.invoke("app:info"),
+    openExternal: (url: string) => ipcRenderer.invoke("app:openExternal", url),
   },
 };
 

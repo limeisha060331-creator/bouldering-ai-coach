@@ -23,11 +23,19 @@ export function maskApiKey(apiKey: string): string {
 export class SettingsStore {
   private data: StoredSettings = {};
   private loaded = false;
+  /**
+   * 构造时对进程环境做快照。
+   * `applyToEnv` 会把用户设置写回 process.env（供仓库根目录 lib 复用），
+   * 若不快照，写回的 Key 会被误判成「环境变量来源」，导致清除后仍然生效。
+   */
+  private readonly envSnapshot: NodeJS.ProcessEnv;
 
   constructor(
     private readonly filePath: string,
-    private readonly env: NodeJS.ProcessEnv = process.env
-  ) {}
+    env: NodeJS.ProcessEnv = process.env
+  ) {
+    this.envSnapshot = { ...env };
+  }
 
   async load(): Promise<void> {
     if (this.loaded) return;
@@ -62,11 +70,11 @@ export class SettingsStore {
   }
 
   private envApiKey(): string {
-    return (this.env.GEMINI_API_KEY ?? "").trim();
+    return (this.envSnapshot.GEMINI_API_KEY ?? "").trim();
   }
 
   private envModel(): string {
-    return (this.env.GEMINI_MODEL ?? "").trim();
+    return (this.envSnapshot.GEMINI_MODEL ?? "").trim();
   }
 
   /** 生效的 API Key（环境变量 > 用户设置） */

@@ -2,6 +2,7 @@
   "name": "crux-boulder-desktop",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "description": "CRUX 抱石 · AI 攀爬动作解析桌面客户端（Electron + React + TypeScript）",
   "author": "CRUX 抱石",
   "license": "MIT",

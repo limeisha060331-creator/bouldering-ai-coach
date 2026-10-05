@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from "electron";
+import { app, BrowserWindow, ipcMain, shell } from "electron";
 import type {
   AnalyzeProgressEvent,
   AnalyzeStartPayload,
@@ -129,6 +129,13 @@ export function registerIpc(options: IpcOptions): JobManager {
       userDataPath: app.getPath("userData"),
     })
   );
+
+  ipcMain.handle("app:openExternal", async (_event, url: string) => {
+    const target = String(url ?? "");
+    if (/^https?:\/\//.test(target)) {
+      await shell.openExternal(target);
+    }
+  });
 
   return jobManager;
 }
