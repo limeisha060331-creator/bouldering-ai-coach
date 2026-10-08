@@ -135,6 +135,7 @@ npm run test:e2e # 11 个 Electron 端到端用例（含真实抽帧与打包产
 - 产品需求：**[docs/PRD-bouldering-app.md](./docs/PRD-bouldering-app.md)**
 - 下一版本产品需求：**[docs/PRD-v2.md](./docs/PRD-v2.md)**
 - 竞品分析（Cruxie 逆向拆解）：**[docs/competitor-cruxie.md](./docs/competitor-cruxie.md)**
+- 竞品分析（JTBD 视角）：**[docs/competitor-jtbd.md](./docs/competitor-jtbd.md)**
 - 需求池：**[docs/backlog.md](./docs/backlog.md)**
 - 低保真原型：**[docs/prototype/index.html](./docs/prototype/index.html)**
 - 设计说明：**[docs/DESIGN.md](./docs/DESIGN.md)**
