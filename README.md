@@ -133,6 +133,10 @@ npm run test:e2e # 11 个 Electron 端到端用例（含真实抽帧与打包产
 - 桌面客户端详细说明：**[desktop/README.md](./desktop/README.md)**
 - Supabase 数据库接入：**[supabase/README.md](./supabase/README.md)**
 - 产品需求：**[docs/PRD-bouldering-app.md](./docs/PRD-bouldering-app.md)**
+- 下一版本产品需求：**[docs/PRD-v2.md](./docs/PRD-v2.md)**
+- 竞品分析（Cruxie 逆向拆解）：**[docs/competitor-cruxie.md](./docs/competitor-cruxie.md)**
+- 需求池：**[docs/backlog.md](./docs/backlog.md)**
+- 低保真原型：**[docs/prototype/index.html](./docs/prototype/index.html)**
 - 设计说明：**[docs/DESIGN.md](./docs/DESIGN.md)**
 
 ## 免责声明
