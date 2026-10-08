@@ -217,7 +217,7 @@
 
 ### 参考文档或链接
 
-- 竞品分析（Cruxie 逆向拆解）：`docs/competitor-cruxie.md`
+- 竞品分析（Cruxie，按竞品产品分析框架拆解）：`docs/competitor-cruxie.md`
 - 需求池：`docs/backlog.md`
 - 低保真原型：`docs/prototype/index.html`
 - 技术设计说明：`docs/DESIGN.md`
