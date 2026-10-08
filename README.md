@@ -138,6 +138,7 @@ npm run test:e2e # 11 个 Electron 端到端用例（含真实抽帧与打包产
 - 竞品分析（JTBD 视角）：**[docs/competitor-jtbd.md](./docs/competitor-jtbd.md)**
 - 需求池：**[docs/backlog.md](./docs/backlog.md)**
 - 低保真原型：**[docs/prototype/index.html](./docs/prototype/index.html)**
+- 可复用技能（竞品分析）：**[skills/](./skills/)**
 - 设计说明：**[docs/DESIGN.md](./docs/DESIGN.md)**
 
 ## 免责声明
