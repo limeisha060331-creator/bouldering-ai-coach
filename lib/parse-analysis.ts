@@ -1,5 +1,5 @@
 import { parseGradeFromText } from "./bouldering-grade";
-import type { AnalysisSegment, BoulderGrade, ParsedAnalysis } from "./types";
+import type { AnalysisSegment, ParsedAnalysis } from "./types";
 import { parseStructuredReport } from "./parse-structured-report";
 
 const LINE_TIMESTAMP =

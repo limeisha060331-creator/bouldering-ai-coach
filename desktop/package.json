@@ -12,6 +12,7 @@
     "build": "node scripts/build.mjs",
     "start": "electron .",
     "typecheck": "tsc --noEmit",
+    "check:unused": "tsc --noEmit --noUnusedLocals --noUnusedParameters",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "node scripts/build.mjs && playwright test",
