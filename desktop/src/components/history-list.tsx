@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { IconChevronRight, IconClock } from "@/components/icons";
 import { formatHistoryTitle, formatRecordDate } from "@lib/record-display";
+import { gradeTapeColor } from "@lib/grade-tape";
 import type { AnalysisRecord } from "@lib/types";
 
 type Props = {
@@ -12,67 +13,72 @@ type Props = {
 export function HistoryList({ records, emptyTitle, emptyHint }: Props) {
   if (records.length === 0) {
     return (
-      <div className="border-2 border-dashed border-[var(--crux-border-subtle)] bg-[var(--spa-elevated)] px-6 py-12 text-center">
-        <p className="text-sm font-bold text-[var(--spa-text-secondary)]">
-          {emptyTitle}
-        </p>
-        <p className="mt-2 text-xs leading-relaxed text-[var(--spa-text-muted)]">
-          {emptyHint}
-        </p>
+      <div className="empty">
+        <p className="t">{emptyTitle}</p>
+        <p className="h">{emptyHint}</p>
       </div>
     );
   }
 
   return (
-    <ul className="flex flex-col gap-3">
+    <ul className="border-t-2 border-[var(--crux-border)]">
       {records.map((r, i) => (
         <li key={r.id}>
           <Link
             to={`/analysis/${r.id}`}
-            className="spa-panel group flex items-center gap-4 p-4 transition hover:border-[var(--crux-accent)] hover:shadow-[6px_6px_0_var(--crux-border)]"
+            className="group flex items-stretch border-b border-[var(--crux-hair)] transition hover:bg-[var(--crux-surface)]"
           >
+            <span
+              className="tape"
+              style={{ background: gradeTapeColor(r.grade) }}
+              aria-hidden
+            />
             {r.thumbnail ? (
               <img
                 src={r.thumbnail}
                 alt=""
-                className="h-14 w-20 shrink-0 border-2 border-[var(--crux-border-subtle)] object-cover sm:h-16 sm:w-24"
+                className="my-3 ml-3 h-12 w-16 shrink-0 border-2 border-[var(--crux-border-subtle)] object-cover sm:h-14 sm:w-20"
               />
             ) : (
-              <div className="flex h-14 w-20 shrink-0 items-center justify-center border-2 border-dashed border-[var(--crux-border-subtle)] sm:h-16 sm:w-24">
-                <IconClock className="h-4 w-4 text-[var(--crux-text-muted)]" />
-              </div>
+              <span className="my-3 ml-3 flex h-12 w-16 shrink-0 items-center justify-center border-2 border-[var(--crux-border-subtle)] text-[var(--crux-text-muted)] sm:h-14 sm:w-20">
+                <IconClock className="h-4 w-4" />
+              </span>
             )}
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-black text-[var(--crux-text)]">
+            <div className="min-w-0 flex-1 py-3 pl-3 pr-2">
+              <p className="truncate text-sm font-extrabold text-[var(--crux-text)]">
                 {formatHistoryTitle(r, records.length - i)}
               </p>
-              <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-[var(--spa-text-muted)]">
+              <p className="mono mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-0.5">
                 <span className="inline-flex items-center gap-1">
-                  <IconClock className="h-3.5 w-3.5 text-[var(--crux-accent)]" />
+                  <IconClock className="h-3 w-3" />
                   {formatRecordDate(r.createdAt, "full")}
                 </span>
                 {r.grade && (
-                  <span className="font-bold text-[var(--crux-accent)]">
+                  <span className="badge !py-0 !text-[0.6875rem]">
+                    <i
+                      style={{ background: gradeTapeColor(r.grade) }}
+                      aria-hidden
+                    />
                     {r.grade}
                   </span>
                 )}
               </p>
               {r.score != null && (
-                <p className="mt-2 text-xs font-bold tabular-nums text-[var(--crux-text)]">
+                <p className="num mt-1.5 text-xs font-bold text-[var(--crux-text)]">
                   {r.score}
-                  <span className="font-normal text-[var(--spa-text-muted)]">
+                  <span className="font-normal text-[var(--crux-text-muted)]">
                     {" "}
                     / 100
                   </span>
                 </p>
               )}
               {r.highlight && (
-                <p className="mt-1.5 line-clamp-2 text-xs leading-relaxed text-[var(--spa-text-secondary)]">
+                <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-[var(--crux-text-secondary)]">
                   {r.highlight}
                 </p>
               )}
             </div>
-            <IconChevronRight className="h-4 w-4 text-[var(--crux-accent)] transition group-hover:translate-x-0.5" />
+            <IconChevronRight className="mr-3 mt-4 h-4 w-4 shrink-0 text-[var(--crux-text-muted)] transition group-hover:translate-x-0.5 group-hover:text-[var(--crux-accent)]" />
           </Link>
         </li>
       ))}

@@ -5,9 +5,9 @@ type Props = {
   locale?: "zh" | "en";
 };
 
-const W = 640;
-const H = 220;
-const PAD = { t: 16, r: 16, b: 28, l: 44 };
+const W = 860;
+const H = 200;
+const PAD = { t: 14, r: 16, b: 30, l: 46 };
 
 function linePath(
   values: number[],
@@ -33,28 +33,43 @@ export function ProgressCharts({ days, locale = "zh" }: Props) {
 
   if (days.length === 0) {
     return (
-      <p className="text-sm text-[var(--crux-text-muted)]">
-        {zh
-          ? "暂无记录。完成一次视频分析并填写爬升高度后，这里会显示进步曲线。"
-          : "No sessions yet. Complete an analysis with ascent height to see trends."}
-      </p>
+      <div className="empty">
+        <p className="t">{zh ? "还没有记录" : "No sessions yet"}</p>
+        <p className="h">
+          {zh
+            ? "完成一次视频分析，并在登记表里填上爬升高度，这里就会开始画曲线。"
+            : "Complete an analysis with ascent height to see trends."}
+        </p>
+      </div>
     );
   }
 
   const ascentVals = days.map((d) => d.ascentM);
   const gradeVals = days.map((d) => d.maxGrade ?? 0);
   const maxAscent = Math.max(...ascentVals, 1);
-  const maxGrade = Math.max(...gradeVals, 10);
+  const maxGrade = Math.max(...gradeVals, 1);
 
   const ascentPath = linePath(ascentVals, maxAscent, innerW, innerH);
   const gradePath = linePath(gradeVals, maxGrade, innerW, innerH);
 
+  const labelClass = "fill-[var(--crux-text-muted)] text-[9px]";
+
+  function yTicks(max: number) {
+    return [0, 0.5, 1].map((f) => ({
+      y: PAD.t + innerH - f * innerH,
+      value: f * max,
+    }));
+  }
+
   return (
-    <div className="space-y-10">
-      <div>
-        <p className="crux-label mb-3">
-          {zh ? "每日总爬升（米）" : "Daily ascent (m)"}
-        </p>
+    <div className="space-y-9">
+      <section>
+        <div className="mb-2 flex items-baseline justify-between">
+          <h2 className="h2 !text-[0.9375rem]">
+            {zh ? "每日总爬升" : "Daily ascent"}
+          </h2>
+          <span className="mono">{zh ? "米" : "m"}</span>
+        </div>
         <svg
           viewBox={`0 0 ${W} ${H}`}
           className="w-full border-2 border-[var(--crux-border)] bg-[var(--crux-surface)]"
@@ -66,14 +81,34 @@ export function ProgressCharts({ days, locale = "zh" }: Props) {
             y1={PAD.t + innerH}
             x2={W - PAD.r}
             y2={PAD.t + innerH}
-            stroke="var(--crux-border-subtle)"
+            stroke="var(--crux-border)"
             strokeWidth="1"
           />
+          {yTicks(maxAscent).map((tk, i) => (
+            <g key={`t-${i}`}>
+              <line
+                x1={PAD.l}
+                x2={W - PAD.r}
+                y1={tk.y}
+                y2={tk.y}
+                stroke="var(--crux-hair)"
+                strokeWidth="1"
+              />
+              <text
+                x={PAD.l - 10}
+                y={tk.y + 3}
+                textAnchor="end"
+                className={labelClass}
+              >
+                {Math.round(tk.value * 10) / 10}
+              </text>
+            </g>
+          ))}
           <path
             d={ascentPath}
             fill="none"
-            stroke="var(--crux-orange-panel)"
-            strokeWidth="3"
+            stroke="var(--crux-accent)"
+            strokeWidth="2.5"
           />
           {days.map((d, i) => {
             const step = days.length > 1 ? innerW / (days.length - 1) : 0;
@@ -81,25 +116,23 @@ export function ProgressCharts({ days, locale = "zh" }: Props) {
             const y = PAD.t + innerH - (d.ascentM / maxAscent) * innerH;
             return (
               <g key={d.date}>
-                <circle cx={x} cy={y} r="4" fill="var(--crux-orange-panel)" />
-                <text
-                  x={x}
-                  y={H - 6}
-                  textAnchor="middle"
-                  className="fill-[var(--crux-text-muted)] text-[9px]"
-                >
+                <circle cx={x} cy={y} r="3.5" fill="var(--crux-accent)" />
+                <text x={x} y={H - 8} textAnchor="middle" className={labelClass}>
                   {d.label}
                 </text>
               </g>
             );
           })}
         </svg>
-      </div>
+      </section>
 
-      <div>
-        <p className="crux-label mb-3">
-          {zh ? "当日最高难度（V 级）" : "Max grade per day (V)"}
-        </p>
+      <section>
+        <div className="mb-2 flex items-baseline justify-between">
+          <h2 className="h2 !text-[0.9375rem]">
+            {zh ? "当日最高难度" : "Max grade per day"}
+          </h2>
+          <span className="mono">V</span>
+        </div>
         <svg
           viewBox={`0 0 ${W} ${H}`}
           className="w-full border-2 border-[var(--crux-border)] bg-[var(--crux-surface)]"
@@ -111,14 +144,34 @@ export function ProgressCharts({ days, locale = "zh" }: Props) {
             y1={PAD.t + innerH}
             x2={W - PAD.r}
             y2={PAD.t + innerH}
-            stroke="var(--crux-border-subtle)"
+            stroke="var(--crux-border)"
             strokeWidth="1"
           />
+          {yTicks(maxGrade).map((tk, i) => (
+            <g key={`gt-${i}`}>
+              <line
+                x1={PAD.l}
+                x2={W - PAD.r}
+                y1={tk.y}
+                y2={tk.y}
+                stroke="var(--crux-hair)"
+                strokeWidth="1"
+              />
+              <text
+                x={PAD.l - 10}
+                y={tk.y + 3}
+                textAnchor="end"
+                className={labelClass}
+              >
+                V{Math.round(tk.value)}
+              </text>
+            </g>
+          ))}
           <path
             d={gradePath}
             fill="none"
             stroke="var(--crux-text)"
-            strokeWidth="3"
+            strokeWidth="2.5"
           />
           {days.map((d, i) => {
             const step = days.length > 1 ? innerW / (days.length - 1) : 0;
@@ -127,20 +180,15 @@ export function ProgressCharts({ days, locale = "zh" }: Props) {
             const y = PAD.t + innerH - (g / maxGrade) * innerH;
             return (
               <g key={`g-${d.date}`}>
-                <circle cx={x} cy={y} r="4" fill="var(--crux-text)" />
-                <text
-                  x={x}
-                  y={H - 6}
-                  textAnchor="middle"
-                  className="fill-[var(--crux-text-muted)] text-[9px]"
-                >
+                <circle cx={x} cy={y} r="3.5" fill="var(--crux-text)" />
+                <text x={x} y={H - 8} textAnchor="middle" className={labelClass}>
                   {d.maxGrade != null ? `V${d.maxGrade}` : "—"}
                 </text>
               </g>
             );
           })}
         </svg>
-      </div>
+      </section>
     </div>
   );
 }

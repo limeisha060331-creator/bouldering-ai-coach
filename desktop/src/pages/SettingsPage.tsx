@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { SiteNav } from "@/components/site-nav";
-import { IconInfo, IconLoader, IconSettings } from "@/components/icons";
+import { CruxHeader } from "@/components/crux-header";
+import { IconInfo, IconLoader } from "@/components/icons";
 import { useUiLocale } from "@/lib/use-ui-locale";
 import type { AppInfo, ProviderSettings, SettingsSnapshot } from "@shared/ipc";
 import { PROVIDERS, type AnalysisProvider } from "@shared/providers";
@@ -92,33 +92,35 @@ export function SettingsPage() {
 
   return (
     <main className="crux-page">
-      <div className="crux-container-narrow">
-        <SiteNav uiLocale={uiLocale} />
+      <CruxHeader />
 
-        <header className="mb-8 flex items-center gap-3 border-2 border-[var(--crux-border)] border-l-[6px] border-l-[var(--crux-accent)] bg-[var(--crux-surface)] p-6 shadow-[4px_4px_0_var(--crux-border)]">
-          <IconSettings className="h-5 w-5 text-[var(--crux-accent)]" />
+      <div className="shell-narrow">
+        <header className="flex flex-wrap items-end justify-between gap-x-8 gap-y-3 border-b-2 border-[var(--crux-border)] pb-6">
           <div>
-            <h1 className="text-xl font-black uppercase tracking-tight text-[var(--crux-text)] sm:text-2xl">
-              {t("设置", "Settings")}
-            </h1>
-            <p className="mt-1 text-xs text-[var(--crux-text-muted)]">
+            <h1 className="h1">{t("设置", "Settings")}</h1>
+            <p className="lede">
               {t(
                 "选择分析后端并填写对应密钥，密钥只保存在本机。",
                 "Pick the analysis backend and store its key locally."
               )}
             </p>
           </div>
+          {info && (
+            <span className="mono border-2 border-[var(--crux-border-subtle)] px-2 py-1">
+              v{info.version}
+            </span>
+          )}
         </header>
 
         {!snapshot || !active ? (
-          <p className="flex items-center gap-2 text-sm text-[var(--crux-text-muted)]">
+          <p className="mono mt-8 flex items-center gap-2">
             <IconLoader className="h-4 w-4" />
             {t("加载中…", "Loading…")}
           </p>
         ) : (
-          <div className="flex flex-col gap-6">
-            <section className="spa-panel p-6">
-              <h2 className="spa-label mb-3">{t("分析后端", "Backend")}</h2>
+          <div className="mt-8 flex flex-col gap-7">
+            <section>
+              <h2 className="h2 mb-3">{t("分析后端", "Backend")}</h2>
               <div className="grid gap-3 sm:grid-cols-2">
                 {PROVIDERS.map((candidate) => {
                   const item = snapshot.providers[candidate];
@@ -131,29 +133,32 @@ export function SettingsPage() {
                       disabled={saving === "provider"}
                       data-testid={`provider-${candidate}`}
                       aria-pressed={selected}
-                      className={`border-2 p-4 text-left transition ${
+                      className={`relative flex flex-col border-2 border-[var(--crux-border)] p-4 pr-4 text-left transition ${
                         selected
-                          ? "border-[var(--crux-accent)] bg-[var(--crux-accent-soft)] shadow-[3px_3px_0_var(--crux-border)]"
-                          : "border-[var(--crux-border-subtle)] bg-[var(--crux-surface)] hover:border-[var(--crux-accent)]"
+                          ? "bg-[var(--crux-surface)] shadow-[4px_4px_0_var(--crux-border)]"
+                          : "border-[var(--crux-border-subtle)] bg-transparent hover:border-[var(--crux-border)]"
                       }`}
                     >
-                      <span className="flex items-center justify-between gap-2">
+                      <span
+                        className="absolute left-0 top-0 h-full w-1.5"
+                        style={{
+                          background: item.hasApiKey
+                            ? "var(--tape-green)"
+                            : "var(--crux-border-subtle)",
+                        }}
+                        aria-hidden
+                      />
+                      <span className="flex items-center justify-between gap-2 pl-2">
                         <span className="text-sm font-black text-[var(--crux-text)]">
                           {item.label}
                         </span>
-                        <span
-                          className={`crux-mono text-[10px] font-bold ${
-                            item.hasApiKey
-                              ? "text-[var(--crux-accent)]"
-                              : "text-[var(--crux-text-muted)]"
-                          }`}
-                        >
+                        <span className="mono">
                           {item.hasApiKey
                             ? t("已配置", "Ready")
                             : t("未配置", "No key")}
                         </span>
                       </span>
-                      <span className="mt-2 block text-[11px] leading-snug text-[var(--crux-text-muted)]">
+                      <span className="mt-2 block pl-2 text-[11px] leading-snug text-[var(--crux-text-muted)]">
                         {item.supportsVideo
                           ? t("直接上传视频做动作理解", "Understands the video directly")
                           : t(
@@ -167,158 +172,170 @@ export function SettingsPage() {
               </div>
             </section>
 
-            <section className="spa-panel p-6">
-              <h2 className="spa-label mb-3">
-                {active.label} · {t("API Key", "API key")}
-              </h2>
-              <p className="text-xs leading-relaxed text-[var(--crux-text-muted)]">
-                {active.fromEnv
-                  ? t(
-                      "当前使用环境变量中的 Key（优先级高于此处设置）。",
-                      "Currently using an environment variable key (takes precedence)."
-                    )
-                  : t(
-                      "只有保存在本机 userData 目录里的这一个 Key，不会上传到任何服务器。",
-                      "Stored only in this machine's userData folder; never uploaded anywhere."
-                    )}
-              </p>
-
-              <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-                <input
-                  type="password"
-                  value={apiKeyInput}
-                  onChange={(e) => setApiKeyInput(e.target.value)}
-                  placeholder={
-                    masked
-                      ? t(`当前：${masked}`, `Current: ${masked}`)
-                      : "sk-..."
-                  }
-                  className="spa-input flex-1 px-3 py-2"
-                  data-testid="api-key-input"
-                />
-                <button
-                  type="button"
-                  onClick={() => void saveApiKey()}
-                  disabled={saving === "key" || apiKeyInput.trim().length === 0}
-                  className="border-2 border-[var(--crux-border)] bg-[var(--crux-accent)] px-5 py-2 text-sm font-bold text-[var(--crux-on-accent)] shadow-[3px_3px_0_var(--crux-border)] transition disabled:opacity-40"
-                  data-testid="save-api-key"
-                >
-                  {saving === "key" ? t("保存中…", "Saving…") : t("保存", "Save")}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void clearApiKey()}
-                  disabled={saving === "key" || !active.hasApiKey}
-                  className="border-2 border-[var(--crux-border-subtle)] bg-[var(--crux-surface)] px-5 py-2 text-sm font-bold text-[var(--crux-text)] transition hover:border-[var(--crux-accent)] disabled:opacity-40"
-                  data-testid="clear-api-key"
-                >
-                  {t("清除", "Clear")}
-                </button>
-              </div>
-
-              <div className="mt-4 flex flex-wrap items-center gap-4">
+            <section className="panel-flat">
+              <div className="panel-head">
+                <span className="t">
+                  {active.label} · {t("API Key", "API key")}
+                </span>
                 <span
-                  className={`crux-mono text-[11px] font-bold ${
-                    active.hasApiKey
-                      ? "text-[var(--crux-accent)]"
-                      : "text-[var(--crux-text-muted)]"
-                  }`}
+                  className="mono"
                   data-testid="api-key-status"
                 >
                   {active.hasApiKey
                     ? t("已配置 Key", "Key configured")
                     : t("未配置 Key", "No key configured")}
                 </span>
-                <button
-                  type="button"
-                  onClick={() => void window.crux.app.openExternal(active.homepage)}
-                  className="crux-mono text-[11px] font-bold text-[var(--crux-accent)] underline underline-offset-4"
-                >
-                  {t(
-                    `前往 ${active.label} 获取 Key`,
-                    `Get a key from ${active.label}`
-                  )}
-                </button>
+              </div>
+              <div className="panel-body">
+                <p className="text-xs leading-relaxed text-[var(--crux-text-muted)]">
+                  {active.fromEnv
+                    ? t(
+                        "当前使用环境变量中的 Key（优先级高于此处设置）。",
+                        "Currently using an environment variable key (takes precedence)."
+                      )
+                    : t(
+                        "只有保存在本机 userData 目录里的这一个 Key，不会上传到任何服务器。",
+                        "Stored only in this machine's userData folder; never uploaded anywhere."
+                      )}
+                </p>
+
+                <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+                  <input
+                    type="password"
+                    value={apiKeyInput}
+                    onChange={(e) => setApiKeyInput(e.target.value)}
+                    placeholder={
+                      masked ? t(`当前：${masked}`, `Current: ${masked}`) : "sk-..."
+                    }
+                    className="input flex-1 font-normal"
+                    data-testid="api-key-input"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => void saveApiKey()}
+                    disabled={saving === "key" || apiKeyInput.trim().length === 0}
+                    className="btn btn--primary"
+                    data-testid="save-api-key"
+                  >
+                    {saving === "key"
+                      ? t("保存中…", "Saving…")
+                      : t("保存", "Save")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void clearApiKey()}
+                    disabled={saving === "key" || !active.hasApiKey}
+                    className="btn"
+                    data-testid="clear-api-key"
+                  >
+                    {t("清除", "Clear")}
+                  </button>
+                </div>
+
+                <div className="mt-4 flex flex-wrap items-center gap-4">
+                  <button
+                    type="button"
+                    onClick={() => void window.crux.app.openExternal(active.homepage)}
+                    className="text-xs font-bold underline decoration-[var(--crux-accent)] decoration-2 underline-offset-4"
+                  >
+                    {t(
+                      `前往 ${active.label} 获取 Key`,
+                      `Get a key from ${active.label}`
+                    )}
+                  </button>
+                </div>
               </div>
             </section>
 
-            <section className="spa-panel p-6">
-              <h2 className="spa-label mb-3">{t("分析模型", "Model")}</h2>
-              <div className="flex flex-col gap-3 sm:flex-row">
-                <input
-                  type="text"
-                  value={modelInput}
-                  onChange={(e) => setModelInput(e.target.value)}
-                  placeholder={active.defaultModel}
-                  className="spa-input flex-1 px-3 py-2"
-                  data-testid="model-input"
-                />
-                <button
-                  type="button"
-                  onClick={() => void saveModel()}
-                  disabled={saving === "model"}
-                  className="border-2 border-[var(--crux-border)] bg-[var(--crux-surface)] px-5 py-2 text-sm font-bold text-[var(--crux-text)] shadow-[3px_3px_0_var(--crux-border)] transition disabled:opacity-40"
-                >
-                  {saving === "model"
-                    ? t("保存中…", "Saving…")
-                    : t("保存", "Save")}
-                </button>
+            <section className="panel-flat">
+              <div className="panel-head">
+                <span className="t">{t("分析模型", "Model")}</span>
+                <span className="s">{active.defaultModel}</span>
               </div>
-              <p className="mt-3 text-xs text-[var(--crux-text-muted)]">
-                {provider === "deepseek"
-                  ? t(
-                      `默认 ${active.defaultModel}，接口地址 https://api.deepseek.com（OpenAI 兼容）。`,
-                      `Default ${active.defaultModel}, endpoint https://api.deepseek.com (OpenAI-compatible).`
-                    )
-                  : t(
-                      `默认 ${active.defaultModel}（免费额度通常只对该模型开放）。`,
-                      `Default ${active.defaultModel} (the free tier usually only covers this model).`
-                    )}
-              </p>
+              <div className="panel-body">
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <input
+                    type="text"
+                    value={modelInput}
+                    onChange={(e) => setModelInput(e.target.value)}
+                    placeholder={active.defaultModel}
+                    className="input flex-1 font-normal"
+                    data-testid="model-input"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => void saveModel()}
+                    disabled={saving === "model"}
+                    className="btn"
+                  >
+                    {saving === "model"
+                      ? t("保存中…", "Saving…")
+                      : t("保存", "Save")}
+                  </button>
+                </div>
+                <p className="field-hint">
+                  {provider === "deepseek"
+                    ? t(
+                        `默认 ${active.defaultModel}，接口地址 https://api.deepseek.com（OpenAI 兼容）。`,
+                        `Default ${active.defaultModel}, endpoint https://api.deepseek.com (OpenAI-compatible).`
+                      )
+                    : t(
+                        `默认 ${active.defaultModel}（免费额度通常只对该模型开放）。`,
+                        `Default ${active.defaultModel} (the free tier usually only covers this model).`
+                      )}
+                </p>
+              </div>
             </section>
 
             {status && (
-              <p
-                role="status"
-                className="border-2 border-[var(--crux-border-subtle)] bg-[var(--crux-elevated)] px-4 py-3 text-sm text-[var(--crux-text-secondary)]"
-              >
+              <p role="status" className="note-box">
                 {status}
               </p>
             )}
 
             {info && (
-              <section className="spa-panel p-6">
-                <div className="mb-3 flex items-center gap-2">
-                  <IconInfo className="h-4 w-4 text-[var(--crux-accent)]" />
-                  <h2 className="spa-label">{t("关于本机", "About")}</h2>
+              <section className="panel-flat">
+                <div className="panel-head">
+                  <span className="t">
+                    {t("关于本机", "About")}
+                  </span>
+                  <span className="s">
+                    <IconInfo className="h-3.5 w-3.5" />
+                  </span>
                 </div>
-                <dl className="grid gap-2 text-xs text-[var(--crux-text-muted)] sm:grid-cols-2">
-                  <div>
-                    <dt className="font-bold">{t("版本", "Version")}</dt>
-                    <dd>{info.version}</dd>
-                  </div>
-                  <div>
-                    <dt className="font-bold">Electron / Chromium</dt>
-                    <dd>
-                      {info.electron} / {info.chrome}
-                    </dd>
-                  </div>
-                  <div className="sm:col-span-2">
-                    <dt className="font-bold">Node</dt>
-                    <dd>{info.node}</dd>
-                  </div>
-                  <div className="sm:col-span-2 min-w-0">
-                    <dt className="font-bold">{t("数据目录", "Data folder")}</dt>
-                    <dd className="break-all">{info.userDataPath}</dd>
-                  </div>
-                </dl>
-                <button
-                  type="button"
-                  onClick={() => void window.crux.files.openPath(info.userDataPath)}
-                  className="mt-4 border-2 border-[var(--crux-border-subtle)] px-4 py-2 text-xs font-bold text-[var(--crux-text)] transition hover:border-[var(--crux-accent)]"
-                >
-                  {t("在文件管理器中打开", "Open in file manager")}
-                </button>
+                <div className="panel-body">
+                  <dl className="m-0 grid gap-x-8 gap-y-2 text-xs sm:grid-cols-2">
+                    <div>
+                      <dt className="mono">{t("版本", "Version")}</dt>
+                      <dd className="m-0 font-bold num">{info.version}</dd>
+                    </div>
+                    <div>
+                      <dt className="mono">Electron / Chromium</dt>
+                      <dd className="m-0 font-bold num">
+                        {info.electron} / {info.chrome}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="mono">Node</dt>
+                      <dd className="m-0 font-bold num">{info.node}</dd>
+                    </div>
+                    <div className="min-w-0 sm:col-span-2">
+                      <dt className="mono">{t("数据目录", "Data folder")}</dt>
+                      <dd className="m-0 break-all font-bold">
+                        {info.userDataPath}
+                      </dd>
+                    </div>
+                  </dl>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      void window.crux.files.openPath(info.userDataPath)
+                    }
+                    className="btn btn--sm mt-4"
+                  >
+                    {t("在文件管理器中打开", "Open in file manager")}
+                  </button>
+                </div>
               </section>
             )}
           </div>

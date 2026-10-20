@@ -22,11 +22,11 @@ export function App() {
         <Route path="/auth/register" element={<RegisterPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-      <footer className="no-print mt-auto border-t-2 border-[var(--crux-border)] bg-[var(--crux-surface)] px-5 py-6 text-center crux-mono text-[10px] leading-relaxed text-[var(--crux-text-muted)]">
-        <p>
+      <footer className="no-print mt-auto border-t-2 border-[var(--crux-border)] bg-[var(--crux-surface)] px-5 py-6 text-center">
+        <p className="mono mx-auto max-w-[52ch] leading-relaxed">
           本服务仅供训练参考，不构成医疗、康复或现场保护建议；请在安全环境下攀爬并自行承担风险。
         </p>
-        <p className="mt-2">
+        <p className="mono mx-auto mt-2 max-w-[60ch] leading-relaxed opacity-70">
           For training reference only; not medical, rehab, or on-the-spot safety
           advice. Climb responsibly and at your own risk.
         </p>

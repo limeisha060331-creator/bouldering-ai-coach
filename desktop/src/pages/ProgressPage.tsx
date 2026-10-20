@@ -1,8 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
+import { CruxHeader } from "@/components/crux-header";
 import { IconLoader } from "@/components/icons";
 import { ProgressCharts } from "@/components/progress-charts";
-import { SiteNav } from "@/components/site-nav";
-import { loadProgressByDay, sumAscentMeters, type DayStat } from "@lib/climbing-stats";
+import {
+  loadProgressByDay,
+  sumAscentMeters,
+  type DayStat,
+} from "@lib/climbing-stats";
 import { listAnalysisRecords } from "@lib/analysis-db";
 import { useUiLocale } from "@/lib/use-ui-locale";
 
@@ -36,35 +40,39 @@ export function ProgressPage() {
 
   return (
     <main className="crux-page">
-      <div className="crux-container-narrow">
-        <SiteNav uiLocale={uiLocale} />
-        <header className="mb-8 border-2 border-[var(--crux-border)] bg-[var(--crux-surface)] p-6 shadow-[4px_4px_0_var(--crux-border)]">
-          <p className="crux-label mb-2">{zh ? "进步" : "Progress"}</p>
-          <h1 className="text-2xl font-black uppercase tracking-tight text-[var(--crux-text)] sm:text-3xl">
-            {zh ? "训练趋势" : "Training trends"}
-          </h1>
-          <p className="mt-3 text-sm text-[var(--crux-text-muted)]">
-            {zh
-              ? "按天汇总爬升距离与最高 V 级，方便对照自己的进步。数据来自你在分析页填写的记录。"
-              : "Daily ascent and max V-grade from your session logs."}
-          </p>
-          {!loading && (
-            <p className="mt-4 text-lg font-black text-[var(--crux-orange-panel)]">
-              {zh ? "累计爬升 " : "Total "}
-              {totalM.toFixed(1)}
-              {zh ? " 米" : " m"}
+      <CruxHeader />
+
+      <div className="shell-narrow">
+        <header className="flex flex-wrap items-end justify-between gap-x-8 gap-y-4 border-b-2 border-[var(--crux-border)] pb-6">
+          <div>
+            <h1 className="h1">{zh ? "训练趋势" : "Training trends"}</h1>
+            <p className="lede">
+              {zh
+                ? "按天汇总爬升距离和最高 V 级。数据来自你在分析页填的登记表。"
+                : "Daily ascent and max V-grade from your session logs."}
             </p>
-          )}
+          </div>
+          <div>
+            <span className="mono block">{zh ? "累计爬升" : "Total ascent"}</span>
+            <div className="mt-1 flex items-baseline gap-1.5">
+              <span className="num text-[3rem] font-black leading-none tracking-[-0.04em]">
+                {loading ? "—" : totalM.toFixed(1)}
+              </span>
+              <span className="text-sm font-bold">{zh ? "米" : "m"}</span>
+            </div>
+          </div>
         </header>
 
-        {loading ? (
-          <p className="flex items-center gap-2 text-sm text-[var(--crux-text-muted)]">
-            <IconLoader className="h-4 w-4" />
-            {zh ? "加载中…" : "Loading…"}
-          </p>
-        ) : (
-          <ProgressCharts days={days} locale={uiLocale} />
-        )}
+        <div className="mt-8">
+          {loading ? (
+            <p className="mono flex items-center gap-2">
+              <IconLoader className="h-4 w-4" />
+              {zh ? "加载中…" : "Loading…"}
+            </p>
+          ) : (
+            <ProgressCharts days={days} locale={uiLocale} />
+          )}
+        </div>
       </div>
     </main>
   );

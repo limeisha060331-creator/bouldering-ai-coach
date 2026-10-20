@@ -3,8 +3,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { PulseButton } from "@/components/pulse-button";
 import { VideoThumbnail } from "@/components/video-thumbnail";
 import { HistoryList } from "@/components/history-list";
+import { CruxHeader } from "@/components/crux-header";
 import {
-  IconHistory,
   IconInfo,
   IconLoader,
   IconSparkles,
@@ -24,6 +24,7 @@ import {
 } from "@lib/compress-video";
 import { parseAnalysis } from "@lib/parse-analysis";
 import { BOULDER_GRADES } from "@lib/bouldering-grade";
+import { gradeTapeColor } from "@lib/grade-tape";
 import type {
   AnalysisDepth,
   AnalysisLocale,
@@ -34,7 +35,6 @@ import { PROMPT_VERSION } from "@lib/analyze-prompt";
 import { STRINGS, formatStr } from "@lib/strings";
 import { useAuth } from "@/lib/use-auth";
 import { useUiLocale } from "@/lib/use-ui-locale";
-import { SiteNav } from "@/components/site-nav";
 import { AnalysisCanceledError, analyzeVideo } from "@/lib/analyze-client";
 import { extractFrames } from "@/lib/extract-frames";
 import type { AnalysisProvider, AnalyzeFrame } from "@shared/ipc";
@@ -439,451 +439,460 @@ export function AnalyzePage() {
 
   return (
     <main className="crux-page">
-      <div className="crux-container-narrow">
-        <SiteNav uiLocale={uiLocale} />
-        <header className="mb-8 border-2 border-[var(--crux-border)] border-l-[6px] border-l-[var(--crux-accent)] bg-[var(--crux-surface)] p-6 shadow-[4px_4px_0_var(--crux-border)]">
-          <p className="spa-label mb-2">{t.brand}</p>
-          <h1 className="text-2xl font-black uppercase tracking-tight text-[var(--crux-text)] sm:text-3xl">
-            {t.title}
-          </h1>
-          <p className="mt-3 max-w-md text-sm font-semibold leading-relaxed text-[var(--crux-text-secondary)]">
-            {t.subtitle}
-          </p>
-          <div className="mt-5 border-2 border-[var(--crux-border)] bg-[var(--crux-elevated)] px-4 py-3">
-            <p className="spa-label">{t.expectTitle}</p>
-            <p className="mt-2 text-xs leading-relaxed text-[var(--crux-text-muted)]">
-              {t.expectBody}
-            </p>
-          </div>
-        </header>
+      <CruxHeader />
 
-        {hasApiKey === false && (
-          <div
-            className="mb-6 flex flex-wrap items-center justify-between gap-3 border-2 border-[var(--crux-accent)] bg-[var(--crux-accent-soft)] px-4 py-3"
-            data-testid="api-key-banner"
-          >
-            <p className="text-sm font-bold text-[var(--crux-text)]">
-              {uiLocale === "zh"
-                ? `尚未配置 ${providerLabel} API Key，配置后才能开始分析。`
-                : `No ${providerLabel} API key configured yet.`}
-            </p>
-            <Link
-              to="/settings"
-              className="border-2 border-[var(--crux-border)] bg-[var(--crux-accent)] px-4 py-2 text-xs font-black uppercase tracking-wider text-[var(--crux-on-accent)] shadow-[3px_3px_0_var(--crux-border)]"
-            >
-              {uiLocale === "zh" ? "去设置" : "Open settings"}
-            </Link>
-          </div>
-        )}
+      <div className="shell">
+        <div className="analyze-grid">
+          {/* ---------- 主列 ---------- */}
+          <div className="col-main">
+            <h1 className="h1">
+              {uiLocale === "zh" ? "分析一段新的攀爬" : "Analyze a new climb"}
+            </h1>
+            <p className="lede">{t.subtitle}</p>
 
-        <section className="spa-panel p-6 sm:p-8">
-          <div className="mb-6 grid gap-4 border-2 border-[var(--crux-border-subtle)] bg-[var(--crux-elevated)] p-4 sm:grid-cols-3">
-            <div>
-              <label className="spa-label mb-2 block">{t.routeGradeLabel}</label>
-              <select
-                value={grade}
-                onChange={(e) => setGrade(e.target.value as BoulderGrade)}
-                className="w-full border-2 border-[var(--crux-border)] bg-[var(--crux-surface)] px-3 py-2 text-sm font-bold"
-                data-testid="grade-select"
+            {hasApiKey === false && (
+              <div
+                className="alert mb-4 mt-4 flex flex-wrap items-center justify-between gap-3"
+                data-testid="api-key-banner"
               >
-                {BOULDER_GRADES.map((g) => (
-                  <option key={g} value={g}>
-                    {g}
-                  </option>
+                <p className="font-extrabold text-[var(--crux-text)]">
+                  {uiLocale === "zh"
+                    ? `尚未配置 ${providerLabel} API Key，配置后才能开始分析。`
+                    : `No ${providerLabel} API key configured yet.`}
+                </p>
+                <Link to="/settings" className="btn btn--sm">
+                  {uiLocale === "zh" ? "去设置" : "Open settings"}
+                </Link>
+              </div>
+            )}
+
+            <label
+              htmlFor="video-upload"
+              onDragOver={(e) => {
+                e.preventDefault();
+                setDragOver(true);
+              }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={handleDrop}
+              className="dropzone mt-6"
+              data-over={dragOver}
+              data-busy={compressing}
+              data-testid="upload-dropzone"
+            >
+              <span className="icon" aria-hidden>
+                {compressing ? (
+                  <IconLoader className="h-5 w-5" />
+                ) : (
+                  <IconUpload className="h-5 w-5" />
+                )}
+              </span>
+              <span className="txt">
+                <span className="t">
+                  {compressing ? t.uploadCompress : t.uploadIdle}
+                </span>
+                <span className="h">
+                  {frameBackend
+                    ? uiLocale === "zh"
+                      ? `最大 ${MAX_SOURCE_BYTES / 1024 / 1024}MB · 本地抽取关键帧后提交`
+                      : `Up to ${MAX_SOURCE_BYTES / 1024 / 1024}MB · sampled into key frames locally`
+                    : formatStr(t.uploadHint, {
+                        maxMb: MAX_SOURCE_BYTES / 1024 / 1024,
+                        analyzeMb: MAX_ANALYZE_MB,
+                      })}
+                </span>
+              </span>
+              <span className="spec-chips" aria-hidden>
+                <span>MP4</span>
+                <span>MOV</span>
+                <span>≤ {MAX_SOURCE_BYTES / 1024 / 1024}MB</span>
+              </span>
+            </label>
+            <input
+              id="video-upload"
+              ref={inputRef}
+              type="file"
+              accept="video/*"
+              className="hidden"
+              onChange={handleFileChange}
+              disabled={compressing || loading}
+              data-testid="video-input"
+            />
+
+            {compressHint && (
+              <p className="mono mt-3 flex items-center gap-2">
+                <IconLoader className="h-3.5 w-3.5" />
+                {compressHint}
+              </p>
+            )}
+            {compressInfo && <p className="mono mt-2">{compressInfo}</p>}
+
+            {preview && file && (
+              <div className="mt-5">
+                <VideoThumbnail src={preview} fileName={file.name} />
+              </div>
+            )}
+
+            {activeStep >= 0 && (
+              <div className="steps no-print mt-6" aria-label="分析流程">
+                {stepLabels.map((label, i) => (
+                  <div
+                    key={label}
+                    data-state={
+                      activeStep === i ? "now" : activeStep > i ? "done" : "todo"
+                    }
+                    data-testid={`pipeline-step-${i}`}
+                  >
+                    <div className="n">{String(i + 1).padStart(2, "0")}</div>
+                    <div className="t">{label}</div>
+                    <div className="s">
+                      {activeStep === i
+                        ? uiLocale === "zh"
+                          ? "进行中"
+                          : "Running"
+                        : activeStep > i
+                          ? uiLocale === "zh"
+                            ? "已完成"
+                            : "Done"
+                          : uiLocale === "zh"
+                            ? "待开始"
+                            : "Waiting"}
+                    </div>
+                  </div>
                 ))}
-              </select>
-              <p className="spa-field-hint mt-1.5">{t.routeGradeHint}</p>
-            </div>
-            <div>
-              <label className="spa-label mb-2 block">{t.ascentLabel}</label>
-              <input
-                type="number"
-                min={0}
-                step={0.5}
-                value={ascentMeters}
-                onChange={(e) => setAscentMeters(e.target.value)}
-                className="w-full border-2 border-[var(--crux-border)] bg-[var(--crux-surface)] px-3 py-2 text-sm font-bold"
-                data-testid="ascent-input"
-              />
-              <p className="spa-field-hint mt-1.5">{t.ascentHint}</p>
-            </div>
-            <div className="sm:col-span-1">
-              <label className="spa-label mb-2 block">{t.sessionNoteLabel}</label>
-              <input
-                value={sessionNote}
-                onChange={(e) => setSessionNote(e.target.value)}
-                placeholder={t.sessionNotePlaceholder}
-                className="w-full border-2 border-[var(--crux-border)] bg-[var(--crux-surface)] px-3 py-2 text-sm"
-              />
+              </div>
+            )}
+
+            {error && (
+              <div className="mt-5 space-y-3">
+                <div role="alert" className="alert" data-testid="analysis-error">
+                  {error}
+                </div>
+                {needsApiKey && (
+                  <Link to="/settings" className="btn btn--sm">
+                    {uiLocale === "zh" ? "去设置填写 Key" : "Open settings"}
+                  </Link>
+                )}
+                {retryable && file && (
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    <button
+                      type="button"
+                      onClick={() => void runAnalysis()}
+                      className="btn flex-1"
+                    >
+                      {t.retrySameVideo}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => selectFile(undefined)}
+                      className="btn flex-1"
+                    >
+                      {t.rechooseFile}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {progressHint && loading && (
+              <div className="mt-5 space-y-1.5" data-testid="progress">
+                <p className="mono flex items-center gap-2 text-[var(--crux-text)]">
+                  <IconLoader className="h-3.5 w-3.5" />
+                  {progressHint}
+                </p>
+                {retryDisplaySec != null && retryDisplaySec > 0 && (
+                  <p key={tick} className="mono">
+                    {t.rateLimitWait(retryDisplaySec)}
+                  </p>
+                )}
+                {elapsedSec > 10 && <p className="mono">{t.cloudKeepOpen}</p>}
+              </div>
+            )}
+
+            <div className="note-box mt-6">
+              <IconInfo className="mt-0.5 h-4 w-4 shrink-0 text-[var(--crux-accent)]" />
+              <div>
+                <p className="font-extrabold text-[var(--crux-text)]">
+                  {t.tipTitle}
+                </p>
+                <p className="mt-1">{t.tipBody}</p>
+              </div>
             </div>
           </div>
 
-          <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
-            <div>
-              <p className="spa-label mb-2">{t.uiLangLabel}</p>
+          {/* ---------- 线路登记表 ---------- */}
+          <div className="col-form">
+            <div className="panel relative">
+              <span
+                className="tape-mark"
+                style={{ background: gradeTapeColor(grade) }}
+                aria-hidden
+              />
+              <div className="panel-head">
+                <span className="t">
+                  {uiLocale === "zh" ? "线路登记" : "Route log"}
+                </span>
+                <span className="s">
+                  {uiLocale === "zh" ? "选填，能让反馈更贴这条线" : "Optional"}
+                </span>
+              </div>
+
+              <div className="panel-body">
+                <div className="mb-4">
+                  <label htmlFor="grade" className="field-label">
+                    {t.routeGradeLabel}
+                  </label>
+                  <select
+                    id="grade"
+                    value={grade}
+                    onChange={(e) => setGrade(e.target.value as BoulderGrade)}
+                    className="input"
+                    data-testid="grade-select"
+                  >
+                    {BOULDER_GRADES.map((g) => (
+                      <option key={g} value={g}>
+                        {g}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="field-hint">{t.routeGradeHint}</p>
+                </div>
+
+                <div className="mb-4">
+                  <label htmlFor="ascent" className="field-label">
+                    {uiLocale === "zh" ? "爬升高度" : "Ascent"}
+                  </label>
+                  <div className="flex">
+                    <input
+                      id="ascent"
+                      type="number"
+                      min={0}
+                      step={0.5}
+                      value={ascentMeters}
+                      onChange={(e) => setAscentMeters(e.target.value)}
+                      className="input"
+                      style={{ borderRight: 0 }}
+                      data-testid="ascent-input"
+                    />
+                    <span className="flex items-center border-2 border-[var(--crux-border)] px-3 text-xs font-bold text-[var(--crux-text-muted)]">
+                      {uiLocale === "zh" ? "米" : "m"}
+                    </span>
+                  </div>
+                  <p className="field-hint">{t.ascentHint}</p>
+                </div>
+
+                <div className="mb-4">
+                  <span className="field-label">{t.depthLabel}</span>
+                  <div className="seg" role="group">
+                    <button
+                      type="button"
+                      aria-pressed={depth === "deep"}
+                      onClick={() => setDepth("deep")}
+                    >
+                      {t.depthDeep}
+                    </button>
+                    <button
+                      type="button"
+                      aria-pressed={depth === "light"}
+                      onClick={() => setDepth("light")}
+                    >
+                      {t.depthLight}
+                    </button>
+                  </div>
+                  <p className="field-hint">
+                    {depth === "deep" ? t.depthDeepDesc : t.depthLightDesc}
+                  </p>
+                </div>
+
+                <div className="mb-4">
+                  <span className="field-label">{t.analysisOutputLang}</span>
+                  <div className="seg" role="group">
+                    <button
+                      type="button"
+                      aria-pressed={analysisLocale === "zh"}
+                      onClick={() => setAnalysisLocale("zh")}
+                    >
+                      {t.analysisOutputZh}
+                    </button>
+                    <button
+                      type="button"
+                      aria-pressed={analysisLocale === "en"}
+                      onClick={() => setAnalysisLocale("en")}
+                    >
+                      {t.analysisOutputEn}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="mb-4">
+                  <label htmlFor="session-note" className="field-label">
+                    {t.sessionNoteLabel}
+                    <span className="note"> — 可选</span>
+                  </label>
+                  <input
+                    id="session-note"
+                    value={sessionNote}
+                    onChange={(e) => setSessionNote(e.target.value)}
+                    placeholder={t.sessionNotePlaceholder}
+                    className="input font-normal"
+                  />
+                </div>
+
+                <PulseButton
+                  onClick={() => void runAnalysis()}
+                  disabled={!file || compressing}
+                  loading={loading}
+                  data-testid="start-analysis"
+                >
+                  <span className="inline-flex items-center justify-center gap-2">
+                    <IconSparkles className="h-4 w-4" />
+                    {t.startAnalysis}
+                  </span>
+                </PulseButton>
+
+                {loading && (
+                  <button
+                    type="button"
+                    onClick={cancelAnalysis}
+                    className="btn btn--block mt-2"
+                  >
+                    <IconX className="h-4 w-4" />
+                    {t.cancelAnalysis}
+                  </button>
+                )}
+
+                <p className="field-hint mt-3">
+                  {uiLocale === "zh"
+                    ? "通常 2–4 分钟。可以离开这一页，完成后来「分析历史」里看报告。"
+                    : "Usually 2–4 minutes. You can leave this page; the report lands in your history."}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-3 flex items-center justify-between gap-3">
+              <span className="mono">
+                {uiLocale === "zh" ? "界面语言" : "UI language"}
+              </span>
               <div className="flex gap-2">
                 <button
                   type="button"
+                  aria-pressed={uiLocale === "zh"}
                   onClick={() => setUiLocale("zh")}
-                  className={`spa-chip transition ${
-                    uiLocale === "zh" ? "spa-choice-active" : "spa-choice-idle"
-                  }`}
+                  className="chip !px-2 !py-1 !text-[0.6875rem]"
                 >
                   {t.uiLangZh}
                 </button>
                 <button
                   type="button"
+                  aria-pressed={uiLocale === "en"}
                   onClick={() => setUiLocale("en")}
-                  className={`spa-chip transition ${
-                    uiLocale === "en" ? "spa-choice-active" : "spa-choice-idle"
-                  }`}
+                  className="chip !px-2 !py-1 !text-[0.6875rem]"
                 >
                   {t.uiLangEn}
                 </button>
               </div>
             </div>
-            <div>
-              <p className="spa-label mb-2">{t.depthLabel}</p>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setDepth("light")}
-                  className={`spa-chip text-left transition ${
-                    depth === "light" ? "spa-choice-active" : "spa-choice-idle"
-                  }`}
-                >
-                  <span className="font-extrabold text-[var(--spa-text)]">
-                    {t.depthLight}
-                  </span>
-                  <span className="ml-1 font-semibold text-[var(--spa-text-muted)]">
-                    · {t.depthLightDesc}
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setDepth("deep")}
-                  className={`spa-chip text-left transition ${
-                    depth === "deep" ? "spa-choice-active" : "spa-choice-idle"
-                  }`}
-                >
-                  <span className="font-extrabold text-[var(--spa-text)]">
-                    {t.depthDeep}
-                  </span>
-                  <span className="ml-1 font-semibold text-[var(--spa-text-muted)]">
-                    · {t.depthDeepDesc}
-                  </span>
-                </button>
-              </div>
-            </div>
-            <div>
-              <p className="spa-label mb-2">{t.analysisOutputLang}</p>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setAnalysisLocale("zh")}
-                  className={`spa-chip transition ${
-                    analysisLocale === "zh"
-                      ? "spa-choice-active"
-                      : "spa-choice-idle"
-                  }`}
-                >
-                  {t.analysisOutputZh}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setAnalysisLocale("en")}
-                  className={`spa-chip transition ${
-                    analysisLocale === "en"
-                      ? "spa-choice-active"
-                      : "spa-choice-idle"
-                  }`}
-                >
-                  {t.analysisOutputEn}
-                </button>
-              </div>
-            </div>
-          </div>
 
-          {activeStep >= 0 && (
-            <div className="mb-6 no-print">
-              <ol className="grid grid-cols-4 gap-2 text-center">
-                {stepLabels.map((label, i) => (
-                  <li key={label}>
-                    <div
-                      className={`mx-auto mb-1.5 flex h-9 w-9 items-center justify-center border-2 text-xs font-extrabold ${
-                        activeStep === i
-                          ? "border-[var(--crux-border)] bg-[var(--crux-accent)] text-[var(--crux-on-accent)] shadow-[2px_2px_0_var(--crux-border)]"
-                          : activeStep > i
-                            ? "border-[var(--crux-accent)] bg-[var(--spa-focus)] text-[var(--crux-accent)]"
-                            : "border-[var(--crux-border-subtle)] bg-[var(--crux-elevated)] text-[var(--spa-text-muted)]"
-                      }`}
-                      data-testid={`pipeline-step-${i}`}
-                    >
-                      {i + 1}
-                    </div>
-                    <span className="text-[11px] font-bold leading-tight text-[var(--crux-text-secondary)] sm:text-xs">
-                      {label}
-                    </span>
-                  </li>
-                ))}
-              </ol>
-            </div>
-          )}
-
-          <label
-            htmlFor="video-upload"
-            onDragOver={(e) => {
-              e.preventDefault();
-              setDragOver(true);
-            }}
-            onDragLeave={() => setDragOver(false)}
-            onDrop={handleDrop}
-            className={`flex min-h-[11rem] cursor-pointer flex-col items-center justify-center border-2 border-dashed px-5 py-8 transition ${
-              dragOver
-                ? "border-[var(--crux-accent)] bg-[var(--spa-focus)]"
-                : "border-[var(--crux-border-subtle)] bg-[var(--spa-elevated)] hover:border-[var(--crux-accent)]"
-            } ${compressing ? "pointer-events-none opacity-50" : ""}`}
-            data-testid="upload-dropzone"
-          >
-            {compressing ? (
-              <IconLoader className="mb-3 h-7 w-7 text-[var(--crux-accent)]" />
-            ) : (
-              <IconUpload className="mb-3 h-7 w-7 text-[var(--crux-accent)]" />
-            )}
-            <span className="text-sm font-extrabold uppercase tracking-wide text-[var(--spa-text)]">
-              {compressing ? t.uploadCompress : t.uploadIdle}
-            </span>
-            <span className="mt-2 text-xs text-[var(--spa-text-muted)]">
-              {frameBackend
-                ? uiLocale === "zh"
-                  ? `最大 ${MAX_SOURCE_BYTES / 1024 / 1024}MB · 本地抽取关键帧后提交`
-                  : `Up to ${MAX_SOURCE_BYTES / 1024 / 1024}MB · sampled into key frames locally`
-                : formatStr(t.uploadHint, {
-                    maxMb: MAX_SOURCE_BYTES / 1024 / 1024,
-                    analyzeMb: MAX_ANALYZE_MB,
-                  })}
-            </span>
-          </label>
-          <input
-            id="video-upload"
-            ref={inputRef}
-            type="file"
-            accept="video/*"
-            className="hidden"
-            onChange={handleFileChange}
-            disabled={compressing || loading}
-            data-testid="video-input"
-          />
-
-          {compressHint && (
-            <p className="mt-4 flex items-center justify-center gap-2 text-center text-xs text-[var(--spa-text-secondary)]">
-              <IconLoader className="h-3.5 w-3.5" />
-              {compressHint}
+            <p className="mono mt-3 leading-relaxed">
+              {uiLocale === "zh" ? "分析后端" : "Backend"}：{providerLabel} ·{" "}
+              <Link to="/settings" className="underline underline-offset-4">
+                {uiLocale === "zh" ? "在设置里切换" : "change in settings"}
+              </Link>
             </p>
-          )}
-
-          {compressInfo && (
-            <p className="mt-3 text-center text-xs text-[var(--spa-text-muted)]">
-              {compressInfo}
-            </p>
-          )}
-
-          <div className="mt-5 flex gap-3 border-2 border-[var(--crux-border-subtle)] bg-[var(--spa-elevated)] px-4 py-3.5">
-            <IconInfo className="mt-0.5 h-4 w-4 shrink-0 text-[var(--crux-accent)]" />
-            <div>
-              <p className="spa-label text-[var(--crux-text)]">{t.tipTitle}</p>
-              <p className="mt-1 text-xs leading-relaxed text-[var(--spa-text-secondary)]">
-                {t.tipBody}
-              </p>
-            </div>
           </div>
 
-          {preview && file && (
-            <div className="mt-6 flex justify-center">
-              <VideoThumbnail src={preview} fileName={file.name} />
+          {/* ---------- 历史 ---------- */}
+          <section className="col-hist" aria-labelledby="history-title">
+            <div className="mb-4 flex items-baseline justify-between gap-3">
+              <h2 id="history-title" className="h2">
+                {t.historyTitle}
+              </h2>
+              <span className="mono">
+                {filteredHistory.length}
+                {uiLocale === "zh" ? " 条" : " records"}
+              </span>
             </div>
-          )}
 
-          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-            <div className="flex-1">
-              <PulseButton
-                onClick={() => void runAnalysis()}
-                disabled={!file || compressing}
-                loading={loading}
-                data-testid="start-analysis"
-              >
-                <span className="inline-flex items-center justify-center gap-2">
-                  <IconSparkles className="h-4 w-4" />
-                  {t.startAnalysis}
-                </span>
-              </PulseButton>
-            </div>
-            {loading && (
-              <button
-                type="button"
-                onClick={cancelAnalysis}
-                className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-[var(--spa-border)] px-4 py-3 text-sm font-medium text-[var(--spa-text-secondary)] transition hover:bg-[var(--spa-elevated)]"
-              >
-                <IconX className="h-4 w-4" />
-                {t.cancelAnalysis}
-              </button>
+            {historyDbError && (
+              <div className="mb-4">
+                <p className="alert font-extrabold text-[var(--crux-text)]">
+                  {t.historyDbError}
+                </p>
+                <p className="field-hint">{t.historyDbHint}</p>
+              </div>
             )}
-          </div>
 
-          {progressHint && loading && (
-            <div className="mt-5 space-y-1.5 text-center" data-testid="progress">
-              <p className="flex items-center justify-center gap-2 text-sm text-[var(--spa-text-secondary)]">
-                <IconLoader className="h-4 w-4" />
-                {progressHint}
-              </p>
-              {retryDisplaySec != null && retryDisplaySec > 0 && (
-                <p key={tick} className="text-xs text-[var(--spa-text-muted)]">
-                  {t.rateLimitWait(retryDisplaySec)}
-                </p>
-              )}
-              {elapsedSec > 10 && (
-                <p className="text-xs text-[var(--spa-text-muted)]">
-                  {t.cloudKeepOpen}
-                </p>
-              )}
-            </div>
-          )}
-
-          {error && (
-            <div className="mt-5 space-y-3">
-              <p
-                role="alert"
-                className="rounded-xl border border-[var(--spa-border)] bg-[var(--spa-elevated)] px-4 py-3 text-sm text-[var(--spa-text-secondary)]"
-                data-testid="analysis-error"
-              >
-                {error}
-              </p>
-              {needsApiKey && (
-                <Link
-                  to="/settings"
-                  className="inline-block border-2 border-[var(--crux-border)] bg-[var(--crux-accent)] px-4 py-2 text-xs font-black uppercase tracking-wider text-[var(--crux-on-accent)] shadow-[3px_3px_0_var(--crux-border)]"
-                >
-                  {uiLocale === "zh" ? "去设置填写 Key" : "Open settings"}
-                </Link>
-              )}
-              {retryable && file && (
-                <div className="flex flex-col gap-2 sm:flex-row">
-                  <button
-                    type="button"
-                    onClick={() => void runAnalysis()}
-                    className="flex-1 rounded-xl border border-[var(--spa-border)] py-2.5 text-sm font-medium text-[var(--spa-text)] transition hover:bg-[var(--spa-focus)]"
-                  >
-                    {t.retrySameVideo}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => selectFile(undefined)}
-                    className="flex-1 rounded-xl border border-[var(--spa-border)] py-2.5 text-sm font-medium text-[var(--spa-text-secondary)] transition hover:bg-[var(--spa-elevated)]"
-                  >
-                    {t.rechooseFile}
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-        </section>
-
-        <section className="mt-12 sm:mt-14">
-          <div className="mb-5 flex items-center gap-2">
-            <IconHistory className="h-4 w-4 text-[var(--crux-accent)]" />
-            <h2 className="text-base font-black uppercase tracking-tight text-[var(--spa-text)]">
-              {t.historyTitle}
-            </h2>
-          </div>
-
-          {historyDbError && (
-            <div className="mb-4 rounded-xl border border-[var(--spa-border)] bg-[var(--spa-elevated)] px-4 py-3 text-xs leading-relaxed text-[var(--spa-text-secondary)]">
-              <p className="font-medium text-[var(--spa-text)]">
-                {t.historyDbError}
-              </p>
-              <p className="mt-1 text-[var(--spa-text-muted)]">
-                {t.historyDbHint}
-              </p>
-            </div>
-          )}
-
-          {!historyDbError && history.length > 0 && (
-            <div className="mb-4 flex flex-col gap-3 border-2 border-[var(--crux-border-subtle)] bg-[var(--spa-elevated)] p-4 sm:flex-row sm:flex-wrap sm:items-end">
-              <div className="min-w-0 flex-1">
-                <label className="spa-label mb-1 block">
-                  {t.historySearch}
-                </label>
-                <input
-                  value={searchQ}
-                  onChange={(e) => setSearchQ(e.target.value)}
-                  className="spa-input w-full px-3 py-2 text-[var(--spa-text)]"
-                />
-              </div>
-              <div>
-                <label className="spa-label mb-1 block">
-                  {t.historyDateLabel}
-                </label>
-                <select
-                  value={datePreset}
-                  onChange={(e) =>
-                    setDatePreset(e.target.value as "all" | "7" | "30")
-                  }
-                  className="spa-input px-3 py-2 text-[var(--spa-text)]"
-                >
-                  <option value="all">{t.historyDateAll}</option>
-                  <option value="7">{t.historyDate7}</option>
-                  <option value="30">{t.historyDate30}</option>
-                </select>
-              </div>
-              <div className="flex gap-2">
-                <div>
-                  <label className="spa-label mb-1 block">
-                    {t.historyScoreMin}
-                  </label>
+            {!historyDbError && history.length > 0 && (
+              <div className="filter-bar mb-5">
+                <div className="min-w-0 flex-1">
+                  <label htmlFor="hist-q">{t.historySearch}</label>
                   <input
+                    id="hist-q"
+                    value={searchQ}
+                    onChange={(e) => setSearchQ(e.target.value)}
+                    className="input !py-1.5 !text-[0.8125rem]"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="hist-date">{t.historyDateLabel}</label>
+                  <select
+                    id="hist-date"
+                    value={datePreset}
+                    onChange={(e) =>
+                      setDatePreset(e.target.value as "all" | "7" | "30")
+                    }
+                    className="input !py-1.5 !text-[0.8125rem]"
+                  >
+                    <option value="all">{t.historyDateAll}</option>
+                    <option value="7">{t.historyDate7}</option>
+                    <option value="30">{t.historyDate30}</option>
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="hist-min">{t.historyScoreMin}</label>
+                  <input
+                    id="hist-min"
                     type="number"
                     min={0}
                     max={100}
                     value={scoreMin}
                     onChange={(e) => setScoreMin(e.target.value)}
-                    className="spa-input w-20 px-2 py-2"
+                    className="input w-20 !py-1.5 !text-[0.8125rem]"
                   />
                 </div>
                 <div>
-                  <label className="spa-label mb-1 block">
-                    {t.historyScoreMax}
-                  </label>
+                  <label htmlFor="hist-max">{t.historyScoreMax}</label>
                   <input
+                    id="hist-max"
                     type="number"
                     min={0}
                     max={100}
                     value={scoreMax}
                     onChange={(e) => setScoreMax(e.target.value)}
-                    className="spa-input w-20 px-2 py-2"
+                    className="input w-20 !py-1.5 !text-[0.8125rem]"
                   />
                 </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchQ("");
+                    setDatePreset("all");
+                    setScoreMin("");
+                    setScoreMax("");
+                  }}
+                  className="btn btn--sm"
+                >
+                  {t.historyClearFilters}
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setSearchQ("");
-                  setDatePreset("all");
-                  setScoreMin("");
-                  setScoreMax("");
-                }}
-                className="spa-chip spa-choice-idle px-3 py-2 hover:bg-[var(--spa-surface)]"
-              >
-                {t.historyClearFilters}
-              </button>
-            </div>
-          )}
+            )}
 
-          <HistoryList
-            records={filteredHistory}
-            emptyTitle={emptyHistoryTitle}
-            emptyHint={emptyHistoryHint}
-          />
-        </section>
+            <HistoryList
+              records={filteredHistory}
+              emptyTitle={emptyHistoryTitle}
+              emptyHint={emptyHistoryHint}
+            />
+          </section>
+        </div>
       </div>
     </main>
   );

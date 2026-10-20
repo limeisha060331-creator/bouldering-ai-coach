@@ -1,4 +1,4 @@
-import type { BoulderGrade } from "@/lib/bouldering-grade";
+import type { BoulderGrade } from "./bouldering-grade";
 
 /**
  * 岩馆用彩色胶带标线路难度，这里沿用同一套编码：

@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { useState } from "react";
 import { useUiLocale } from "@/lib/use-ui-locale";
 import { IconMenu, IconX } from "@/components/icons";
@@ -12,65 +12,63 @@ type Props = {
 export function CruxHeader({ variant = "app" }: Props) {
   const [uiLocale] = useUiLocale();
   const [open, setOpen] = useState(false);
+  const { pathname } = useLocation();
+
+  const navItems = [
+    { to: "/", label: uiLocale === "zh" ? "首页" : "Home" },
+    { to: "/analyze", label: uiLocale === "zh" ? "分析" : "Analyze" },
+    { to: "/progress", label: uiLocale === "zh" ? "进步" : "Progress" },
+    { to: "/favorites", label: uiLocale === "zh" ? "收藏" : "Saved" },
+    { to: "/settings", label: uiLocale === "zh" ? "设置" : "Settings" },
+  ];
+
+  const isActive = (to: string) =>
+    to === "/" ? pathname === "/" : pathname.startsWith(to);
 
   return (
-    <header className="no-print border-b-2 border-[var(--crux-border)] bg-[var(--crux-surface)]">
-      <div
-        className={`flex h-12 items-center justify-between sm:h-14 ${
-          variant === "landing" ? "w-full px-4 sm:px-6" : "crux-container"
-        }`}
-      >
+    <header
+      data-variant={variant}
+      className="no-print border-b-2 border-[var(--crux-border)] bg-[var(--crux-bg)]"
+    >
+      <div className="flex h-14 w-full items-center justify-between gap-6 px-[clamp(1rem,3vw,3rem)]">
         <Link
           to="/"
-          className="text-sm font-black tracking-tight text-[var(--crux-text)] sm:text-base"
+          className="flex items-baseline gap-2 text-[1.1875rem] font-black tracking-[-0.03em] text-[var(--crux-text)]"
         >
-          CRUX 抱石
+          CRUX
+          <span className="text-[0.8125rem] font-medium tracking-normal text-[var(--crux-text-secondary)]">
+            {uiLocale === "zh" ? "抱石" : "Bouldering"}
+          </span>
         </Link>
 
-        <div className="hidden items-center gap-3 sm:flex">
+        <div className="hidden items-center gap-6 sm:flex">
+          <nav className="flex items-center gap-6">
+            {navItems.map((item) => (
+              <Link
+                key={item.to}
+                to={item.to}
+                aria-current={isActive(item.to) ? "page" : undefined}
+                className={
+                  isActive(item.to)
+                    ? "text-[0.8125rem] font-extrabold text-[var(--crux-text)] underline decoration-[var(--crux-accent)] decoration-[3px] underline-offset-[7px]"
+                    : "text-[0.8125rem] font-semibold text-[var(--crux-text-secondary)] transition hover:text-[var(--crux-text)]"
+                }
+              >
+                {item.label}
+              </Link>
+            ))}
+          </nav>
           <AuthNav uiLocale={uiLocale} compact />
           <ThemeToggle compact />
-          <nav className="flex items-center gap-5">
-            <Link
-              to="/"
-              className="text-xs font-semibold text-[var(--crux-text-muted)] transition hover:text-[var(--crux-text)]"
-            >
-              首页
-            </Link>
-            <Link
-              to="/analyze"
-              className="text-xs font-semibold text-[var(--crux-text-muted)] transition hover:text-[var(--crux-text)]"
-            >
-              分析
-            </Link>
-            <Link
-              to="/progress"
-              className="text-xs font-semibold text-[var(--crux-text-muted)] transition hover:text-[var(--crux-text)]"
-            >
-              进步
-            </Link>
-            <Link
-              to="/favorites"
-              className="text-xs font-semibold text-[var(--crux-text-muted)] transition hover:text-[var(--crux-text)]"
-            >
-              收藏
-            </Link>
-            <Link
-              to="/settings"
-              className="text-xs font-semibold text-[var(--crux-text-muted)] transition hover:text-[var(--crux-text)]"
-            >
-              设置
-            </Link>
-          </nav>
         </div>
 
         <div className="flex items-center gap-2 sm:hidden">
-          <AuthNav uiLocale={uiLocale} compact />
           <ThemeToggle compact />
           <button
             type="button"
             className="flex h-9 w-9 items-center justify-center border-2 border-[var(--crux-border)]"
             aria-label="菜单"
+            aria-expanded={open}
             onClick={() => setOpen((o) => !o)}
           >
             {open ? (
@@ -83,32 +81,28 @@ export function CruxHeader({ variant = "app" }: Props) {
       </div>
 
       {open && (
-        <nav className="border-t-2 border-[var(--crux-border)] bg-[var(--crux-surface)] px-4 py-3 sm:hidden">
-          {[
-            { to: "/", label: "首页" },
-            { to: "/analyze", label: "分析" },
-            { to: "/progress", label: "进步" },
-            { to: "/favorites", label: "收藏" },
-            { to: "/settings", label: "设置" },
-          ].map((item) => (
+        <nav className="flex flex-col border-t-2 border-[var(--crux-border)] px-4 py-2 sm:hidden">
+          {navItems.map((item) => (
             <Link
               key={item.to}
               to={item.to}
-              className="block py-2 text-xs font-semibold"
+              aria-current={isActive(item.to) ? "page" : undefined}
+              className={`flex items-center justify-between border-b border-[var(--crux-hair)] py-3 text-sm ${
+                isActive(item.to)
+                  ? "font-extrabold text-[var(--crux-text)]"
+                  : "font-semibold text-[var(--crux-text-secondary)]"
+              }`}
               onClick={() => setOpen(false)}
             >
               {item.label}
+              {isActive(item.to) && (
+                <span className="h-3 w-1 bg-[var(--crux-accent)]" />
+              )}
             </Link>
           ))}
-          {variant === "landing" && (
-            <Link
-              to="/analyze"
-              className="mt-3 block bg-[var(--crux-orange-panel)] px-4 py-3 text-center text-sm font-bold text-[var(--crux-on-accent)]"
-              onClick={() => setOpen(false)}
-            >
-              上传视频分析
-            </Link>
-          )}
+          <div className="flex items-center justify-between py-3">
+            <AuthNav uiLocale={uiLocale} />
+          </div>
         </nav>
       )}
     </header>

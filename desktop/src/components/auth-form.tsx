@@ -54,8 +54,13 @@ export function AuthForm({ mode, uiLocale, configured }: Props) {
 
   if (!configured) {
     return (
-      <div className="spa-panel border-[var(--crux-accent)] p-6">
-        <p className="text-sm font-bold text-[var(--crux-text)]">
+      <div className="panel relative p-6">
+        <span
+          className="tape-mark"
+          style={{ background: "var(--crux-accent)" }}
+          aria-hidden
+        />
+        <p className="text-sm font-extrabold text-[var(--crux-text)]">
           {t.authNotConfiguredTitle}
         </p>
         <p className="mt-3 text-sm leading-relaxed text-[var(--crux-text-muted)]">
@@ -66,64 +71,71 @@ export function AuthForm({ mode, uiLocale, configured }: Props) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="spa-panel p-6 sm:p-8">
-      <div className="space-y-4">
+    <form onSubmit={handleSubmit} className="panel relative">
+      <span
+        className="tape-mark"
+        style={{ background: "var(--tape-yellow)" }}
+        aria-hidden
+      />
+      <div className="space-y-4 p-6">
         {isRegister && (
           <div>
-            <label className="spa-label mb-2 block">{t.authDisplayName}</label>
+            <label htmlFor="auth-name" className="field-label">
+              {t.authDisplayName}
+            </label>
             <input
+              id="auth-name"
               type="text"
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
               autoComplete="name"
               placeholder={t.authDisplayNamePlaceholder}
-              className="w-full border-2 border-[var(--crux-border)] bg-[var(--crux-surface)] px-3 py-2 text-sm"
+              className="input font-normal"
             />
           </div>
         )}
         <div>
-          <label className="spa-label mb-2 block">{t.authEmail}</label>
+          <label htmlFor="auth-email" className="field-label">
+            {t.authEmail}
+          </label>
           <input
+            id="auth-email"
             type="email"
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             autoComplete="email"
-            className="w-full border-2 border-[var(--crux-border)] bg-[var(--crux-surface)] px-3 py-2 text-sm"
+            className="input font-normal"
           />
         </div>
         <div>
-          <label className="spa-label mb-2 block">{t.authPassword}</label>
+          <label htmlFor="auth-password" className="field-label">
+            {t.authPassword}
+          </label>
           <input
+            id="auth-password"
             type="password"
             required
             minLength={8}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             autoComplete={isRegister ? "new-password" : "current-password"}
-            className="w-full border-2 border-[var(--crux-border)] bg-[var(--crux-surface)] px-3 py-2 text-sm"
+            className="input font-normal"
           />
-          {isRegister && (
-            <p className="mt-1 text-[10px] text-[var(--crux-text-muted)]">
-              {t.authPasswordHint}
-            </p>
-          )}
+          {isRegister && <p className="field-hint">{t.authPasswordHint}</p>}
         </div>
-      </div>
 
-      {error && (
-        <p
-          role="alert"
-          className="mt-4 rounded-lg border-2 border-[var(--crux-border)] bg-[var(--crux-elevated)] px-3 py-2 text-sm text-[var(--crux-text-secondary)]"
-        >
-          {error}
-        </p>
-      )}
+        {error && (
+          <p role="alert" className="alert">
+            {error}
+          </p>
+        )}
 
-      <div className="mt-6">
-        <PulseButton type="submit" loading={loading} disabled={loading}>
-          {isRegister ? t.authRegisterSubmit : t.authLoginSubmit}
-        </PulseButton>
+        <div className="pt-2">
+          <PulseButton type="submit" loading={loading} disabled={loading}>
+            {isRegister ? t.authRegisterSubmit : t.authLoginSubmit}
+          </PulseButton>
+        </div>
       </div>
     </form>
   );

@@ -1,7 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import { AuthForm } from "@/components/auth-form";
-import { SiteNav } from "@/components/site-nav";
+import { CruxHeader } from "@/components/crux-header";
 import { useAuth } from "@/lib/use-auth";
 import { useUiLocale } from "@/lib/use-ui-locale";
 import { STRINGS } from "@lib/strings";
@@ -18,25 +18,21 @@ export function LoginPage() {
 
   return (
     <main className="crux-page">
-      <div className="crux-container-narrow">
-        <SiteNav uiLocale={uiLocale} />
-        <header className="mb-8 border-2 border-[var(--crux-border)] border-l-[6px] border-l-[var(--crux-accent)] bg-[var(--crux-surface)] p-6 shadow-[4px_4px_0_var(--crux-border)]">
-          <p className="spa-label mb-2">{t.brand}</p>
-          <h1 className="text-2xl font-black uppercase tracking-tight text-[var(--crux-text)] sm:text-3xl">
-            {t.authLoginTitle}
-          </h1>
-          <p className="mt-3 text-sm leading-relaxed text-[var(--crux-text-muted)]">
-            {t.authLoginSubtitle}
-          </p>
-        </header>
+      <CruxHeader />
 
-        <AuthForm mode="login" uiLocale={uiLocale} configured={configured} />
+      <div className="mx-auto w-full max-w-[32rem] px-[clamp(1rem,3vw,3rem)] py-10">
+        <h1 className="h1 !text-[2.25rem]">{t.authLoginTitle}</h1>
+        <p className="lede">{t.authLoginSubtitle}</p>
 
-        <p className="mt-6 text-center text-sm text-[var(--crux-text-muted)]">
+        <div className="mt-7">
+          <AuthForm mode="login" uiLocale={uiLocale} configured={configured} />
+        </div>
+
+        <p className="mt-6 text-sm text-[var(--crux-text-muted)]">
           {t.authNoAccount}{" "}
           <Link
             to="/auth/register"
-            className="font-bold text-[var(--crux-accent)] hover:underline"
+            className="font-extrabold text-[var(--crux-text)] underline decoration-[var(--crux-accent)] decoration-2 underline-offset-4"
           >
             {t.authRegister}
           </Link>
