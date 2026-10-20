@@ -6,6 +6,7 @@ import {
   IconClock,
   IconDownload,
   IconFileText,
+  IconFilm,
   IconStar,
 } from "@/components/icons";
 import { StructuredReportView } from "@/components/structured-report";
@@ -16,6 +17,8 @@ import { analysisToMarkdown, downloadTextFile } from "@/lib/export-analysis";
 import { downloadAnalysisPdf } from "@/lib/generate-analysis-pdf";
 import { listAnalysisRecords } from "@/lib/analysis-db";
 import { STRINGS, type UiLocale } from "@/lib/strings";
+import { gradeTapeColor, gradeTapeName } from "@/lib/grade-tape";
+import { formatRecordDate } from "@/lib/record-display";
 
 type Props = {
   analysis: string;
@@ -46,11 +49,13 @@ export function AnalysisView({
   const [showFullRaw, setShowFullRaw] = useState(false);
   const [pdfBusy, setPdfBusy] = useState(false);
   const [pdfVideoIndex, setPdfVideoIndex] = useState<number | null>(null);
+  const [sameGrade, setSameGrade] = useState<AnalysisRecord[]>([]);
   const t = STRINGS[uiLocale];
   const parsed = parseAnalysis(analysis);
   const segments = presetSegments?.length ? presetSegments : parsed.segments;
   const pinned = new Set(bookmarkedIndices);
   const structured = parsed.structured;
+  const zh = uiLocale === "zh";
 
   useEffect(() => {
     if (initialSegmentIndex != null && segments[initialSegmentIndex]) {
@@ -62,8 +67,19 @@ export function AnalysisView({
     void listAnalysisRecords().then((list) => {
       const i = list.findIndex((r) => r.id === record.id);
       setPdfVideoIndex(i >= 0 ? i + 1 : null);
+      setSameGrade(
+        list
+          .filter(
+            (r) =>
+              r.id !== record.id &&
+              r.grade != null &&
+              record.grade != null &&
+              r.grade === record.grade
+          )
+          .slice(0, 3)
+      );
     });
-  }, [record.id]);
+  }, [record.id, record.grade]);
 
   useEffect(() => {
     const sec =
@@ -99,8 +115,14 @@ export function AnalysisView({
 
   function exportMd() {
     const md = analysisToMarkdown({ ...record, segments });
-    const safe = record.fileName.replace(/[^\w\u4e00-\u9fa5.-]+/g, "_").slice(0, 60);
-    downloadTextFile(`${safe || "analysis"}.md`, md, "text/markdown;charset=utf-8");
+    const safe = record.fileName
+      .replace(/[^\w\u4e00-\u9fa5.-]+/g, "_")
+      .slice(0, 60);
+    downloadTextFile(
+      `${safe || "analysis"}.md`,
+      md,
+      "text/markdown;charset=utf-8"
+    );
   }
 
   async function exportPdf() {
@@ -112,7 +134,7 @@ export function AnalysisView({
       console.error("[pdf]", e);
       const detail = e instanceof Error ? e.message : "";
       alert(
-        uiLocale === "zh"
+        zh
           ? `PDF 生成失败${detail ? `：${detail}` : "，请用 Chrome/Edge 桌面浏览器重试"}`
           : `PDF export failed${detail ? `: ${detail}` : ". Try Chrome/Edge on desktop."}`
       );
@@ -121,157 +143,241 @@ export function AnalysisView({
     }
   }
 
+  const metaRows: Array<[string, string]> = [
+    [
+      zh ? "难度" : "Grade",
+      record.grade
+        ? `${record.grade}（${gradeTapeName(record.grade)}）`
+        : "—",
+    ],
+    [
+      zh ? "爬升" : "Ascent",
+      record.ascentMeters != null
+        ? `${record.ascentMeters} ${zh ? "米" : "m"}`
+        : "—",
+    ],
+    [zh ? "分析深度" : "Depth", record.depth === "deep" ? (zh ? "深度" : "Deep") : (zh ? "轻量" : "Light")],
+    [zh ? "反馈语言" : "Output", record.locale === "en" ? "English" : "中文"],
+  ];
+
+  if (record.promptVersion) {
+    metaRows.push([zh ? "提示词版本" : "Prompt", record.promptVersion]);
+  }
+
   return (
-    <div className="flex flex-col gap-8">
+    <div>
       <AnalysisPdfTemplate
         ref={pdfRef}
         record={{ ...record, segments }}
         videoIndex={pdfVideoIndex}
       />
 
-      {videoUrl && (
-        <div className="overflow-hidden rounded-xl border border-[var(--spa-border)] bg-[var(--spa-elevated)]">
-          <video
-            ref={videoRef}
-            src={videoUrl}
-            controls
-            className="max-h-64 w-full object-contain sm:max-h-80"
-          />
-        </div>
-      )}
-
-      <div className="flex flex-wrap gap-3 text-xs text-[var(--spa-text-muted)]">
-        {record.promptVersion && (
-          <span>
-            {t.metaPromptVer}: {record.promptVersion}
-          </span>
-        )}
-        {record.depth && (
-          <span>
-            {t.metaDepth}: {record.depth}
-          </span>
-        )}
-        {record.locale && (
-          <span>
-            {t.metaAiLang}: {record.locale}
-          </span>
-        )}
-      </div>
-
-      {parsed.score != null && (
-        <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:gap-8">
-          <div className="flex h-[4.5rem] w-[4.5rem] shrink-0 flex-col items-center justify-center rounded-full border border-[var(--spa-border)] bg-[var(--spa-elevated)]">
-            <span className="text-2xl font-light tabular-nums tracking-tight text-[var(--spa-text)]">
-              {parsed.score}
-            </span>
-            <span className="text-[10px] uppercase tracking-widest text-[var(--spa-text-muted)]">
-              / 100
-            </span>
-          </div>
-          {parsed.highlight && (
-            <blockquote className="flex-1 border-l border-[var(--spa-border)] pl-5 text-sm leading-relaxed text-[var(--spa-text-secondary)]">
-              {parsed.highlight}
-            </blockquote>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div className="mono flex flex-wrap items-center gap-x-3 gap-y-1">
+          <span>{formatRecordDate(record.createdAt, "full")}</span>
+          {record.sessionNote && (
+            <>
+              <span aria-hidden>—</span>
+              <span className="max-w-[42ch] truncate">{record.sessionNote}</span>
+            </>
           )}
         </div>
-      )}
-
-      <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
-          onClick={exportPdf}
-          disabled={pdfBusy}
-          className="inline-flex items-center gap-2 rounded-lg border border-[var(--crux-text)] bg-[var(--crux-text)] px-4 py-2 text-xs font-medium text-[var(--crux-surface)] transition hover:opacity-90 disabled:opacity-50"
-        >
-          <IconDownload className="h-3.5 w-3.5" />
-          {pdfBusy ? (uiLocale === "zh" ? "生成中…" : "Exporting…") : t.downloadPdf}
-        </button>
-        <button
-          type="button"
-          onClick={exportMd}
-          className="inline-flex items-center gap-2 rounded-lg border border-[var(--spa-border)] bg-[var(--spa-surface)] px-3 py-2 text-xs font-medium text-[var(--spa-text)] transition hover:bg-[var(--spa-elevated)]"
-        >
-          <IconFileText className="h-3.5 w-3.5" />
-          {t.exportMarkdown}
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={exportPdf}
+            disabled={pdfBusy}
+            className="btn btn--sm"
+          >
+            <IconDownload className="h-3.5 w-3.5" />
+            {pdfBusy ? (zh ? "生成中…" : "Exporting…") : t.downloadPdf}
+          </button>
+          <button type="button" onClick={exportMd} className="btn btn--sm">
+            <IconFileText className="h-3.5 w-3.5" />
+            {t.exportMarkdown}
+          </button>
+        </div>
       </div>
 
-      {structured.hasStructuredContent ? (
-        <StructuredReportView structured={structured} uiLocale={uiLocale} />
-      ) : (
-        parsed.highlight && (
-          <p className="rounded-xl border border-[var(--spa-border-subtle)] bg-[var(--spa-elevated)] p-4 text-sm leading-relaxed text-[var(--spa-text-secondary)]">
-            {parsed.highlight}
-          </p>
-        )
-      )}
+      <div className="result-grid">
+        {/* ---------- 左：视频 + 分数 + 数据 ---------- */}
+        <div>
+          {videoUrl ? (
+            <div className="border-2 border-[var(--crux-border)] bg-[#12100d]">
+              <video
+                ref={videoRef}
+                src={videoUrl}
+                controls
+                className="aspect-video w-full object-contain"
+              />
+            </div>
+          ) : (
+            <div className="flex aspect-video w-full flex-col items-center justify-center gap-2 border-2 border-[var(--crux-border-subtle)] bg-[var(--crux-surface)] px-6 text-center">
+              <IconFilm className="h-5 w-5 text-[var(--crux-text-muted)]" />
+              <p className="mono max-w-[30ch] leading-relaxed">
+                {zh
+                  ? "这段视频没有存在本机。换设备后只同步了报告文字。"
+                  : "No local copy of this video — only the report was synced."}
+              </p>
+            </div>
+          )}
 
-      {segments.length > 0 && (
-        <section>
-          <h3 className="spa-label mb-4">{t.analysisTimeline}</h3>
-          <ul className="flex flex-col gap-2">
-            {segments.map((seg, i) => (
-              <li key={`${seg.timestamp}-${i}`} className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => togglePin(i)}
-                  className={`mt-3 shrink-0 rounded-lg border p-2 transition ${
-                    pinned.has(i)
-                      ? "border-[var(--crux-accent)] bg-[var(--crux-accent-soft)] text-[var(--crux-accent)]"
-                      : "border-[var(--spa-border-subtle)] text-[var(--crux-accent)]/50 hover:border-[var(--crux-accent)] hover:bg-[var(--crux-accent-soft)] hover:text-[var(--crux-accent)]"
-                  }`}
-                  aria-pressed={pinned.has(i)}
-                  title={pinned.has(i) ? t.unpinSegment : t.pinSegment}
-                >
-                  <IconStar className="h-4 w-4" filled={pinned.has(i)} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => seekTo(seg.seconds, i)}
-                  className={`min-w-0 flex-1 rounded-xl border px-4 py-3.5 text-left transition ${
-                    activeIndex === i
-                      ? "border-[var(--spa-text)] bg-[var(--spa-focus)]"
-                      : "border-[var(--spa-border-subtle)] bg-[var(--spa-elevated)] hover:border-[var(--spa-border)]"
-                  } ${pinned.has(i) ? "ring-1 ring-[var(--spa-text-muted)]/30" : ""}`}
-                >
-                  <span className="inline-flex items-center gap-1.5 font-mono text-xs font-medium tabular-nums text-[var(--spa-text-secondary)]">
-                    <IconClock className="h-3.5 w-3.5" />
-                    {seg.timestamp}
+          {parsed.score != null && (
+            <div className="mt-6 flex items-start gap-6">
+              <div className="flex-none">
+                <div className="flex items-baseline gap-1">
+                  <span className="num text-[4rem] font-black leading-[0.9] tracking-[-0.05em]">
+                    {parsed.score}
                   </span>
-                  <span className="mt-1.5 block text-sm leading-relaxed text-[var(--spa-text)]">
-                    {seg.content}
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+                  <span className="mono">/ 100</span>
+                </div>
+                <span className="mono mt-1 block">
+                  {zh ? "动作完成度" : "Movement score"}
+                </span>
+              </div>
+              {parsed.highlight && (
+                <p className="max-w-[46ch] border-l-4 border-[var(--crux-border)] pl-4 text-sm leading-[1.7] text-[var(--crux-text-secondary)]">
+                  {parsed.highlight}
+                </p>
+              )}
+            </div>
+          )}
 
-      <section>
-        <button
-          type="button"
-          onClick={() => setShowFullRaw((v) => !v)}
-          className="inline-flex items-center gap-2 text-xs font-medium text-[var(--spa-text-muted)] transition hover:text-[var(--spa-text-secondary)]"
-        >
-          <IconFileText className="h-3.5 w-3.5" />
-          {showFullRaw ? t.hideFullText : t.showFullText}
-          <IconChevronDown
-            className={`h-3.5 w-3.5 transition ${showFullRaw ? "rotate-180" : ""}`}
-          />
-        </button>
-        {showFullRaw && (
-          <pre className="mt-3 max-h-64 overflow-auto rounded-xl border border-[var(--spa-border-subtle)] bg-[var(--spa-elevated)] p-4 text-[11px] leading-relaxed text-[var(--spa-text-muted)] whitespace-pre-wrap">
-            {analysis}
-          </pre>
-        )}
-      </section>
+          <div className="panel-flat mt-6">
+            <div className="panel-head">
+              <span className="t">{zh ? "这条线的数据" : "Route data"}</span>
+              <span
+                className="h-3 w-1"
+                style={{ background: gradeTapeColor(record.grade) }}
+                aria-hidden
+              />
+            </div>
+            <div className="panel-body !py-2">
+              <dl className="m-0">
+                {metaRows.map(([k, v]) => (
+                  <div
+                    key={k}
+                    className="flex items-baseline justify-between gap-4 border-b border-[var(--crux-hair)] py-2 text-xs last:border-b-0"
+                  >
+                    <dt className="text-[var(--crux-text-muted)]">{k}</dt>
+                    <dd className="m-0 font-bold num">{v}</dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+          </div>
+        </div>
 
-      {segments.length === 0 && !structured.hasStructuredContent && (
-        <p className="whitespace-pre-wrap text-sm leading-relaxed text-[var(--spa-text-secondary)]">
-          {analysis}
-        </p>
-      )}
+        {/* ---------- 右：时间轴 + 结构化报告 ---------- */}
+        <div className="min-w-0">
+          {segments.length > 0 && (
+            <section aria-labelledby="timeline-title">
+              <div className="mb-1 flex items-baseline gap-2">
+                <h3 id="timeline-title" className="h2 !text-[0.9375rem]">
+                  {t.analysisTimeline}
+                </h3>
+                <span className="mono">
+                  {videoUrl
+                    ? zh
+                      ? "点一行，视频跳到那一刻"
+                      : "Tap a line to seek"
+                    : zh
+                      ? "按时间点看动作"
+                      : "By timestamp"}
+                </span>
+              </div>
+              <ul className="timeline">
+                {segments.map((seg, i) => (
+                  <li
+                    key={`${seg.timestamp}-${i}`}
+                    data-active={activeIndex === i}
+                    data-pinned={pinned.has(i)}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => seekTo(seg.seconds, i)}
+                      className="seek"
+                    >
+                      <span className="ts inline-flex items-center gap-1.5">
+                        <IconClock className="h-3 w-3" />
+                        {seg.timestamp}
+                      </span>
+                      <p>{seg.content}</p>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => togglePin(i)}
+                      className="pin"
+                      aria-pressed={pinned.has(i)}
+                      title={pinned.has(i) ? t.unpinSegment : t.pinSegment}
+                    >
+                      <IconStar className="h-4 w-4" filled={pinned.has(i)} />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          {structured.hasStructuredContent ? (
+            <div className="mt-7">
+              <StructuredReportView structured={structured} uiLocale={uiLocale} />
+            </div>
+          ) : (
+            parsed.highlight && (
+              <p className="note-box mt-6">{parsed.highlight}</p>
+            )
+          )}
+
+          {sameGrade.length > 0 && (
+            <section className="mt-7">
+              <h3 className="h2 !text-[0.9375rem]">
+                {zh
+                  ? `同难度（${record.grade}）的前几次`
+                  : `Other ${record.grade} sessions`}
+              </h3>
+              <ul className="mt-2 border-t-2 border-[var(--crux-border)]">
+                {sameGrade.map((r) => (
+                  <li
+                    key={r.id}
+                    className="flex items-baseline gap-3 border-b border-[var(--crux-hair)] py-2.5 text-xs"
+                  >
+                    <span className="mono">{formatRecordDate(r.createdAt)}</span>
+                    <span className="ml-auto font-extrabold num">
+                      {r.score ?? "—"}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          <section className="mt-7">
+            <button
+              type="button"
+              onClick={() => setShowFullRaw((v) => !v)}
+              className="inline-flex items-center gap-2 text-xs font-bold text-[var(--crux-text-muted)] transition hover:text-[var(--crux-text)]"
+            >
+              <IconFileText className="h-3.5 w-3.5" />
+              {showFullRaw ? t.hideFullText : t.showFullText}
+              <IconChevronDown
+                className={`h-3.5 w-3.5 transition ${showFullRaw ? "rotate-180" : ""}`}
+              />
+            </button>
+            {showFullRaw && (
+              <pre className="mt-3 max-h-72 overflow-auto border-2 border-[var(--crux-border-subtle)] bg-[var(--crux-surface)] p-4 text-[0.7rem] leading-relaxed whitespace-pre-wrap text-[var(--crux-text-secondary)]">
+                {analysis}
+              </pre>
+            )}
+          </section>
+
+          {segments.length === 0 && !structured.hasStructuredContent && (
+            <p className="mt-6 whitespace-pre-wrap text-sm leading-relaxed text-[var(--crux-text-secondary)]">
+              {analysis}
+            </p>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

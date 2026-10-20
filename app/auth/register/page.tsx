@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { AuthForm } from "@/components/auth-form";
-import { SiteNav } from "@/components/site-nav";
+import { CruxHeader } from "@/components/crux-header";
 import { useAuth } from "@/lib/use-auth";
 import { useUiLocale } from "@/lib/use-ui-locale";
 import { STRINGS } from "@/lib/strings";
@@ -21,25 +21,21 @@ export default function RegisterPage() {
 
   return (
     <main className="crux-page">
-      <div className="crux-container-narrow">
-        <SiteNav uiLocale={uiLocale} />
-        <header className="mb-8 border-2 border-[var(--crux-border)] border-l-[6px] border-l-[var(--crux-accent)] bg-[var(--crux-surface)] p-6 shadow-[4px_4px_0_var(--crux-border)]">
-          <p className="spa-label mb-2">{t.brand}</p>
-          <h1 className="text-2xl font-black uppercase tracking-tight text-[var(--crux-text)] sm:text-3xl">
-            {t.authRegisterTitle}
-          </h1>
-          <p className="mt-3 text-sm leading-relaxed text-[var(--crux-text-muted)]">
-            {t.authRegisterSubtitle}
-          </p>
-        </header>
+      <CruxHeader />
 
-        <AuthForm mode="register" uiLocale={uiLocale} configured={configured} />
+      <div className="mx-auto w-full max-w-[32rem] px-[clamp(1rem,3vw,3rem)] py-10">
+        <h1 className="h1 !text-[2.25rem]">{t.authRegisterTitle}</h1>
+        <p className="lede">{t.authRegisterSubtitle}</p>
 
-        <p className="mt-6 text-center text-sm text-[var(--crux-text-muted)]">
+        <div className="mt-7">
+          <AuthForm mode="register" uiLocale={uiLocale} configured={configured} />
+        </div>
+
+        <p className="mt-6 text-sm text-[var(--crux-text-muted)]">
           {t.authHasAccount}{" "}
           <Link
             href="/auth/login"
-            className="font-bold text-[var(--crux-accent)] hover:underline"
+            className="font-extrabold text-[var(--crux-text)] underline decoration-[var(--crux-accent)] decoration-2 underline-offset-4"
           >
             {t.authLogin}
           </Link>

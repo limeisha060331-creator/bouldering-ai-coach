@@ -4,11 +4,12 @@ import { Suspense, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { AnalysisView } from "@/components/analysis-view";
-import { SiteNav } from "@/components/site-nav";
+import { CruxHeader } from "@/components/crux-header";
 import { IconArrowLeft, IconLoader } from "@/components/icons";
 import { getAnalysisRecord, patchAnalysisRecord } from "@/lib/analysis-db";
 import { STRINGS } from "@/lib/strings";
 import { useUiLocale } from "@/lib/use-ui-locale";
+import { gradeTapeColor } from "@/lib/grade-tape";
 import type { AnalysisRecord } from "@/lib/types";
 
 function AnalysisDetailContent() {
@@ -17,6 +18,7 @@ function AnalysisDetailContent() {
   const id = params.id as string;
   const [uiLocale] = useUiLocale();
   const t = STRINGS[uiLocale];
+  const zh = uiLocale === "zh";
 
   const segParam = searchParams.get("seg");
   const tParam = searchParams.get("t");
@@ -80,28 +82,31 @@ function AnalysisDetailContent() {
 
   if (loading) {
     return (
-      <main className="crux-page flex min-h-screen items-center justify-center">
-        <p className="flex items-center gap-2 text-sm text-[var(--spa-text-muted)]">
-          <IconLoader className="h-4 w-4" />
-          {t.detailLoading}
-        </p>
+      <main className="crux-page">
+        <CruxHeader />
+        <div className="shell flex flex-1 items-center justify-center">
+          <p className="mono flex items-center gap-2">
+            <IconLoader className="h-4 w-4" />
+            {t.detailLoading}
+          </p>
+        </div>
       </main>
     );
   }
 
   if (notFound || !record) {
     return (
-      <main className="crux-page flex min-h-screen flex-col items-center justify-center gap-5 px-5">
-        <p className="text-sm text-[var(--spa-text-secondary)]">
-          {t.detailNotFound}
-        </p>
-        <Link
-          href="/analyze"
-          className="inline-flex items-center gap-2 text-sm font-medium text-[var(--spa-text)] underline-offset-4 hover:underline"
-        >
-          <IconArrowLeft className="h-4 w-4" />
-          {t.detailBack}
-        </Link>
+      <main className="crux-page">
+        <CruxHeader />
+        <div className="shell flex flex-1 flex-col items-center justify-center gap-5">
+          <p className="text-sm text-[var(--crux-text-secondary)]">
+            {t.detailNotFound}
+          </p>
+          <Link href="/analyze" className="btn">
+            <IconArrowLeft className="h-4 w-4" />
+            {t.detailBack}
+          </Link>
+        </div>
       </main>
     );
   }
@@ -126,36 +131,40 @@ function AnalysisDetailContent() {
 
   return (
     <main className="crux-page">
-      <div className="crux-container-narrow">
-        <SiteNav uiLocale={uiLocale} />
-        <header className="mb-6">
-          <Link
-            href="/analyze"
-            className="inline-flex items-center gap-1.5 text-xs text-[var(--spa-text-muted)] transition hover:text-[var(--spa-text-secondary)]"
-          >
-            <IconArrowLeft className="h-3.5 w-3.5" />
-            {uiLocale === "zh" ? "返回" : "Back"}
-          </Link>
-          <h1 className="mt-4 text-xl font-black uppercase tracking-tight text-[var(--crux-text)] sm:text-2xl">
+      <CruxHeader />
+
+      <div className="shell">
+        <Link
+          href="/analyze"
+          className="mono inline-flex items-center gap-1.5 transition hover:text-[var(--crux-text)]"
+        >
+          <IconArrowLeft className="h-3.5 w-3.5" />
+          {zh ? "返回分析" : "Back to analyze"}
+        </Link>
+
+        <header className="mt-4 flex flex-wrap items-end justify-between gap-x-6 gap-y-3 border-b-2 border-[var(--crux-border)] pb-5">
+          <div className="flex items-end gap-3">
+            <span className="text-[3.5rem] font-black leading-[0.8] tracking-[-0.055em]">
+              {record.grade ?? "—"}
+            </span>
+            <span className="pb-1.5 text-xl font-extrabold tracking-tight">
+              {zh ? "抱石分析报告" : "Bouldering report"}
+            </span>
+            <span
+              className="mb-2 h-8 w-2"
+              style={{ background: gradeTapeColor(record.grade) }}
+              aria-hidden
+            />
+          </div>
+          <p className="mono max-w-[34ch] truncate">
             {record.fileName}
-          </h1>
-          <p className="mt-1.5 crux-mono text-xs text-[var(--crux-text-muted)]">
-            {new Date(record.createdAt).toLocaleString(
-              uiLocale === "zh" ? "zh-CN" : "en-US"
-            )}
-            {record.grade ? ` · ${record.grade}` : ""}
             {record.ascentMeters != null
-              ? ` · ${record.ascentMeters}m`
+              ? ` ，${record.ascentMeters} ${zh ? "米" : "m"}`
               : ""}
           </p>
-          {record.sessionNote && (
-            <p className="mt-2 text-sm text-[var(--crux-text-secondary)]">
-              {record.sessionNote}
-            </p>
-          )}
         </header>
 
-        <article className="spa-panel p-6 sm:p-8">
+        <div className="mt-6">
           <AnalysisView
             analysis={record.analysis}
             videoUrl={videoUrl}
@@ -173,7 +182,7 @@ function AnalysisDetailContent() {
                 : null
             }
           />
-        </article>
+        </div>
       </div>
     </main>
   );
@@ -183,8 +192,11 @@ export default function AnalysisDetailPage() {
   return (
     <Suspense
       fallback={
-        <main className="crux-page flex min-h-screen items-center justify-center">
-          <p className="text-sm text-[var(--spa-text-muted)]">加载中…</p>
+        <main className="crux-page">
+          <CruxHeader />
+          <div className="shell flex flex-1 items-center justify-center">
+            <p className="mono">加载中…</p>
+          </div>
         </main>
       }
     >

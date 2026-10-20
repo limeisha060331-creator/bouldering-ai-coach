@@ -7,9 +7,15 @@ type Props = {
   score: number | null;
   highlight: string | null;
   fileName?: string;
+  grade?: string | null;
 };
 
-export function ShareCardButton({ score, highlight, fileName }: Props) {
+const PAPER = "#ede8df";
+const INK = "#17130f";
+const MUTED = "#6f665a";
+const ORANGE = "#f04a12";
+
+export function ShareCardButton({ score, highlight, fileName, grade }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [sharing, setSharing] = useState(false);
 
@@ -21,57 +27,57 @@ export function ShareCardButton({ score, highlight, fileName }: Props) {
     canvas.width = w;
     canvas.height = h;
 
-    const grad = ctx.createLinearGradient(0, 0, 0, h);
-    grad.addColorStop(0, "#f6f4f0");
-    grad.addColorStop(1, "#efede8");
-    ctx.fillStyle = grad;
+    ctx.fillStyle = PAPER;
     ctx.fillRect(0, 0, w, h);
 
-    ctx.strokeStyle = "rgba(26, 25, 23, 0.06)";
-    ctx.lineWidth = 1;
-    for (let y = 0; y < h; y += 48) {
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(w, y);
-      ctx.stroke();
+    // 2px 墨线边框，和页面同一套结构
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = 4;
+    ctx.strokeRect(32, 32, w - 64, h - 64);
+
+    // 左上角胶带
+    ctx.fillStyle = ORANGE;
+    ctx.fillRect(62, 32, 14, 120);
+
+    ctx.fillStyle = INK;
+    ctx.font = "800 30px system-ui, sans-serif";
+    ctx.fillText("CRUX 抱石", 100, 108);
+    ctx.fillStyle = MUTED;
+    ctx.font = "400 20px system-ui, sans-serif";
+    ctx.fillText(fileName || "攀爬片段", 100, 146);
+
+    if (grade) {
+      ctx.fillStyle = INK;
+      ctx.font = "900 120px system-ui, sans-serif";
+      ctx.fillText(grade, 100, 316);
     }
-
-    ctx.fillStyle = "#1a1917";
-    ctx.font = "500 26px system-ui, sans-serif";
-    ctx.fillText("抱石分析 · AI Coach", 48, 88);
-
-    ctx.fillStyle = "#8a857c";
-    ctx.font = "20px system-ui, sans-serif";
-    ctx.fillText(fileName || "攀爬片段", 48, 128);
 
     if (score != null) {
-      ctx.strokeStyle = "#e8e4dc";
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.arc(w / 2, 320, 96, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.fillStyle = "#1a1917";
-      ctx.font = "300 72px system-ui, sans-serif";
-      ctx.textAlign = "center";
-      ctx.fillText(String(score), w / 2, 340);
-      ctx.font = "18px system-ui, sans-serif";
-      ctx.fillStyle = "#8a857c";
-      ctx.fillText("/ 100", w / 2, 378);
-      ctx.textAlign = "left";
+      ctx.fillStyle = INK;
+      ctx.font = "900 96px system-ui, sans-serif";
+      const baseY = grade ? 470 : 320;
+      ctx.fillText(String(score), 100, baseY);
+      const scoreWidth = ctx.measureText(String(score)).width;
+      ctx.fillStyle = MUTED;
+      ctx.font = "400 24px ui-monospace, monospace";
+      ctx.fillText("/ 100", 100 + scoreWidth + 12, baseY);
     }
 
-    ctx.fillStyle = "#5c5852";
-    ctx.font = "500 22px system-ui, sans-serif";
-    ctx.fillText("教练金句", 48, 480);
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(100, 560);
+    ctx.lineTo(w - 100, 560);
+    ctx.stroke();
 
     const quote = highlight || "每一次发力，都是向顶点的致敬。";
-    ctx.fillStyle = "#1a1917";
-    ctx.font = "28px system-ui, sans-serif";
-    wrapText(ctx, quote, 48, 530, w - 96, 42);
+    ctx.fillStyle = INK;
+    ctx.font = "500 30px system-ui, sans-serif";
+    wrapText(ctx, quote, 100, 630, w - 200, 48);
 
-    ctx.fillStyle = "#9c9890";
-    ctx.font = "18px system-ui, sans-serif";
-    ctx.fillText("bouldering-ai-coach.vercel.app", 48, h - 56);
+    ctx.fillStyle = MUTED;
+    ctx.font = "400 20px ui-monospace, monospace";
+    ctx.fillText("bouldering-ai-coach.vercel.app", 100, h - 88);
 
     return new Promise((resolve, reject) => {
       canvas.toBlob(
@@ -126,12 +132,7 @@ export function ShareCardButton({ score, highlight, fileName }: Props) {
   return (
     <>
       <canvas ref={canvasRef} className="hidden" aria-hidden />
-      <button
-        type="button"
-        onClick={handleShare}
-        disabled={sharing}
-        className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-[var(--spa-border)] bg-[var(--spa-surface)] px-4 py-2.5 text-sm font-medium text-[var(--spa-text)] shadow-[var(--spa-shadow)] transition hover:bg-[var(--spa-elevated)] disabled:opacity-50"
-      >
+      <button type="button" onClick={handleShare} disabled={sharing} className="btn">
         {sharing ? (
           <>
             <IconLoader className="h-4 w-4" />
