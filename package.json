@@ -13,6 +13,8 @@
     "test:watch": "vitest",
     "eval": "tsx evals/run.ts",
     "eval:compare": "tsx evals/compare.ts",
+    "corpus:fetch": "tsx evals/corpus/fetch.ts",
+    "eval:live": "tsx evals/live.ts",
     "cost:report": "tsx evals/cost-report.ts"
   },
   "dependencies": {

@@ -7,6 +7,8 @@
 | 成本模型 | `npm run cost:report` | `docs/quality/cost-model.md` |
 | 评测回归 | `npm run eval` | `evals/runs/<runId>/report.md` |
 | 版本对比 | `npm run eval:compare -- <baseline> <candidate>` | `comparison-vs-*.md` |
+| 真实语料 | `npm run corpus:fetch` | `evals/private/corpus/manifest.json` |
+| 真实基线 | `npm run eval:live` | 结构指标、真实 token、真实耗时 |
 | 失败分类 | `lib/failure-taxonomy.ts` | 每个失败码的级别、责任方、修复与回归 |
 
 ## 快速开始
@@ -31,19 +33,37 @@ npm run eval:compare -- baseline candidate
 
 ```text
 evals/
-├─ cases/       案例元数据：时长、难度、人工 5 维评分、必须提到的线索
-├─ fixtures/    模型输出夹具：strong / generic / malformed
-├─ runs/        每次评测的结果 JSON 与 Markdown 报告
-├─ run.ts       评测入口
-├─ compare.ts   两版对比与决策
+├─ cases/           案例元数据：时长、难度、人工 5 维评分、必须提到的线索
+├─ fixtures/        模型输出夹具：strong / generic / malformed
+├─ corpus/
+│  ├─ sources/      真实视频的授权清单（进仓库，可复核）
+│  ├─ schema.ts     语料 schema 与覆盖度统计
+│  └─ fetch.ts      下载器：sha256 固定、429 退避、断点续传
+├─ private/         真实视频与 manifest（.gitignore，不进仓库）
+├─ runs/            每次评测的结果 JSON 与 Markdown 报告
+├─ run.ts           replay 评测入口
+├─ live.ts          live 评测入口（真实视频 + 真实 API）
+├─ live-report.ts   live 报告渲染
+├─ compare.ts       两版对比与决策
 ├─ cost-report.ts 成本模型生成器
-└─ report.ts    Markdown 渲染
+└─ report.ts       replay 报告渲染
 ```
 
 ## 两种模式
 
-- `replay`：读 `fixtures/` 里已有的模型输出，离线跑指标。当前默认模式，不需要 API Key，适合 CI 和回归。
-- `live`：以后接真实视频与真实模型调用，写入实际 usage。当前还没有实现，避免把合成数据伪装成真实基线。
+- `replay`：读 `fixtures/` 里已有的模型输出，离线跑指标。不需要 API Key，适合 CI 和回归，也可以复现历史上的 badcase。
+- `live`：读 `evals/private/corpus/manifest.json`，跑生产同一条链路（uploadFile → 轮询 ACTIVE → generateContent），记录 provider 真实 token、各阶段耗时和原始输出。
+
+两种模式的指标集不同，这是故意的：
+
+| | replay | live |
+| --- | --- | --- |
+| 人工标签 | 需要（fixtures 指向上面的 case） | 可以没有 |
+| 能出综合质量分 | 能 | 不能，只出结构分 |
+| 能出 5 维 MAE | 能 | 不能，等人标 |
+| 能出真实 token / 成本 / 耗时 | 不能（估算） | 能 |
+
+`live` 模式只跑不依赖人工标注的指标：格式合法率、时间戳可定位率、空话率、重复片段率、失败码分布。没有人工金标就不给质量分，避免把“格式对了”说成“教练质量达标”。
 
 ## 指标口径
 
@@ -67,9 +87,14 @@ evals/
 
 案例视频不要进仓库。仓库只存元数据、标签和脱敏后的输出；视频留在本地或私有存储。
 
+## 真实语料的授权边界
+
+来源、筛选规则和授权矩阵写在 [docs/quality/data-sources.md](../docs/quality/data-sources.md)。一句话：只收授权明确的公开视频（CC0 / CC BY / CC BY-SA / 公有领域），视频不进仓库，只提交元数据与 sha256。
+
 ## 当前限制
 
 - 夹具是合成的，报告里的数字只能证明脚本能跑，不能证明模型质量。
 - 维度分依赖模型显式输出「维度分：…」这一行；当前 Prompt 不保证，所以 `DIMENSION_SCORES_MISSING` 是预期内的失败。
 - 成本是估算，不是账单；接入真实 usage 后要校准一次。
+- `live` 模式的语料是公开授权的赛事与户外视频，机位和选手水平都优于普通用户，结论不能直接外推到 C 端。
 - 还没有把评测接到 CI 和线上看板，这是下一步。

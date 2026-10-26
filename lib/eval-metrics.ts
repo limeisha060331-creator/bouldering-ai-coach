@@ -11,21 +11,12 @@ import {
   type FailureFinding,
   type FailureSeverity,
 } from "./failure-taxonomy";
-
-const GENERIC_PHRASES = [
-  "注意重心",
-  "多练习",
-  "加强核心",
-  "保持专注",
-  "放松",
-  "多爬",
-  "要自信",
-  "找准节奏",
-  "整体不错",
-  "继续努力",
-  "需要加强",
-  "要更稳",
-] as const;
+import {
+  checkTimestamps,
+  computeDuplicateSegmentRate,
+  countGenericSegments,
+  meanSegmentChars,
+} from "./eval-signals";
 
 const SEVERITY_RANK: Record<FailureSeverity, number> = {
   P0: 0,
@@ -82,13 +73,6 @@ function clamp(value: number, min: number, max: number): number {
 function mean(values: number[]): number {
   if (values.length === 0) return 0;
   return values.reduce((sum, value) => sum + value, 0) / values.length;
-}
-
-function normalizeSegmentText(text: string): string {
-  return text
-    .toLowerCase()
-    .replace(/[\s，。！？、；：,.!?;:'"“”‘’（）()\-—]/g, "")
-    .trim();
 }
 
 function labelToDimension(label: string): DimensionKey | null {
@@ -155,29 +139,13 @@ export function evaluateAnalysis(
   const gradeMatch =
     gradePredicted == null ? null : gradePredicted === evalCase.grade;
 
-  const inRangeCount = segments.filter(
-    (segment) =>
-      segment.seconds >= 0 && segment.seconds <= evalCase.durationSec + 2
-  ).length;
-  const timestampInRangeRate =
-    segmentCount === 0 ? 0 : inRangeCount / segmentCount;
+  const timestamps = checkTimestamps(parsed, evalCase.durationSec);
+  const inRangeCount = timestamps.inRangeCount;
+  const timestampInRangeRate = timestamps.inRangeRate;
+  const timestampMonotonic = timestamps.monotonic;
 
-  const timestampMonotonic = segments.every(
-    (segment, index) =>
-      index === 0 || segment.seconds >= segments[index - 1].seconds
-  );
-
-  const normalized = segments.map((segment) =>
-    normalizeSegmentText(segment.content)
-  );
-  const duplicateCount =
-    segmentCount === 0 ? 0 : segmentCount - new Set(normalized).size;
-  const duplicateSegmentRate =
-    segmentCount === 0 ? 0 : duplicateCount / segmentCount;
-
-  const genericCount = segments.filter((segment) =>
-    GENERIC_PHRASES.some((phrase) => segment.content.includes(phrase))
-  ).length;
+  const duplicateSegmentRate = computeDuplicateSegmentRate(segments);
+  const genericCount = countGenericSegments(segments);
   const genericAdviceRate =
     segmentCount === 0 ? 1 : genericCount / segmentCount;
 
@@ -192,10 +160,7 @@ export function evaluateAnalysis(
       ? 1
       : mustMentionHits.length / evalCase.labels.mustMention.length;
 
-  const avgSegmentChars =
-    segmentCount === 0
-      ? 0
-      : mean(segments.map((segment) => segment.content.length));
+  const avgSegmentChars = meanSegmentChars(segments);
 
   const dimensionScores = parseDimensionScores(raw);
   const dimensionMae = dimensionScores

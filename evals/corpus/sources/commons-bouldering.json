@@ -1,0 +1,243 @@
+{
+  "collection": "commons-bouldering",
+  "createdAt": "2026-10-26",
+  "note": "维基共享资源上授权明确的可下载抱石视频。只收视频容器受 Gemini File API 支持的条目（排除 ogv/ogg）。",
+  "items": [
+    {
+      "id": "gym-rockspot-v3",
+      "title": "Indoor Bouldering V3 Rock Spot.webm",
+      "venue": "indoor-gym",
+      "grade": "V3",
+      "tags": [
+        "commercial-gym",
+        "portrait",
+        "amateur"
+      ],
+      "durationSec": 45.91,
+      "sizeBytes": 1933025,
+      "width": 204,
+      "height": 360,
+      "orientation": "portrait",
+      "mimeType": "video/webm",
+      "license": "CC BY-SA 3.0",
+      "artist": "Cryptic C62",
+      "sourcePage": "https://commons.wikimedia.org/wiki/File:Indoor_Bouldering_V3_Rock_Spot.webm",
+      "downloadUrl": "https://upload.wikimedia.org/wikipedia/commons/5/5c/Indoor_Bouldering_V3_Rock_Spot.webm?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original"
+    },
+    {
+      "id": "hueco-baby-martini-v6",
+      "title": "Hueco Tanks - Baby Martini - V6.webm",
+      "venue": "outdoor",
+      "grade": "V6",
+      "tags": [
+        "hueco-tanks",
+        "texas",
+        "granite"
+      ],
+      "durationSec": 46.44,
+      "sizeBytes": 54554093,
+      "width": 1920,
+      "height": 1080,
+      "orientation": "landscape",
+      "mimeType": "video/webm",
+      "license": "CC BY 3.0",
+      "artist": "Cameras and editing: Gabi Enos, Brandon Fox",
+      "sourcePage": "https://commons.wikimedia.org/wiki/File:Hueco_Tanks_-_Baby_Martini_-_V6.webm",
+      "downloadUrl": "https://upload.wikimedia.org/wikipedia/commons/3/34/Hueco_Tanks_-_Baby_Martini_-_V6.webm?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original"
+    },
+    {
+      "id": "hueco-fern-roof-v10",
+      "title": "Hueco Tanks - Fern Roof - V10.webm",
+      "venue": "outdoor",
+      "grade": "V10",
+      "tags": [
+        "hueco-tanks",
+        "texas",
+        "granite"
+      ],
+      "durationSec": 28.76,
+      "sizeBytes": 37615607,
+      "width": 1920,
+      "height": 1080,
+      "orientation": "landscape",
+      "mimeType": "video/webm",
+      "license": "CC BY 3.0",
+      "artist": "Cameras and editing: Gabi Enos, Brandon Fox",
+      "sourcePage": "https://commons.wikimedia.org/wiki/File:Hueco_Tanks_-_Fern_Roof_-_V10.webm",
+      "downloadUrl": "https://upload.wikimedia.org/wikipedia/commons/d/df/Hueco_Tanks_-_Fern_Roof_-_V10.webm?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original"
+    },
+    {
+      "id": "hueco-schwerer-gustav-v11",
+      "title": "Hueco Tanks - Schwerer Gustav - V11.webm",
+      "venue": "outdoor",
+      "grade": "V11",
+      "tags": [
+        "hueco-tanks",
+        "texas",
+        "granite"
+      ],
+      "durationSec": 37.04,
+      "sizeBytes": 41409064,
+      "width": 1920,
+      "height": 1080,
+      "orientation": "landscape",
+      "mimeType": "video/webm",
+      "license": "CC BY 3.0",
+      "artist": "\"Cameras and editing: Gabi Enos, Brandon Fox",
+      "sourcePage": "https://commons.wikimedia.org/wiki/File:Hueco_Tanks_-_Schwerer_Gustav_-_V11.webm",
+      "downloadUrl": "https://upload.wikimedia.org/wikipedia/commons/1/10/Hueco_Tanks_-_Schwerer_Gustav_-_V11.webm?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original"
+    },
+    {
+      "id": "ifsc-euros-2020-khazanov-b3",
+      "title": "2020-11-28 - IFSC Euros - Combined M-B - Alex Khazanov - Video 3.webm",
+      "venue": "indoor-competition",
+      "grade": null,
+      "tags": [
+        "ifsc",
+        "euro-championships",
+        "2020"
+      ],
+      "durationSec": 19.01,
+      "sizeBytes": 10929714,
+      "width": 1920,
+      "height": 1080,
+      "orientation": "landscape",
+      "mimeType": "video/webm",
+      "license": "CC0",
+      "artist": "Voltmetro",
+      "sourcePage": "https://commons.wikimedia.org/wiki/File:2020-11-28_-_IFSC_Euros_-_Combined_M-B_-_Alex_Khazanov_-_Video_3.webm",
+      "downloadUrl": "https://upload.wikimedia.org/wikipedia/commons/e/e0/2020-11-28_-_IFSC_Euros_-_Combined_M-B_-_Alex_Khazanov_-_Video_3.webm?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original"
+    },
+    {
+      "id": "jmm-2013-becan",
+      "title": "Klemen Becan finale bloc hommes JMM 2013.webm",
+      "venue": "indoor-competition",
+      "grade": null,
+      "tags": [
+        "french-masters",
+        "final",
+        "2013",
+        "long"
+      ],
+      "durationSec": 77.66,
+      "sizeBytes": 9025350,
+      "width": 854,
+      "height": 480,
+      "orientation": "landscape",
+      "mimeType": "video/webm",
+      "license": "CC BY-SA 3.0",
+      "artist": "Shev123",
+      "sourcePage": "https://commons.wikimedia.org/wiki/File:Klemen_Becan_finale_bloc_hommes_JMM_2013.webm",
+      "downloadUrl": "https://upload.wikimedia.org/wikipedia/commons/6/6e/Klemen_Becan_finale_bloc_hommes_JMM_2013.webm?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original"
+    },
+    {
+      "id": "jmm-2013-malamid",
+      "title": "Evgeniya Malamid JMM 2013 Finale Bloc.webm",
+      "venue": "indoor-competition",
+      "grade": null,
+      "tags": [
+        "french-masters",
+        "final",
+        "2013",
+        "female"
+      ],
+      "durationSec": 49.26,
+      "sizeBytes": 5161843,
+      "width": 854,
+      "height": 480,
+      "orientation": "landscape",
+      "mimeType": "video/webm",
+      "license": "CC BY-SA 3.0",
+      "artist": "Shev123",
+      "sourcePage": "https://commons.wikimedia.org/wiki/File:Evgeniya_Malamid_JMM_2013_Finale_Bloc.webm",
+      "downloadUrl": "https://upload.wikimedia.org/wikipedia/commons/1/12/Evgeniya_Malamid_JMM_2013_Finale_Bloc.webm?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original"
+    },
+    {
+      "id": "jmm-2013-markovic",
+      "title": "Mina Markovic finale bloc JMM 2013.webm",
+      "venue": "indoor-competition",
+      "grade": null,
+      "tags": [
+        "french-masters",
+        "final",
+        "2013",
+        "female"
+      ],
+      "durationSec": 45.17,
+      "sizeBytes": 7177057,
+      "width": 854,
+      "height": 480,
+      "orientation": "landscape",
+      "mimeType": "video/webm",
+      "license": "CC BY-SA 3.0",
+      "artist": "Shev123",
+      "sourcePage": "https://commons.wikimedia.org/wiki/File:Mina_Markovic_finale_bloc_JMM_2013.webm",
+      "downloadUrl": "https://upload.wikimedia.org/wikipedia/commons/5/5b/Mina_Markovic_finale_bloc_JMM_2013.webm?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original"
+    },
+    {
+      "id": "jmm-2013-schubert-long",
+      "title": "Jakob Schubert JMM 2013 Annecy.webm",
+      "venue": "indoor-competition",
+      "grade": null,
+      "tags": [
+        "french-masters",
+        "final",
+        "2013",
+        "long"
+      ],
+      "durationSec": 45.55,
+      "sizeBytes": 23408967,
+      "width": 1920,
+      "height": 1080,
+      "orientation": "landscape",
+      "mimeType": "video/webm",
+      "license": "CC BY-SA 3.0",
+      "artist": "Shev123",
+      "sourcePage": "https://commons.wikimedia.org/wiki/File:Jakob_Schubert_JMM_2013_Annecy.webm",
+      "downloadUrl": "https://upload.wikimedia.org/wikipedia/commons/3/35/Jakob_Schubert_JMM_2013_Annecy.webm?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original"
+    },
+    {
+      "id": "jmm-2013-schubert-short",
+      "title": "Jakob Schubert JMM 2013 Annecy 2.webm",
+      "venue": "indoor-competition",
+      "grade": null,
+      "tags": [
+        "french-masters",
+        "final",
+        "2013"
+      ],
+      "durationSec": 15.01,
+      "sizeBytes": 8737524,
+      "width": 1920,
+      "height": 1080,
+      "orientation": "landscape",
+      "mimeType": "video/webm",
+      "license": "CC0",
+      "artist": "Shev123",
+      "sourcePage": "https://commons.wikimedia.org/wiki/File:Jakob_Schubert_JMM_2013_Annecy_2.webm",
+      "downloadUrl": "https://upload.wikimedia.org/wikipedia/commons/3/3f/Jakob_Schubert_JMM_2013_Annecy_2.webm?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original"
+    },
+    {
+      "id": "jmm-2013-stohr",
+      "title": "Anna Stohr JMM 2013 Annecy Bloc.webm",
+      "venue": "indoor-competition",
+      "grade": null,
+      "tags": [
+        "french-masters",
+        "final",
+        "2013",
+        "female"
+      ],
+      "durationSec": 26.05,
+      "sizeBytes": 15879844,
+      "width": 1920,
+      "height": 1080,
+      "orientation": "landscape",
+      "mimeType": "video/webm",
+      "license": "CC0",
+      "artist": "Shev123",
+      "sourcePage": "https://commons.wikimedia.org/wiki/File:Anna_Stohr_JMM_2013_Annecy_Bloc.webm",
+      "downloadUrl": "https://upload.wikimedia.org/wikipedia/commons/c/c1/Anna_Stohr_JMM_2013_Annecy_Bloc.webm?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original"
+    }
+  ]
+}

@@ -40,3 +40,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# 评测语料：真实视频含人物出镜，只留本地，不进仓库
+/evals/private/
+
+# 本地临时文件与冒烟运行的中间产物
+.tmp-*
+/evals/runs/live-smoke-*/

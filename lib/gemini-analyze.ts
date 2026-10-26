@@ -159,12 +159,29 @@ export async function uploadVideoToGemini(
   return { fileName: r.fileName, fileUri: r.fileUri };
 }
 
-export async function runGeminiAnalysis(
+export type GeminiAnalysisDetail = {
+  text: string;
+  modelId: string;
+  attempts: number;
+  latencyMs: number;
+  /**
+   * 直接取 provider 返回的 usageMetadata，不做二次估算。
+   * 拿不到时为 null，评测侧必须把这类样本标成 estimate，不能混进实际账单。
+   */
+  usage: {
+    promptTokens: number;
+    cachedTokens: number;
+    outputTokens: number;
+    totalTokens: number;
+  } | null;
+};
+
+export async function runGeminiAnalysisDetailed(
   apiKey: string,
   fileUri: string,
   mimeType: string,
   options?: RunGeminiAnalysisOptions
-): Promise<string> {
+): Promise<GeminiAnalysisDetail> {
   const modelId = getGeminiModelId();
   const genAI = new GoogleGenerativeAI(apiKey);
   const depth = options?.depth ?? "deep";
@@ -186,6 +203,7 @@ export async function runGeminiAnalysis(
 
   const maxAttempts = options?.maxAttempts ?? 4;
   let lastError: unknown;
+  const startedAt = Date.now();
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
@@ -217,7 +235,25 @@ export async function runGeminiAnalysis(
 
       logInfo("gemini", "generateContent 完成", { length: text.length });
 
-      return text.trim();
+      const meta = (result.response as { usageMetadata?: Record<string, unknown> })
+        .usageMetadata;
+      const num = (value: unknown): number =>
+        typeof value === "number" && Number.isFinite(value) ? value : 0;
+
+      return {
+        text: text.trim(),
+        modelId,
+        attempts: attempt,
+        latencyMs: Date.now() - startedAt,
+        usage: meta
+          ? {
+              promptTokens: num(meta.promptTokenCount),
+              cachedTokens: num(meta.cachedContentTokenCount),
+              outputTokens: num(meta.candidatesTokenCount),
+              totalTokens: num(meta.totalTokenCount),
+            }
+          : null,
+      };
     } catch (err) {
       lastError = err;
       if (!isGeminiRetryableError(err) || attempt >= maxAttempts) {
@@ -246,6 +282,21 @@ export async function runGeminiAnalysis(
   }
 
   throw lastError;
+}
+
+export async function runGeminiAnalysis(
+  apiKey: string,
+  fileUri: string,
+  mimeType: string,
+  options?: RunGeminiAnalysisOptions
+): Promise<string> {
+  const detail = await runGeminiAnalysisDetailed(
+    apiKey,
+    fileUri,
+    mimeType,
+    options
+  );
+  return detail.text;
 }
 
 /** 同步直传（仅本地调试；Vercel 生产环境请用异步任务） */
