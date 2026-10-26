@@ -1,0 +1,21 @@
+{
+  "id": "case-001",
+  "title": "45 秒 V4 室内抱石，完攀",
+  "durationSec": 45,
+  "grade": "V4",
+  "locale": "zh",
+  "depth": "deep",
+  "model": "gemini-2.5-flash",
+  "labels": {
+    "dimensions": {
+      "hips": 4,
+      "power": 3,
+      "feet": 4,
+      "sequence": 3,
+      "completion": 5
+    },
+    "mustMention": ["折膝", "脚点", "胯部"],
+    "mustNotClaim": ["没有热身"],
+    "notes": "示例标签：用于验证评测脚本结构，不代表真实视频的人工评分。"
+  }
+}

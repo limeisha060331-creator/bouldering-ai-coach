@@ -7,7 +7,13 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "check:unused": "tsc --noEmit --noUnusedLocals --noUnusedParameters"
+    "lint:quality": "eslint lib/ai-cost.ts lib/eval-compare.ts lib/eval-metrics.ts lib/eval-run.ts lib/eval-schema.ts lib/failure-taxonomy.ts evals tests vitest.config.mts",
+    "check:unused": "tsc --noEmit --noUnusedLocals --noUnusedParameters",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "eval": "tsx evals/run.ts",
+    "eval:compare": "tsx evals/compare.ts",
+    "cost:report": "tsx evals/cost-report.ts"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
@@ -22,17 +28,20 @@
     "lucide-react": "^1.16.0",
     "next": "16.2.6",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/bcryptjs": "^2.4.6",
-    "@types/node": "^20",
+    "@types/node": "^24.19.2",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "tsx": "^4.23.15",
+    "typescript": "^5",
+    "vitest": "^5.0.5"
   }
 }

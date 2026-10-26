@@ -1,0 +1,225 @@
+{
+  "runId": "baseline-fixture-2026-10-26",
+  "createdAt": "2026-10-26T13:03:22.531Z",
+  "mode": "replay",
+  "dataSource": "synthetic-fixtures:evals\\fixtures",
+  "promptVersion": "2026-02-1",
+  "model": "mixed (per case)",
+  "cases": 3,
+  "metrics": {
+    "cases": 3,
+    "formatValidRate": 0.6666666666666666,
+    "timestampInRangeRate": 0.9166666666666666,
+    "mustMentionCoverage": 0.7777777777777777,
+    "genericAdviceRate": 0.3333333333333333,
+    "duplicateSegmentRate": 0.08333333333333333,
+    "gradeMatchRate": 0.6666666666666666,
+    "dimensionMae": 0,
+    "dimensionMaeCases": 1,
+    "dimensionMaeCoverage": 0.3333333333333333,
+    "qualityScore": 0.6545069444444445,
+    "avgSegmentCount": 4.666666666666667,
+    "failureCounts": {
+      "DIMENSION_SCORES_MISSING": 2,
+      "GENERIC_ADVICE": 1,
+      "MUST_MENTION_MISSED": 1,
+      "SCORE_MISSING": 1,
+      "TIMESTAMP_NOT_MONOTONIC": 1,
+      "TIMESTAMP_OUT_OF_RANGE": 1,
+      "DUPLICATE_SEGMENT": 1,
+      "GRADE_MISMATCH": 1,
+      "SEGMENT_TOO_SHORT": 1
+    }
+  },
+  "results": [
+    {
+      "caseId": "case-001",
+      "label": "strong",
+      "model": "gemini-2.5-flash",
+      "segmentCount": 6,
+      "formatValid": true,
+      "scorePresent": true,
+      "score": 82,
+      "gradePredicted": "V4",
+      "gradeExpected": "V4",
+      "gradeMatch": true,
+      "timestampInRangeRate": 1,
+      "timestampMonotonic": true,
+      "mustMentionCoverage": 1,
+      "mustMentionHits": [
+        "折膝",
+        "脚点",
+        "胯部"
+      ],
+      "mustMentionMisses": [],
+      "genericAdviceRate": 0,
+      "duplicateSegmentRate": 0,
+      "avgSegmentChars": 27.5,
+      "dimensionScores": {
+        "hips": 4,
+        "power": 3,
+        "feet": 4,
+        "sequence": 3,
+        "completion": 5
+      },
+      "dimensionMae": 0,
+      "qualityScore": 0.96875,
+      "failureCodes": [],
+      "failures": []
+    },
+    {
+      "caseId": "case-002",
+      "label": "generic",
+      "model": "deepseek-flash",
+      "segmentCount": 4,
+      "formatValid": true,
+      "scorePresent": true,
+      "score": 70,
+      "gradePredicted": "V3",
+      "gradeExpected": "V3",
+      "gradeMatch": true,
+      "timestampInRangeRate": 1,
+      "timestampMonotonic": true,
+      "mustMentionCoverage": 0.3333333333333333,
+      "mustMentionHits": [
+        "脚点"
+      ],
+      "mustMentionMisses": [
+        "侧拉",
+        "胯部"
+      ],
+      "genericAdviceRate": 1,
+      "duplicateSegmentRate": 0,
+      "avgSegmentChars": 12,
+      "dimensionScores": null,
+      "dimensionMae": null,
+      "qualityScore": 0.5633333333333334,
+      "failureCodes": [
+        "DIMENSION_SCORES_MISSING",
+        "GENERIC_ADVICE",
+        "MUST_MENTION_MISSED"
+      ],
+      "failures": [
+        {
+          "code": "DIMENSION_SCORES_MISSING",
+          "severity": "P1",
+          "owner": "prompt",
+          "evidence": "未找到完整的 5 维分数",
+          "fix": "结构化输出加入 5 个维度的 1-5 分；这是 v2 schema 的核心验收项。"
+        },
+        {
+          "code": "GENERIC_ADVICE",
+          "severity": "P1",
+          "owner": "prompt",
+          "evidence": "4/4 条含空话短语",
+          "fix": "禁用“注意重心/多练习”类句式，要求动作 + 身体部位 + 下一次怎么做。"
+        },
+        {
+          "code": "MUST_MENTION_MISSED",
+          "severity": "P1",
+          "owner": "prompt",
+          "evidence": "命中 1/3，漏掉：侧拉、胯部",
+          "fix": "把关键线索写进案例标签，Prompt 要求逐条覆盖；漏检进入 badcase 池。"
+        }
+      ]
+    },
+    {
+      "caseId": "case-003",
+      "label": "malformed",
+      "model": "gemini-2.5-flash",
+      "segmentCount": 4,
+      "formatValid": false,
+      "scorePresent": false,
+      "score": null,
+      "gradePredicted": "V3",
+      "gradeExpected": "V5",
+      "gradeMatch": false,
+      "timestampInRangeRate": 0.75,
+      "timestampMonotonic": false,
+      "mustMentionCoverage": 1,
+      "mustMentionHits": [
+        "挂旗",
+        "发力顺序",
+        "脚点"
+      ],
+      "mustMentionMisses": [],
+      "genericAdviceRate": 0,
+      "duplicateSegmentRate": 0.25,
+      "avgSegmentChars": 10.5,
+      "dimensionScores": null,
+      "dimensionMae": null,
+      "qualityScore": 0.4314375,
+      "failureCodes": [
+        "SCORE_MISSING",
+        "TIMESTAMP_NOT_MONOTONIC",
+        "TIMESTAMP_OUT_OF_RANGE",
+        "DIMENSION_SCORES_MISSING",
+        "DUPLICATE_SEGMENT",
+        "GRADE_MISMATCH",
+        "SEGMENT_TOO_SHORT"
+      ],
+      "failures": [
+        {
+          "code": "SCORE_MISSING",
+          "severity": "P0",
+          "owner": "prompt",
+          "evidence": "未解析到「评分：xx/100」",
+          "fix": "把 score 纳入 schema 必填字段；模型未给出时由维度分加权计算并标注来源。"
+        },
+        {
+          "code": "TIMESTAMP_NOT_MONOTONIC",
+          "severity": "P0",
+          "owner": "parser",
+          "evidence": "存在倒序时间戳",
+          "fix": "按秒数稳定排序后再渲染；排序会改变叙事顺序时提示人工复核。"
+        },
+        {
+          "code": "TIMESTAMP_OUT_OF_RANGE",
+          "severity": "P0",
+          "owner": "parser",
+          "evidence": "1/4 条超出 0-62s",
+          "fix": "解析后校验 0 <= t <= duration + 2s；越界条目丢弃或标记为不可定位。"
+        },
+        {
+          "code": "DIMENSION_SCORES_MISSING",
+          "severity": "P1",
+          "owner": "prompt",
+          "evidence": "未找到完整的 5 维分数",
+          "fix": "结构化输出加入 5 个维度的 1-5 分；这是 v2 schema 的核心验收项。"
+        },
+        {
+          "code": "DUPLICATE_SEGMENT",
+          "severity": "P1",
+          "owner": "model",
+          "evidence": "重复率 25%",
+          "fix": "按归一化文本去重，保留最早时间戳；重复率进入回归指标。"
+        },
+        {
+          "code": "GRADE_MISMATCH",
+          "severity": "P1",
+          "owner": "model",
+          "evidence": "模型判断 V3，标注 V5",
+          "fix": "把用户填写的难度作为上下文传入，要求模型只做区间修正；记录偏差用于校准。"
+        },
+        {
+          "code": "SEGMENT_TOO_SHORT",
+          "severity": "P2",
+          "owner": "prompt",
+          "evidence": "平均每条 10.5 字",
+          "fix": "要求每条至少包含“看到了什么 + 为什么错 + 下一次怎么做”。"
+        }
+      ]
+    }
+  ],
+  "cost": {
+    "avgUsd": 0.0033983,
+    "totalUsd": 0.0101949,
+    "avgCny": 0.024127930000000002,
+    "totalCny": 0.07238379
+  },
+  "notes": [
+    "本报告使用 evals\\fixtures 下的合成夹具验证评测链路。",
+    "夹具只用于回归脚本与失败分类，不代表真实模型质量。",
+    "接入真实视频后，把 mode 改为 live 并写入实际 usage。"
+  ]
+}

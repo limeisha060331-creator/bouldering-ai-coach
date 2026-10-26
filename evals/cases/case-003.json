@@ -1,0 +1,20 @@
+{
+  "id": "case-003",
+  "title": "60 秒 V5 室内抱石，中段脱落",
+  "durationSec": 60,
+  "grade": "V5",
+  "locale": "zh",
+  "depth": "deep",
+  "model": "gemini-2.5-flash",
+  "labels": {
+    "dimensions": {
+      "hips": 4,
+      "power": 4,
+      "feet": 3,
+      "sequence": 4,
+      "completion": 4
+    },
+    "mustMention": ["挂旗", "发力顺序", "脚点"],
+    "notes": "示例标签：用于验证失败分类与时间戳校验，不代表真实视频的人工评分。"
+  }
+}

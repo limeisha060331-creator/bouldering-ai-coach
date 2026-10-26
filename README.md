@@ -128,6 +128,20 @@ npm test         # 144 个单元 / 组件 / 集成用例
 npm run test:e2e # 11 个 Electron 端到端用例（含真实抽帧与打包产物冒烟）
 ```
 
+## 质量与成本
+
+仓库里有一套可跑的 AI 质量运营链路，回答“说得对不对、一次多少钱、哪里会坏、下一版该不该上”：
+
+```bash
+npm test              # 成本计算、评测指标、决策规则
+npm run eval          # 用合成夹具跑评测，生成报告
+npm run cost:report   # 生成单次 / 月度 / 单位经济成本模型
+```
+
+入口说明见 **[docs/quality/README.md](./docs/quality/README.md)**，评测口径见 **[eval-rubric.md](./docs/quality/eval-rubric.md)**，失败案例见 **[failure-cases.md](./docs/quality/failure-cases.md)**。
+
+当前评测使用合成夹具验证链路，数字不代表真实模型质量；换入真实视频后才能用于发布决策。
+
 ## 更多文档
 
 - 桌面客户端详细说明：**[desktop/README.md](./desktop/README.md)**

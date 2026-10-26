@@ -1,0 +1,142 @@
+{
+  "runId": "candidate-v2-2026-10-26",
+  "createdAt": "2026-10-26T13:03:22.521Z",
+  "mode": "replay",
+  "dataSource": "synthetic-fixtures:evals\\fixtures-v2",
+  "promptVersion": "2026-02-1",
+  "model": "mixed (per case)",
+  "cases": 3,
+  "metrics": {
+    "cases": 3,
+    "formatValidRate": 1,
+    "timestampInRangeRate": 1,
+    "mustMentionCoverage": 1,
+    "genericAdviceRate": 0,
+    "duplicateSegmentRate": 0,
+    "gradeMatchRate": 1,
+    "dimensionMae": 0,
+    "dimensionMaeCases": 3,
+    "dimensionMaeCoverage": 1,
+    "qualityScore": 0.9618055555555557,
+    "avgSegmentCount": 5.333333333333333,
+    "failureCounts": {}
+  },
+  "results": [
+    {
+      "caseId": "case-001",
+      "label": "strong",
+      "model": "gemini-2.5-flash",
+      "segmentCount": 6,
+      "formatValid": true,
+      "scorePresent": true,
+      "score": 82,
+      "gradePredicted": "V4",
+      "gradeExpected": "V4",
+      "gradeMatch": true,
+      "timestampInRangeRate": 1,
+      "timestampMonotonic": true,
+      "mustMentionCoverage": 1,
+      "mustMentionHits": [
+        "折膝",
+        "脚点",
+        "胯部"
+      ],
+      "mustMentionMisses": [],
+      "genericAdviceRate": 0,
+      "duplicateSegmentRate": 0,
+      "avgSegmentChars": 27.5,
+      "dimensionScores": {
+        "hips": 4,
+        "power": 3,
+        "feet": 4,
+        "sequence": 3,
+        "completion": 5
+      },
+      "dimensionMae": 0,
+      "qualityScore": 0.96875,
+      "failureCodes": [],
+      "failures": []
+    },
+    {
+      "caseId": "case-002",
+      "label": "improved",
+      "model": "deepseek-flash",
+      "segmentCount": 4,
+      "formatValid": true,
+      "scorePresent": true,
+      "score": 68,
+      "gradePredicted": "V3",
+      "gradeExpected": "V3",
+      "gradeMatch": true,
+      "timestampInRangeRate": 1,
+      "timestampMonotonic": true,
+      "mustMentionCoverage": 1,
+      "mustMentionHits": [
+        "侧拉",
+        "胯部",
+        "脚点"
+      ],
+      "mustMentionMisses": [],
+      "genericAdviceRate": 0,
+      "duplicateSegmentRate": 0,
+      "avgSegmentChars": 26.5,
+      "dimensionScores": {
+        "hips": 3,
+        "power": 3,
+        "feet": 2,
+        "sequence": 2,
+        "completion": 3
+      },
+      "dimensionMae": 0,
+      "qualityScore": 0.96625,
+      "failureCodes": [],
+      "failures": []
+    },
+    {
+      "caseId": "case-003",
+      "label": "fixed",
+      "model": "gemini-2.5-flash",
+      "segmentCount": 6,
+      "formatValid": true,
+      "scorePresent": true,
+      "score": 76,
+      "gradePredicted": "V5",
+      "gradeExpected": "V5",
+      "gradeMatch": true,
+      "timestampInRangeRate": 1,
+      "timestampMonotonic": true,
+      "mustMentionCoverage": 1,
+      "mustMentionHits": [
+        "挂旗",
+        "发力顺序",
+        "脚点"
+      ],
+      "mustMentionMisses": [],
+      "genericAdviceRate": 0,
+      "duplicateSegmentRate": 0,
+      "avgSegmentChars": 20.166666666666668,
+      "dimensionScores": {
+        "hips": 4,
+        "power": 4,
+        "feet": 3,
+        "sequence": 4,
+        "completion": 4
+      },
+      "dimensionMae": 0,
+      "qualityScore": 0.9504166666666667,
+      "failureCodes": [],
+      "failures": []
+    }
+  ],
+  "cost": {
+    "avgUsd": 0.0036244,
+    "totalUsd": 0.0108732,
+    "avgCny": 0.02573324,
+    "totalCny": 0.07719972
+  },
+  "notes": [
+    "本报告使用 evals\\fixtures-v2 下的合成夹具验证评测链路。",
+    "夹具只用于回归脚本与失败分类，不代表真实模型质量。",
+    "接入真实视频后，把 mode 改为 live 并写入实际 usage。"
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "id": "case-002",
+  "title": "30 秒 V3 室内抱石，未完攀",
+  "durationSec": 30,
+  "grade": "V3",
+  "locale": "zh",
+  "depth": "deep",
+  "model": "deepseek-flash",
+  "labels": {
+    "dimensions": {
+      "hips": 3,
+      "power": 3,
+      "feet": 2,
+      "sequence": 2,
+      "completion": 3
+    },
+    "mustMention": ["侧拉", "胯部", "脚点"],
+    "notes": "示例标签：用于验证评测脚本结构，不代表真实视频的人工评分。"
+  }
+}
