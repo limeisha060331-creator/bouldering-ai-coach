@@ -49,6 +49,48 @@ function estimate(model: ModelId, durationSec: number, outputChars: number) {
   return { usage, inputTokens, cost: computeCost(model, usage) };
 }
 
+type LiveRunFile = {
+  runId: string;
+  createdAt: string;
+  mode: string;
+  results: {
+    durationSec: number;
+    raw?: string;
+    totalMs: number | null;
+    uploadMs: number | null;
+    generateMs: number | null;
+    usage: { promptTokens: number; outputTokens: number } | null;
+    cost: { actualUsd: number | null; estimatedUsd: number };
+  }[];
+};
+
+/** 找最近一次 live 运行，用真实账单校准估算模型 */
+function loadLatestLiveRun(root: string): LiveRunFile | null {
+  const runsDir = path.join(root, "evals", "runs");
+  if (!fs.existsSync(runsDir)) return null;
+
+  const candidates = fs
+    .readdirSync(runsDir)
+    .map((dir) => path.join(runsDir, dir, "results.json"))
+    .filter((file) => fs.existsSync(file))
+    .map((file) => JSON.parse(fs.readFileSync(file, "utf8")) as LiveRunFile)
+    .filter((run) => run.mode === "live")
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+
+  return candidates.length === 0 ? null : candidates[candidates.length - 1];
+}
+
+function mean(values: number[]): number | null {
+  return values.length === 0
+    ? null
+    : values.reduce((sum, value) => sum + value, 0) / values.length;
+}
+
+function drift(estimated: number | null, actual: number | null): string {
+  if (estimated == null || actual == null || actual === 0) return "—";
+  return `${(((estimated - actual) / actual) * 100).toFixed(1)}%`;
+}
+
 function main(): void {
   const root = process.cwd();
   const rows = SCENARIOS.flatMap((scenario) =>
@@ -137,11 +179,91 @@ function main(): void {
   lines.push("- 抽帧更便宜，但丢失帧间连续动作，时间轴点评的连续性会下降。成本差异必须用质量差异来换。");
   lines.push("- 在当前单价下，模型调用不是主要成本；视频存储、带宽、失败重试和人工支持更值得盯。");
   lines.push("");
-  lines.push("## 8. 更新方法");
+
+  const liveRun = loadLatestLiveRun(root);
+  if (liveRun) {
+    const usable = liveRun.results.filter((item) => item.usage != null);
+    const actualCosts = liveRun.results
+      .map((item) => item.cost.actualUsd)
+      .filter((value): value is number => value != null);
+    const estimatedCosts = liveRun.results.map((item) => item.cost.estimatedUsd);
+    const actualInput = usable.map((item) => item.usage?.promptTokens ?? 0);
+    const actualOutput = usable.map((item) => item.usage?.outputTokens ?? 0);
+
+    const estimates = liveRun.results.map((item) =>
+      estimateGeminiVideoUsage({
+        durationSec: item.durationSec,
+        promptText,
+        outputText: item.raw ?? "",
+        locale: "zh",
+      })
+    );
+    const estimatedInput = estimates.map(
+      (usage) =>
+        (usage.inputTextTokens ?? 0) + (usage.inputVideoTokens ?? 0)
+    );
+    const estimatedOutput = estimates.map((usage) => usage.outputTokens);
+
+    lines.push("## 8. 真实调用校准");
+    lines.push("");
+    lines.push(
+      `来源：\`evals/runs/${liveRun.runId}\`，${liveRun.results.length} 条真实视频，Gemini 直传，成本取自 provider 返回的 usageMetadata。`
+    );
+    lines.push("");
+    lines.push("| 项 | 估算 | 实测 | 估算偏差（正数=高估） |");
+    lines.push("| --- | ---: | ---: | ---: |");
+    const avgActualCost = mean(actualCosts);
+    const avgEstCost = mean(estimatedCosts);
+    lines.push(
+      `| 单条成本 | ${formatUsd(avgEstCost ?? 0)} | ${formatUsd(avgActualCost ?? 0)} | ${drift(avgEstCost, avgActualCost)} |`
+    );
+    lines.push(
+      `| 单条输入 tokens | ${Math.round(mean(estimatedInput) ?? 0).toLocaleString("en-US")} | ${Math.round(mean(actualInput) ?? 0).toLocaleString("en-US")} | ${drift(mean(estimatedInput), mean(actualInput))} |`
+    );
+    lines.push(
+      `| 单条输出 tokens | ${Math.round(mean(estimatedOutput) ?? 0).toLocaleString("en-US")} | ${Math.round(mean(actualOutput) ?? 0).toLocaleString("en-US")} | ${drift(mean(estimatedOutput), mean(actualOutput))} |`
+    );
+    lines.push("");
+
+    const avgUpload = mean(
+      liveRun.results
+        .map((item) => item.uploadMs)
+        .filter((value): value is number => value != null)
+    );
+    const avgGenerate = mean(
+      liveRun.results
+        .map((item) => item.generateMs)
+        .filter((value): value is number => value != null)
+    );
+    const avgTotal = mean(
+      liveRun.results
+        .map((item) => item.totalMs)
+        .filter((value): value is number => value != null)
+    );
+    lines.push(
+      `端到端耗时：平均 ${
+        avgTotal == null ? "—" : `${(avgTotal / 1000).toFixed(1)}s`
+      }，其中上传 ${
+        avgUpload == null ? "—" : `${(avgUpload / 1000).toFixed(1)}s`
+      }，生成 ${
+        avgGenerate == null ? "—" : `${(avgGenerate / 1000).toFixed(1)}s`
+      }。`
+    );
+    lines.push("");
+    lines.push(
+      "- 估算偏差主要来自输出长度：同一条 46 秒视频两次运行分别产出 16 段和 29 段，输出 token 相差近一倍，这部分模型不保证。"
+    );
+    lines.push(
+      "- 因此月度预算要在这个实测值上留 10% 余量，而不是直接用理论估算值。"
+    );
+    lines.push("");
+  }
+
+  lines.push("## 9. 更新方法");
   lines.push("");
   lines.push("1. 改 `lib/ai-cost.ts` 里的 `MODEL_PRICING` 或 `TOKEN_ASSUMPTIONS`。");
   lines.push("2. 跑 `npm run cost:report` 重新生成本文档。");
-  lines.push("3. 生产环境接入真实 usage 后，把估算值替换为账单值，并在迭代记录里留一次校准。");
+  lines.push("3. 每次跑完 `eval:live` 后重跑本脚本，第 8 节会自动换成最新一次真实调用。");
   lines.push("");
 
   const output = lines.join("\n");
