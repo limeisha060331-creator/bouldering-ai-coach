@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "lint:quality": "eslint lib/ai-cost.ts lib/eval-compare.ts lib/eval-metrics.ts lib/eval-run.ts lib/eval-schema.ts lib/failure-taxonomy.ts evals tests vitest.config.mts",
+    "lint:quality": "eslint lib/ai-cost.ts lib/analysis-schema.ts lib/eval-compare.ts lib/eval-metrics.ts lib/eval-run.ts lib/eval-schema.ts lib/eval-signals.ts lib/eval-structural.ts lib/failure-taxonomy.ts evals tests vitest.config.mts",
     "check:unused": "tsc --noEmit --noUnusedLocals --noUnusedParameters",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -15,6 +15,7 @@
     "eval:compare": "tsx evals/compare.ts",
     "corpus:fetch": "tsx evals/corpus/fetch.ts",
     "eval:live": "tsx evals/live.ts",
+    "eval:live:compare": "tsx evals/live-compare.ts",
     "cost:report": "tsx evals/cost-report.ts"
   },
   "dependencies": {

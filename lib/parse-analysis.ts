@@ -1,5 +1,6 @@
 import { parseGradeFromText } from "./bouldering-grade";
 import type { AnalysisSegment, ParsedAnalysis } from "./types";
+import { parseAnalysisContract, parsedFromContract } from "./analysis-schema";
 import { parseStructuredReport } from "./parse-structured-report";
 
 const LINE_TIMESTAMP =
@@ -9,7 +10,19 @@ function toSeconds(min: string, sec: string): number {
   return parseInt(min, 10) * 60 + parseInt(sec, 10);
 }
 
+/**
+ * 入口：先按 v2 契约解析，不是契约就走 v1 文本解析。
+ *
+ * 保留回落是刻意的——历史记录、桌面端已入队的旧任务、
+ * 以及模型偶发不守契约时，报告都还能读出来，只是拿不到分数。
+ */
 export function parseAnalysis(raw: string): ParsedAnalysis {
+  const contract = parseAnalysisContract(raw);
+  if (contract) return parsedFromContract(raw, contract);
+  return parseLegacyAnalysis(raw);
+}
+
+function parseLegacyAnalysis(raw: string): ParsedAnalysis {
   const lines = raw.split("\n");
   const segments: AnalysisSegment[] = [];
   const otherLines: string[] = [];

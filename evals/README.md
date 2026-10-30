@@ -9,6 +9,7 @@
 | 版本对比 | `npm run eval:compare -- <baseline> <candidate>` | `comparison-vs-*.md` |
 | 真实语料 | `npm run corpus:fetch` | `evals/private/corpus/manifest.json` |
 | 真实基线 | `npm run eval:live` | 结构指标、真实 token、真实耗时 |
+| 版本对比 | `npm run eval:live:compare -- <base> <candidate>` | 结构层上线 / 迭代决策 |
 | 失败分类 | `lib/failure-taxonomy.ts` | 每个失败码的级别、责任方、修复与回归 |
 
 ## 快速开始
@@ -44,6 +45,7 @@ evals/
 ├─ run.ts           replay 评测入口
 ├─ live.ts          live 评测入口（真实视频 + 真实 API）
 ├─ live-report.ts   live 报告渲染
+├─ live-compare.ts  两次 live 运行的结构对比与红线判定
 ├─ compare.ts       两版对比与决策
 ├─ cost-report.ts 成本模型生成器
 └─ report.ts       replay 报告渲染
@@ -64,6 +66,17 @@ evals/
 | 能出真实 token / 成本 / 耗时 | 不能（估算） | 能 |
 
 `live` 模式只跑不依赖人工标注的指标：格式合法率、时间戳可定位率、空话率、重复片段率、失败码分布。没有人工金标就不给质量分，避免把“格式对了”说成“教练质量达标”。
+
+## 输出契约 v1 / v2
+
+v1 是自由文本，`score` 和 5 维分靠模型自觉，真实基线 10/10 缺失。v2 改成单个 JSON 对象，schema 在 `lib/analysis-schema.ts`，解析器先试契约、失败回落 v1 正则。
+
+```bash
+npm run eval:live -- --contract v2 --run-id live-v2 --gap 8
+npm run eval:live:compare -- live-baseline-2026-10-26 live-v2
+```
+
+生产默认仍是 v1（`ACTIVE_CONTRACT`），改之前先跑对比。
 
 ## 指标口径
 

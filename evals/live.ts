@@ -1,10 +1,13 @@
 import fs from "node:fs";
 import path from "node:path";
 import {
+  ACTIVE_CONTRACT,
+  CONTRACT_VERSIONS,
   getAnalysisPrompt,
   getMaxOutputTokens,
   getGeminiModelId,
-  PROMPT_VERSION,
+  getPromptVersion,
+  type ContractVersion,
 } from "../lib/analyze-prompt";
 import {
   computeCost,
@@ -70,6 +73,8 @@ export type LiveRun = {
   mode: "live";
   model: string;
   promptVersion: string;
+  /** 老运行没有这个字段，按 v1 理解 */
+  contract?: ContractVersion;
   depth: AnalysisDepth;
   locale: AnalysisLocale;
   dataSource: string;
@@ -103,6 +108,7 @@ type Options = {
   dryRun: boolean;
   /** 只从已有 results.json 重算聚合与报告，不再调用 API */
   replay: string | null;
+  contract: ContractVersion;
 };
 
 const sleep = (ms: number): Promise<void> =>
@@ -140,6 +146,11 @@ function parseArgs(argv: string[]): Options {
     locale: localeRaw === "en" ? "en" : "zh",
     dryRun: argv.includes("--dry-run"),
     replay: value("--replay") ?? null,
+    contract: CONTRACT_VERSIONS.includes(
+      (value("--contract") ?? "") as ContractVersion
+    )
+      ? ((value("--contract") ?? "") as ContractVersion)
+      : ACTIVE_CONTRACT,
   };
 }
 
@@ -336,11 +347,15 @@ async function main(): Promise<void> {
   if (items.length === 0) throw new Error("筛选后没有可跑的语料");
 
   const modelId = getGeminiModelId();
-  const promptText = getAnalysisPrompt(options.depth, options.locale);
+  const promptText = getAnalysisPrompt(
+    options.depth,
+    options.locale,
+    options.contract
+  );
 
   if (options.dryRun) {
     console.log(
-      `live 评测计划：${items.length} 条，model=${modelId} depth=${options.depth} prompt=${PROMPT_VERSION}`
+      `live 评测计划：${items.length} 条，model=${modelId} depth=${options.depth} contract=${options.contract} prompt=${getPromptVersion(options.contract)}`
     );
     for (const item of items) {
       console.log(
@@ -405,7 +420,8 @@ async function main(): Promise<void> {
     createdAt: new Date().toISOString(),
     mode: "live",
     model: modelId,
-    promptVersion: PROMPT_VERSION,
+    promptVersion: getPromptVersion(options.contract),
+    contract: options.contract,
     depth: options.depth,
     locale: options.locale,
     dataSource: "evals/private/corpus/manifest.json",

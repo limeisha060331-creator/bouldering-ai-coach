@@ -124,7 +124,7 @@
 
 **当前处理**：评测把缺失记成 P0，不静默降级成「无分数但算通过」。
 
-**下一步**：结构化输出 v2 把 `score`、`dimensionScores` 纳入 schema 必填；`score` 由 5 维分加权生成并标注来源是「模型给分」还是「加权计算」，不允许两处同时给且互相矛盾。
+**下一步**：结构化输出 v2 把 `score`、`dimensionScores` 纳入 schema 必填；`score` 由 5 维分加权生成并标注来源是「模型给分」还是「加权计算」，不允许两处同时给且互相矛盾。v2 代码已落地（`lib/analysis-schema.ts`），默认关闭，待真机对比（见 D-006）。
 
 **回归**：`npm run eval:live -- --only gym-rockspot-v3`，要求契约完整率从 0% 变 100%。
 

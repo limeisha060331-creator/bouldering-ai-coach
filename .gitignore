@@ -46,4 +46,4 @@ next-env.d.ts
 
 # 本地临时文件与冒烟运行的中间产物
 .tmp-*
-/evals/runs/live-smoke-*/
+/evals/runs/*smoke*/

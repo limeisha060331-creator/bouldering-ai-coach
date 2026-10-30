@@ -11,6 +11,7 @@ import {
   type FailureFinding,
   type FailureSeverity,
 } from "./failure-taxonomy";
+import { parseAnalysisContract } from "./analysis-schema";
 import {
   checkTimestamps,
   computeDuplicateSegmentRate,
@@ -90,6 +91,10 @@ function labelToDimension(label: string): DimensionKey | null {
  * 不是脚本算不出来再猜一个分数。
  */
 export function parseDimensionScores(raw: string): DimensionScores | null {
+  // v2 契约优先：分数直接来自 schema 校验过的字段，不再依赖某一行文案的写法
+  const contract = parseAnalysisContract(raw);
+  if (contract) return contract.dimensionScores;
+
   const line = raw
     .split("\n")
     .map((item) => item.trim())
