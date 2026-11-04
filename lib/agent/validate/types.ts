@@ -28,6 +28,11 @@ export type ValidationContext = {
   durationSec: number;
   /** 工具产生的事实，是可验证证据的唯一来源 */
   facts: SessionFact[];
+  /**
+   * 没有姿态证据时（例如旧客户端只上传关键帧），允许跳过证据/覆盖检查。
+   * 默认 true；只有明确知道本次没有工具事实时才设为 false。
+   */
+  requireEvidence?: boolean;
   minSegments?: number;
   coverageConfidenceFloor?: number;
   evidenceToleranceSec?: number;

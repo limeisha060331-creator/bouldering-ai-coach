@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const background = vi.hoisted(() => ({ tasks: [] as Promise<unknown>[] }));
 const deepseek = vi.hoisted(() => ({ run: vi.fn() }));
+const agentRuntime = vi.hoisted(() => ({ run: vi.fn() }));
 
 vi.mock("@vercel/functions", () => ({
   waitUntil: (task: Promise<unknown>) => {
@@ -14,6 +15,19 @@ vi.mock("../lib/deepseek-analysis", async (importOriginal) => {
     await importOriginal<typeof import("../lib/deepseek-analysis")>();
   return { ...actual, runDeepSeekAnalysis: deepseek.run };
 });
+
+vi.mock("../lib/agent/web-runtime", () => ({
+  runWebAgentAnalysis: agentRuntime.run,
+  AgentAnalysisError: class AgentAnalysisError extends Error {
+    constructor(
+      message: string,
+      readonly outcome: { record: Record<string, unknown> }
+    ) {
+      super(message);
+      this.name = "AgentAnalysisError";
+    }
+  },
+}));
 
 const { saveMemoryJob, getMemoryJob } = await import("../lib/job-memory-store");
 const { advanceAnalysisJob } = await import("../lib/process-analysis-job");
@@ -53,12 +67,17 @@ async function drain(): Promise<void> {
 beforeEach(() => {
   Object.assign(process.env, { NODE_ENV: "development" });
   process.env.DEEPSEEK_API_KEY = "sk-test";
+  process.env.AGENT_RUNTIME = "off";
+  delete process.env.AGENT_FALLBACK;
   background.tasks.length = 0;
   deepseek.run.mockReset();
+  agentRuntime.run.mockReset();
 });
 
 afterEach(() => {
   delete process.env.DEEPSEEK_API_KEY;
+  delete process.env.AGENT_RUNTIME;
+  delete process.env.AGENT_FALLBACK;
   Object.assign(process.env, { NODE_ENV: "test" });
 });
 
@@ -139,6 +158,86 @@ describe("advanceAnalysisJob（内存任务表 + DeepSeek 状态机）", () => {
     const saved = getMemoryJob("job-1");
     expect(saved?.status).toBe("failed");
     expect(saved?.error).toContain("DEEPSEEK_API_KEY");
+    expect(deepseek.run).not.toHaveBeenCalled();
+  });
+
+  it("AGENT_RUNTIME=on 时走 Agent，并保存运行记录", async () => {
+    process.env.AGENT_RUNTIME = "on";
+    agentRuntime.run.mockResolvedValue({
+      analysis: "难度：V5\n[00:03] 起步重心偏后",
+      contract: { segments: [] },
+      outcome: {
+        record: {
+          version: 1,
+          runId: "job-1",
+          startedAt: new Date().toISOString(),
+          finishedAt: new Date().toISOString(),
+          ok: true,
+          model: "deepseek-flash",
+          attempts: 2,
+          steps: 1,
+          toolCalls: [{ tool: "pose.analyze", ok: true, durationMs: 3 }],
+          validation: { ok: true, codes: [], issues: 0 },
+          usage: {
+            promptTokens: 100,
+            outputTokens: 50,
+            totalTokens: 150,
+            cachedTokens: 0,
+          },
+          costUsd: 0.001,
+          contextDigest: "abc",
+        },
+      },
+    });
+    saveMemoryJob(job());
+
+    await advanceAnalysisJob("job-1");
+    await drain();
+
+    const saved = getMemoryJob("job-1");
+    expect(saved?.status).toBe("completed");
+    expect(saved?.agent?.steps).toBe(1);
+    expect(saved?.agentPhase).toBe("done");
+    expect(deepseek.run).not.toHaveBeenCalled();
+    expect(agentRuntime.run).toHaveBeenCalledTimes(1);
+  });
+
+  it("Agent 失败默认回退单次 DeepSeek，并保留失败原因", async () => {
+    process.env.AGENT_RUNTIME = "on";
+    agentRuntime.run.mockRejectedValue(new Error("agent boom"));
+    deepseek.run.mockResolvedValue({
+      text: "难度：V4\n[00:03] 回退成功",
+      modelId: "deepseek-flash",
+      attempts: 1,
+      latencyMs: 500,
+      usage: { promptTokens: 10, outputTokens: 5, totalTokens: 15, cachedTokens: 0 },
+    });
+    saveMemoryJob(job());
+
+    await advanceAnalysisJob("job-1");
+    await drain();
+
+    const saved = getMemoryJob("job-1");
+    expect(saved?.status).toBe("completed");
+    expect(saved?.analysis).toContain("回退成功");
+    expect(saved?.agentError).toContain("agent boom");
+    expect(saved?.agentPhase).toBe("fallback");
+    expect(deepseek.run).toHaveBeenCalledTimes(1);
+  });
+
+  it("AGENT_FALLBACK=off 时 Agent 失败直接标记任务失败", async () => {
+    process.env.AGENT_RUNTIME = "on";
+    process.env.AGENT_FALLBACK = "off";
+    agentRuntime.run.mockRejectedValue(new Error("no fallback"));
+    saveMemoryJob(job());
+
+    await advanceAnalysisJob("job-1");
+    await drain();
+
+    const saved = getMemoryJob("job-1");
+    expect(saved?.status).toBe("failed");
+    expect(saved?.agentError).toContain("no fallback");
+    expect(saved?.agentPhase).toBe("failed");
     expect(deepseek.run).not.toHaveBeenCalled();
   });
 });

@@ -32,6 +32,8 @@ import {
 } from "@/lib/fetch-json";
 import { parseAnalysis } from "@/lib/parse-analysis";
 import { AnalysisPollError, pollUntilComplete } from "@/lib/poll-analysis";
+import { extractPoseEvidence } from "@/lib/pose-extraction";
+import type { PoseEvidence } from "@/lib/pose-types";
 import { BOULDER_GRADES } from "@/lib/bouldering-grade";
 import { gradeTapeColor } from "@/lib/grade-tape";
 import { formatRecordDate } from "@/lib/record-display";
@@ -68,6 +70,7 @@ export default function AnalyzePage() {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [frames, setFrames] = useState<AnalyzeFrame[]>([]);
+  const [pose, setPose] = useState<PoseEvidence | null>(null);
   const [durationSec, setDurationSec] = useState<number | null>(null);
   const [preparing, setPreparing] = useState(false);
   const [prepHint, setPrepHint] = useState<string | null>(null);
@@ -160,6 +163,7 @@ export default function AnalyzePage() {
     setRetryable(false);
     setPrepInfo(null);
     setFrames([]);
+    setPose(null);
     setDurationSec(null);
 
     if (!selected.type.startsWith("video/")) {
@@ -207,9 +211,53 @@ export default function AnalyzePage() {
           ? `已抽取 ${result.frames.length} 张关键帧 · 时长 ${Math.round(result.durationSec)} 秒`
           : `${result.frames.length} key frames · ${Math.round(result.durationSec)}s`
       );
+
+      // 姿态估计是增强证据：失败不阻塞分析，旧浏览器直接走纯视觉路径。
+      setPrepHint(
+        uiLocale === "zh"
+          ? `正在估计姿态… 0/${result.frames.length}`
+          : `Estimating pose… 0/${result.frames.length}`
+      );
+      try {
+        const poseAbort = new AbortController();
+        let poseTimer = 0;
+        const timeout = new Promise<null>((resolve) => {
+          poseTimer = window.setTimeout(() => {
+            poseAbort.abort();
+            resolve(null);
+          }, 20_000);
+        });
+        const evidence = await Promise.race([
+          extractPoseEvidence(result.frames, {
+            signal: poseAbort.signal,
+            onProgress: (done, total) =>
+              setPrepHint(
+                uiLocale === "zh"
+                  ? `正在估计姿态… ${done}/${total}`
+                  : `Estimating pose… ${done}/${total}`
+              ),
+          }),
+          timeout,
+        ]);
+        window.clearTimeout(poseTimer);
+        setPose(evidence);
+        if (evidence) {
+          const withPose = evidence.frames.filter(
+            (item) => item.landmarks
+          ).length;
+          setPrepInfo(
+            uiLocale === "zh"
+              ? `${result.frames.length} 张关键帧 · ${Math.round(result.durationSec)} 秒 · 姿态 ${withPose}/${result.frames.length} 帧`
+              : `${result.frames.length} key frames · ${Math.round(result.durationSec)}s · pose ${withPose}/${result.frames.length}`
+          );
+        }
+      } catch {
+        setPose(null);
+      }
     } catch (e) {
       setFile(null);
       setFrames([]);
+      setPose(null);
       setDurationSec(null);
       if (preview) URL.revokeObjectURL(preview);
       setPreview(null);
@@ -230,6 +278,7 @@ export default function AnalyzePage() {
     if (!selected) {
       setFile(null);
       setFrames([]);
+      setPose(null);
       setDurationSec(null);
       if (preview) URL.revokeObjectURL(preview);
       setPreview(null);
@@ -282,6 +331,8 @@ export default function AnalyzePage() {
             frames,
             depth,
             locale: analysisLocale,
+            grade,
+            pose,
           }),
           signal: abortRef.current.signal,
         }),
@@ -297,6 +348,9 @@ export default function AnalyzePage() {
         estimatedSeconds?: number;
         message?: string;
         analysis?: string;
+        agent?: AnalysisRecord["agent"];
+        agentError?: string;
+        runtime?: string;
       };
 
       const parsedRes = await readFetchJson<AnalyzePostJson>(res);
@@ -353,6 +407,7 @@ export default function AnalyzePage() {
           Number.isFinite(ascent) && ascent > 0 ? ascent : undefined,
         sessionNote: sessionNote.trim() || undefined,
         userId: authUser?.id,
+        agent: data.agent,
       };
 
       // 原片只在不太大时留作本地回放；大文件只保留缩略图，避免撑爆 IndexedDB

@@ -19,6 +19,8 @@ import {
 import { hashArgs, stableStringify } from "./stable-json";
 import {
   DEFAULT_LIMITS,
+  readToolAttachments,
+  stripToolAttachments,
   type ErasedTool,
   type SandboxErrorCode,
   type SandboxLimits,
@@ -106,6 +108,11 @@ export class Sandbox {
 
   describeTools(): string {
     return this.registry.describe();
+  }
+
+  /** 给模型适配器用的工具目录（名字 + 描述 + JSON Schema） */
+  catalog(): ReturnType<ToolRegistry["catalog"]> {
+    return this.registry.catalog();
   }
 
   async run(toolName: string, rawArgs: unknown): Promise<ToolResult> {
@@ -496,6 +503,7 @@ export class Sandbox {
       const serialized = JSON.stringify(outcome.value) ?? "";
       const truncated =
         Buffer.byteLength(serialized, "utf8") > this.limits.maxOutputBytes;
+      const attachments = readToolAttachments(outcome.value);
 
       return {
         callId,
@@ -511,7 +519,8 @@ export class Sandbox {
         timedOut: false,
         truncated,
         replay: false,
-        data: outcome.value,
+        data: stripToolAttachments(outcome.value),
+        ...(attachments.length > 0 ? { attachments } : {}),
       };
     } catch (err) {
       return {

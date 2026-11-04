@@ -82,4 +82,48 @@ describe("parseAnalyzeRequest", () => {
       expect(parseAnalyzeRequest(request({ durationSec })).ok).toBe(false);
     }
   });
+
+  it("接受可选姿态证据与难度", () => {
+    const pose = {
+      model: "mediapipe-pose-landmarker-lite@1.2.0",
+      frames: [
+        {
+          atSec: 1.2,
+          timestamp: "00:01",
+          landmarks: Array.from({ length: 33 }, () => ({
+            x: 0.5,
+            y: 0.5,
+            z: 0,
+            visibility: 0.9,
+          })),
+          worldLandmarks: null,
+        },
+      ],
+    };
+
+    const parsed = parseAnalyzeRequest(request({ pose, grade: "V5" }));
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    expect(parsed.value.pose?.frames).toHaveLength(1);
+    expect(parsed.value.grade).toBe("V5");
+  });
+
+  it("姿态证据格式错误时拒绝整个请求", () => {
+    const parsed = parseAnalyzeRequest(
+      request({
+        pose: {
+          frames: [{ atSec: -1, timestamp: "bad", landmarks: [] }],
+        },
+      })
+    );
+
+    expect(parsed.ok).toBe(false);
+    if (!parsed.ok) expect(parsed.error).toContain("姿态");
+  });
+
+  it("非法难度被忽略，不影响分析", () => {
+    const parsed = parseAnalyzeRequest(request({ grade: "V99" }));
+    expect(parsed.ok).toBe(true);
+    if (parsed.ok) expect(parsed.value.grade).toBeUndefined();
+  });
 });

@@ -52,12 +52,13 @@
 
 仅网页服务端使用的 `lib` 文件包括 `auth-server.ts`、`db.ts`、`db-types.ts`、`supabase/`、`analysis-jobs.ts`、`job-memory-store.ts`、`process-analysis-job.ts`，它们不会进入桌面构建。
 
-## 尚未接入产品流程
+## 部分接入与预留接口
 
 以下代码有测试或接口，但当前没有产品调用方。删除或接入需要单独决策：
 
-- `lib/agent/`：上下文组装、三层记忆、沙箱、输出校验、轨迹评测。只有 `tests/` 引用。
 - `lib/analysis-cloud.ts` 的 `deleteAnalysisInCloud` 与 `DELETE /api/analyses/[id]`：接口存在，网页没有删除入口。
+
+`lib/agent/` 已接入网页端分析流程（`AGENT_RUNTIME=on` 时启用，失败默认回退单次 DeepSeek）；桌面端仍未接入。
 
 ## 验证
 

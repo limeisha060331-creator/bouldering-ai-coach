@@ -1,3 +1,4 @@
+import { z } from "zod";
 import type { ErasedTool } from "./types";
 
 /**
@@ -35,5 +36,29 @@ export class ToolRegistry {
     return [...this.tools.values()]
       .map((tool) => `- ${tool.name}: ${tool.description}`)
       .join("\n");
+  }
+
+  /**
+   * 给模型看的工具目录。zod 4 自带 JSON Schema 转换；
+   * 转换失败时退回空 schema，工具仍可被调用，只是参数提示变弱。
+   */
+  catalog(): Array<{
+    name: string;
+    description: string;
+    inputSchema: unknown;
+  }> {
+    return [...this.tools.values()].map((tool) => {
+      let inputSchema: unknown = {};
+      try {
+        inputSchema = z.toJSONSchema(tool.input);
+      } catch {
+        inputSchema = {};
+      }
+      return {
+        name: tool.name,
+        description: tool.description,
+        inputSchema,
+      };
+    });
   }
 }

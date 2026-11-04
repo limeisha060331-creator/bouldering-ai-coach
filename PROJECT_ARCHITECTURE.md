@@ -1,7 +1,7 @@
 # CRUX 抱石项目架构说明
 
 > 扫描基线：2026-11-04，分支 `feat/visual-refresh`，提交 `b65f99c`。
-> 本文以当前代码为准，描述网页端、桌面端、共享领域层、质量评测链路，以及尚未接入产品流程的 Agent harness。
+> 本文以当前代码为准，描述网页端、桌面端、共享领域层、质量评测链路，以及已接入网页分析链路的 Agent harness。
 
 ## 1. 项目概览与整体架构
 
@@ -70,13 +70,15 @@ flowchart TB
   Design --- WebUI
   Design --- DesktopUI
 
-  subgraph Quality["质量与实验层（非产品主链路）"]
+  subgraph Quality["Agent 运行时与质量层"]
     Evals["evals/<br/>replay · live · compare · cost"]
-    Agent["lib/agent/<br/>context · memory · sandbox<br/>validate · eval"]
+    Agent["lib/agent/<br/>loop · model · tools<br/>context · memory · sandbox · validate"]
   end
 
   Evals --> Domain
-  Tests["tests/"] -.->|"当前唯一引用方"| Agent
+  WebAPI --> Agent
+  Agent --> DS
+  Tests["tests/"] -.->|"行为与回放"| Agent
   Evals -.->|"CLI 调用"| DS
 ```
 
@@ -104,7 +106,7 @@ my-bouldering-ai/
 ├─ components/              网页与桌面共用的展示组件
 ├─ styles/crux.css          两端共用的设计 token 与组件样式
 ├─ lib/                     共享领域逻辑
-│  ├─ agent/                独立 Agent harness（当前仅测试引用）
+│  ├─ agent/                Agent 循环、模型适配器、工具集、记忆与校验
 │  └─ supabase/             服务端 Supabase 访问层
 ├─ desktop/
 │  ├─ electron/             Electron 主进程
@@ -132,7 +134,7 @@ my-bouldering-ai/
 | 持久化 | `lib/analysis-db.ts`、`lib/analysis-cloud.ts`、`lib/supabase/` | IndexedDB 主存储、云端镜像、行与领域对象互转 | 云端失败不能阻断本地使用 |
 | 桌面平台 | `desktop/electron/`、`desktop/shared/`、`desktop/src/lib` | 窗口安全、IPC、设置与本地账户、文件保存 | IPC 只暴露白名单方法 |
 | 质量评测 | `evals/`、`lib/eval-*.ts`、`lib/ai-cost.ts` | 夹具评测、真实语料评测、版本对比、成本与失败分类 | 只读 `lib`，不反向依赖页面 |
-| Agent harness | `lib/agent/` | 上下文、记忆、沙箱、校验修复、轨迹评测 | 当前没有产品调用方 |
+| Agent harness | `lib/agent/` | 顶层循环、DeepSeek 动作协议、姿态/取帧/记忆工具、上下文、沙箱、校验修复、轨迹评测 | 网页异步分析主链路；桌面端暂未接入 |
 | 文档与规范 | `docs/`、`openspec/`、`skills/` | 产品需求、设计、质量口径、变更提案 | 不参与运行时 |
 
 ### 2.3 导入别名
@@ -646,13 +648,26 @@ flowchart LR
 - `DEEPSEEK_API_KEY` 只出现在网页 Route Handler 或桌面主进程；渲染进程通过 IPC 触发分析，不接触密钥。
 - 桌面 `settings-store` 把设置写入应用数据目录；`auth-store` 使用 `scrypt` 派生哈希，账户保存在本地 `accounts.json`。
 - 网页的 Supabase `service_role` 只在服务端 Route Handler 使用，浏览器不直连数据库。
-- 桌面沙箱（用于 Agent harness）默认只透传运行必需的环境变量，API Key、数据库连接串不会进入子进程。
+- 沙箱默认只透传运行必需的环境变量，API Key、数据库连接串不会进入子进程。
 
 ## 5. Agent 执行流程分析
 
-### 5.1 定位：独立 harness，尚未接入产品
+### 5.1 定位：网页端已接入的 Agent 运行时
 
-`lib/agent/` 是一套围绕「抱石教练 Agent」设计的独立能力层，包含上下文组装、长期记忆、工具沙箱、输出校验修复、轨迹评测五个子系统。它当前的引用方只有 `tests/`：
+`lib/agent/` 现在包含可执行的顶层循环、DeepSeek 动作协议适配器、网页端工具集、上下文组装、长期记忆、工具沙箱、输出校验修复和轨迹评测。网页端在 `AGENT_RUNTIME=on`（非测试环境默认）时走：
+
+```text
+关键帧 + 姿态证据 → runWebAgentAnalysis
+  → runAgent（模型 → 工具 → 事实 → 上下文 → 模型）
+  → validateReport → 修复或交付
+  → AgentRunRecord + 记忆写入
+```
+
+旧路径仍保留为回退：Agent 失败且 `AGENT_FALLBACK` 未关闭时，`lib/process-analysis-job.ts` 会调用一次 `runDeepSeekAnalysis`。接触安全红线（`E_SAFETY_BLOCKED`）时不回退，直接失败。
+
+桌面端尚未接入这套运行时；桌面分析仍走主进程的单次 DeepSeek 调用。
+
+Agent 相关测试：
 
 - `tests/context-builder.test.ts`
 - `tests/memory-store.test.ts`
@@ -660,14 +675,9 @@ flowchart LR
 - `tests/sandbox-safety.test.ts`
 - `tests/agent-validate.test.ts`
 - `tests/agent-eval.test.ts`
-
-网页与桌面的实际分析链路是**单次模型调用**：
-
-```text
-关键帧 → 一次 Chat Completions → 正文 → 解析 → 入库
-```
-
-它没有工具调用循环，没有会话事实，没有记忆写入，也没有校验修复。`lib/agent/` 描述的是「如果要做多步、可验证、可回放的教练 Agent，应该具备哪些部件」，不是当前产品正在运行的流程。
+- `tests/agent-loop.test.ts`
+- `tests/pose-tools.test.ts`
+- `tests/frame-extract.test.ts`
 
 ### 5.2 设计中的 Agent 执行流程
 
@@ -697,7 +707,7 @@ flowchart TD
     Record --> Eval["scoreRun → 指标聚合 → 门禁"]
 ```
 
-图中「模型生成」是唯一不在仓库里的环节。`runRepairLoop` 接收调用方传入的 `generate` 函数，`runAgentEval` 接收 `runCase`，所以 harness 本身不绑定具体模型或 SDK。
+模型生成由 `AgentModel` 接口注入。网页端使用 `DeepSeekAgentModel`：每轮只接受一个 JSON 动作（`tool` 或 `final`），工具结果以 user 消息回填；测试使用 `createScriptedModel`。`runRepairLoop` 仍保留给纯文本修复场景，顶层循环自己管理工具调用、重新取证和校验预算。
 
 ### 5.3 上下文组装：`lib/agent/context/`
 
@@ -761,7 +771,15 @@ flowchart TD
 
 `Sandbox` 还输出 `trace()`、`escalationLog()`、`summary()`，为评测提供可回放证据。
 
-内置工具目前只有 `video.probe`：只读调用 `ffprobe`，读取时长、分辨率、编码，输入路径必须是 workspace 内相对路径，单次运行最多 4 次。
+网页端内置工具：
+
+| 工具 | 作用 | 证据形态 |
+| --- | --- | --- |
+| `pose.analyze` | 消费浏览器 MediaPipe 产出的 33 点姿态，计算膝/肘角度、髋部横移、脚踝位移、肩线倾斜 | `{ events, summary }`，每条 event 带秒数、身体部位、置信度 |
+| `frame.extract` | 从已上传关键帧里按时间点或窗口重新取图 | `{ frames, attachments }`，图片通过 `ToolResult.attachments` 回填模型 |
+| `memory.recall` | 只读查询同用户、同难度、同机位的历史记录 | `{ hits, count }`，只作对比，不能当本次证据 |
+
+`video.probe` 仍是桌面/命令行场景的工具：只读调用 `ffprobe`，读取时长、分辨率、编码，输入路径必须是 workspace 内相对路径，单次运行最多 4 次。记忆写入不暴露给模型，报告通过校验后由循环确定性写入。
 
 ### 5.6 长期记忆：`lib/agent/memory/`
 
@@ -780,7 +798,7 @@ flowchart TD
 - 分数 = `recency × 0.7 + lighting × 0.3`，其中 `lighting` 好为 1、其他为 0.5。
 - 默认返回 3 条，附 `reason`（同难度、同机位、多少天前）。
 
-记忆文件是单个 JSON，写入通过 `writeChain` 串行化，避免并发覆盖。
+记忆存储通过 `MemoryPersistence` 端口注入：桌面/测试用单个 JSON 文件，写入通过 `writeChain` 串行化，避免并发覆盖；网页端已登录用户使用 `agent_memory` 表（`supabase/migrations/0002_agent_memory.sql`），由服务端 `service_role` 按 `user_id` 显式读写。
 
 ### 5.7 输出校验与修复：`lib/agent/validate/`
 
@@ -863,13 +881,17 @@ cost-budget
 
 ### 5.9 当前接入缺口
 
-以当前代码为准，Agent harness 还缺三块产品化连接：
+原来的三块缺口已补齐：
 
-1. **没有顶层 Agent 循环。** 仓库里没有把「模型 → 工具 → 事实 → 上下文 → 模型」串起来的 runner；现有代码提供的是可组合部件与测试。
-2. **没有真实工具集。** 除 `video.probe` 外，没有姿态估计、帧提取、记忆写入等工具实现。
-3. **没有产品调用方。** 网页和桌面都不会创建 `Sandbox`、`MemoryStore` 或 `runRepairLoop`；分析结果仍由单次 DeepSeek 调用产生。
+1. **顶层循环。** `lib/agent/loop.ts` 串起模型、工具、事实、上下文、校验与修复，并带模型轮次、工具步数、墙钟、token、成本预算和 JSONL 检查点。
+2. **真实工具集。** 网页端有 `pose.analyze`、`frame.extract`、`memory.recall`；浏览器侧由 `lib/pose-extraction.ts` 生成姿态证据。
+3. **产品调用方。** `app/analyze/page.tsx` 上报姿态与难度；`app/api/analyze/route.ts` 与 `lib/process-analysis-job.ts` 创建并运行 Agent；状态接口和轮询回传 `agentPhase` 与 `AgentRunRecord`。
 
-这也意味着：当前产品的质量保障主要依赖 Prompt、输出解析、评测夹具和人工检查，而不是 Agent 的运行时校验。
+剩余边界：
+
+- 桌面端尚未接入 Agent 运行时，仍走单次 DeepSeek。
+- 没有姿态证据的旧客户端走保守纯视觉路径，不触发证据强制校验。
+- Agent 默认 3 次模型、4 次工具、30 秒；失败默认回退单次分析，安全红线除外。
 
 ## 6. 关键实现差异与风险清单
 
@@ -877,7 +899,7 @@ cost-budget
 | --- | --- | --- |
 | 生产 Prompt 与 `analyze-prompt.ts` | 生产用 `getFrameAnalysisPrompt`；`ACTIVE_CONTRACT` 只被评测与测试引用 | 修改 `ACTIVE_CONTRACT` 不会改变线上分析 |
 | v2 契约 | `analysis-schema.ts` 与解析器已支持；生产 Prompt 仍要求自由文本 + `难度/评分/金句` | 线上主要走 v1 解析；v2 主要用于评测对比 |
-| Agent harness | 仅 `tests/` 引用 | 不能把 `lib/agent/` 当作当前分析引擎 |
+| Agent harness | 网页端异步/同步分析可用，桌面端未接入 | 桌面端不能把 `lib/agent/` 当作当前分析引擎 |
 | 桌面云端同步 | 桌面调用共享 `analysis-db`，但 `analysis-cloud` 请求相对 `/api/analyses`；桌面没有对应 HTTP 服务或代理 | 打包桌面端实际以本地 IndexedDB 为主，云端镜像静默跳过 |
 | 桌面账户 | 本地 `accounts.json` + `scrypt`，与网页 Supabase 账户不互通 | 两端用户体系独立 |
 | 网页删除记录 | `DELETE /api/analyses/[id]` 与 `deleteAnalysisInCloud` 存在 | 页面暂无删除入口 |
@@ -889,7 +911,7 @@ cost-budget
 按调用链阅读，比按目录顺序更高效：
 
 1. **网页主链路**
-   `app/analyze/page.tsx` → `lib/frame-extraction.ts` → `app/api/analyze/route.ts` → `lib/analyze-request.ts` → `lib/process-analysis-job.ts` → `lib/deepseek-analysis.ts` → `lib/parse-analysis.ts` → `lib/analysis-db.ts` → `app/analysis/[id]/page.tsx`
+   `app/analyze/page.tsx` → `lib/frame-extraction.ts` → `lib/pose-extraction.ts` → `app/api/analyze/route.ts` → `lib/analyze-request.ts` → `lib/process-analysis-job.ts` → `lib/agent/web-runtime.ts` → `lib/agent/loop.ts` → `lib/parse-analysis.ts` → `lib/analysis-db.ts` → `app/analysis/[id]/page.tsx`
 2. **桌面主链路**
    `desktop/src/pages/AnalyzePage.tsx` → `desktop/src/lib/analyze-client.ts` → `desktop/electron/preload.ts` → `desktop/electron/ipc.ts` → `desktop/electron/job-manager.ts` → `desktop/electron/deepseek-runner.ts`
 3. **存储与账户**

@@ -164,6 +164,15 @@ export function AnalysisView({
     metaRows.push([zh ? "提示词版本" : "Prompt", record.promptVersion]);
   }
 
+  if (record.agent) {
+    metaRows.push([
+      "Agent",
+      zh
+        ? `${record.agent.steps} 次工具 · ${record.agent.attempts} 轮模型 · ${record.agent.validation.ok ? "校验通过" : "校验未通过"}`
+        : `${record.agent.steps} tools · ${record.agent.attempts} model turns · ${record.agent.validation.ok ? "validated" : "validation failed"}`,
+    ]);
+  }
+
   return (
     <div>
       <AnalysisPdfTemplate

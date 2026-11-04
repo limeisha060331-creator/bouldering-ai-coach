@@ -83,4 +83,6 @@ export interface AnalysisRecord {
   sessionNote?: string;
   /** 登录用户 ID（可选，用于日后云端同步） */
   userId?: string;
+  /** 网页端 Agent 运行审计；旧记录没有这个字段 */
+  agent?: import("./agent/run-types").AgentRunRecord;
 }

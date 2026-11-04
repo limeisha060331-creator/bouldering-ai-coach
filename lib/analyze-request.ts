@@ -2,7 +2,9 @@ import {
   MAX_FRAME_DATA_URL_CHARS,
   type AnalyzeFrame,
 } from "./frame-extraction";
-import type { AnalysisDepth, AnalysisLocale } from "./types";
+import type { AnalysisDepth, AnalysisLocale, BoulderGrade } from "./types";
+import { BOULDER_GRADES } from "./bouldering-grade";
+import { parsePoseEvidence, type PoseEvidence } from "./pose-types";
 
 /** 单次分析允许的最大帧数，留足 token 与请求体余量 */
 export const MAX_REQUEST_FRAMES = 24;
@@ -18,6 +20,10 @@ export type AnalyzeRequest = {
   frames: AnalyzeFrame[];
   depth: AnalysisDepth;
   locale: AnalysisLocale;
+  /** 浏览器端 MediaPipe 产出的姿态证据；可选 */
+  pose: PoseEvidence | null;
+  /** 用户选择的线路难度，用于历史记忆检索 */
+  grade?: BoulderGrade;
 };
 
 export type ParseAnalyzeRequestResult =
@@ -115,8 +121,27 @@ export function parseAnalyzeRequest(
   const locale: AnalysisLocale =
     input.locale === "en" ? "en" : "zh";
 
+  const grade =
+    typeof input.grade === "string" &&
+    (BOULDER_GRADES as readonly string[]).includes(input.grade)
+      ? (input.grade as BoulderGrade)
+      : undefined;
+
+  const poseResult = parsePoseEvidence(input.pose);
+  if (!poseResult.ok) {
+    return { ok: false, error: poseResult.error };
+  }
+
   return {
     ok: true,
-    value: { fileName, durationSec, frames, depth, locale },
+    value: {
+      fileName,
+      durationSec,
+      frames,
+      depth,
+      locale,
+      pose: poseResult.value,
+      grade,
+    },
   };
 }

@@ -1,11 +1,12 @@
 # Supabase 数据库接入
 
-Web 端的数据层由 Supabase（Postgres + PostgREST）提供，包含两张表：
+Web 端的数据层由 Supabase（Postgres + PostgREST）提供，包含三张表：
 
 | 表 | 用途 | 代码位置 |
 | --- | --- | --- |
 | `public.users` | 注册用户（邮箱、bcrypt 密码哈希） | `lib/db.ts` |
 | `public.analyses` | 每次视频分析记录（含时间轴、评分、难度、收藏下标） | `lib/supabase/analysis-repo.ts` |
+| `public.agent_memory` | 每个用户的 Agent 长期记忆（档案、训练事件、术语偏好） | `lib/agent/memory/supabase-persistence.ts` |
 
 RLS 默认全部关闭给外部角色，只有服务端用 `service_role` 读写；浏览器端不直连数据库，
 所有请求都经过 `/api/auth/*` 与 `/api/analyses/*`。
@@ -20,7 +21,8 @@ RLS 默认全部关闭给外部角色，只有服务端用 `service_role` 读写
 
 1. 左侧 **SQL Editor** → **New query**。
 2. 粘贴 `supabase/migrations/0001_init.sql` 全部内容 → **Run**。
-3. 在 **Table Editor** 中确认出现 `users`、`analyses` 两张表。
+3. 再粘贴 `supabase/migrations/0002_agent_memory.sql` 全部内容 → **Run**。
+4. 在 **Table Editor** 中确认出现 `users`、`analyses`、`agent_memory` 三张表。
 
 > 也可以用 Supabase CLI：`supabase link --project-ref <你的项目ref>` 后执行 `supabase db push`。
 
@@ -58,6 +60,7 @@ npm run dev
 
 ```bash
 psql "$SUPABASE_DB_URL" -f supabase/migrations/0001_init.sql
+psql "$SUPABASE_DB_URL" -f supabase/migrations/0002_agent_memory.sql
 ```
 
 ## 数据流
@@ -67,6 +70,7 @@ psql "$SUPABASE_DB_URL" -f supabase/migrations/0001_init.sql
                   └─ 已登录 → POST /api/analyses ──► Supabase analyses
 /analysis/[id]    本地读取；本地没有则 GET /api/analyses/:id 回源并缓存
 /auth/*           Supabase users（service_role）+ JWT 会话 Cookie
+/analyze (Agent)  通过 0002 迁移的 agent_memory 读写长期记忆
 ```
 
 视频文件本身仍存在浏览器本地 / Vercel Blob，不入库；云端只同步分析文本、缩略图与元数据。

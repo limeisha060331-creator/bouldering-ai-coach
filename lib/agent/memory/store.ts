@@ -16,17 +16,28 @@ import {
   type MemoryWriteDecision,
 } from "./types";
 
-type MemoryFile = {
+export type MemoryFile = {
   version: 1;
   profiles: Record<string, MemoryProfile>;
   episodes: MemoryEpisode[];
   preferences: MemoryPreference[];
 };
 
+/**
+ * 记忆持久化端口。
+ * 桌面/测试用文件，网页生产用 Supabase；策略逻辑留在 MemoryStore。
+ */
+export type MemoryPersistence = {
+  read(): Promise<MemoryFile | null>;
+  write(data: MemoryFile): Promise<void>;
+};
+
 export type MemoryStoreOptions = {
   now?: () => Date;
   /** 超过这个天数的记录不再参与对比，但仍然保留 */
   ttlDays?: number;
+  /** 不传时读写构造参数里的 JSON 文件 */
+  persistence?: MemoryPersistence;
 };
 
 const MIN_ISSUE_CONFIDENCE = 0.6;
@@ -45,6 +56,7 @@ export class MemoryStore {
   private readonly filePath: string;
   private readonly now: () => Date;
   private readonly ttlDays: number;
+  private readonly persistence?: MemoryPersistence;
   private data: MemoryFile = emptyFile();
   private loaded = false;
   private writeChain: Promise<void> = Promise.resolve();
@@ -53,6 +65,7 @@ export class MemoryStore {
     this.filePath = filePath;
     this.now = options.now ?? (() => new Date());
     this.ttlDays = options.ttlDays ?? 180;
+    this.persistence = options.persistence;
   }
 
   async load(): Promise<void> {
@@ -60,8 +73,10 @@ export class MemoryStore {
     this.loaded = true;
 
     try {
-      const raw = await readFile(this.filePath, "utf8");
-      const parsed = JSON.parse(raw) as MemoryFile;
+      const parsed = this.persistence
+        ? await this.persistence.read()
+        : (JSON.parse(await readFile(this.filePath, "utf8")) as MemoryFile);
+      if (!parsed) return;
       if (parsed.version !== 1) return;
       this.data = {
         version: 1,
@@ -311,6 +326,10 @@ export class MemoryStore {
 
   private async persist(): Promise<void> {
     this.writeChain = this.writeChain.then(async () => {
+      if (this.persistence) {
+        await this.persistence.write(this.data);
+        return;
+      }
       await mkdir(path.dirname(this.filePath), { recursive: true });
       await writeFile(
         this.filePath,

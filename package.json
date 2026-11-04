@@ -21,6 +21,7 @@
     "cost:report": "tsx evals/cost-report.ts"
   },
   "dependencies": {
+    "@mediapipe/tasks-vision": "^1.2.0",
     "@supabase/supabase-js": "^2.117.2",
     "@vercel/blob": "^2.3.3",
     "@vercel/functions": "^3.6.0",

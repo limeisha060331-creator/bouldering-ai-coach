@@ -71,21 +71,25 @@ NEXT_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 SUPABASE_SERVICE_ROLE_KEY=...
 AUTH_SECRET=...
+# 可选：网页端 Agent（默认开启，失败回退单次分析）
+AGENT_RUNTIME=on
+AGENT_FALLBACK=on
 ```
 
 ## 数据库（Supabase）
 
-网页版的账户与云端数据存在 Supabase（Postgres）上，共两张表：
+网页版的账户与云端数据存在 Supabase（Postgres）上，共三张表：
 
 | 表 | 用途 |
 | --- | --- |
 | `users` | 注册用户（邮箱 + bcrypt 密码哈希） |
 | `analyses` | 每次视频分析记录（时间轴、评分、难度、收藏下标等） |
+| `agent_memory` | 每个用户的 Agent 长期记忆（档案、训练事件、术语偏好） |
 
 接入三步（详见 **[supabase/README.md](./supabase/README.md)**）：
 
 1. 在 <https://supabase.com/dashboard> 新建项目。
-2. 打开 **SQL Editor**，执行 `supabase/migrations/0001_init.sql` 建表。
+2. 打开 **SQL Editor**，依次执行 `supabase/migrations/0001_init.sql`、`supabase/migrations/0002_agent_memory.sql` 建表。
 3. 在 **Project Settings → API** 复制 `Project URL`、`anon`、`service_role`，
    填入 `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` / `SUPABASE_SERVICE_ROLE_KEY`。
 
@@ -99,7 +103,7 @@ AUTH_SECRET=...
 | --- | --- | --- |
 | 界面 | React 19 + TypeScript + Tailwind 4 + Vite | React 19 + TypeScript + Tailwind 4 |
 | 运行时 | Electron 主进程（Node） | Next.js 16 App Router |
-| AI | DeepSeek `deepseek-flash`（端侧抽帧） | DeepSeek `deepseek-flash`（浏览器抽帧） |
+| AI | DeepSeek `deepseek-flash`（端侧抽帧） | DeepSeek `deepseek-flash` + Agent 工具循环（浏览器抽帧与姿态取证） |
 | 本地存储 | IndexedDB + 应用数据目录配置 | IndexedDB（本地优先）+ Supabase（账户与云端同步） |
 | 测试 | Vitest + Playwright（Electron） | — |
 

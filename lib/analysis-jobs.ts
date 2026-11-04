@@ -4,6 +4,9 @@ import {
   updateMemoryJob,
 } from "./job-memory-store";
 import type { AnalyzeFrame } from "./frame-extraction";
+import type { PoseEvidence } from "./pose-types";
+import type { AgentRunRecord } from "./agent/run-types";
+import type { BoulderGrade } from "./types";
 
 export type JobStatus =
   | "uploaded"
@@ -25,6 +28,12 @@ export interface AnalysisJob {
   frames?: AnalyzeFrame[];
   frameCount?: number;
   durationSec?: number;
+  /** 浏览器端姿态证据；体积不大，直接随任务 JSON 保存 */
+  pose?: PoseEvidence;
+  /** 用户选择的线路难度，用于记忆检索 */
+  grade?: BoulderGrade;
+  /** 发起分析的登录用户 */
+  userId?: string;
   model?: string;
   /** provider 返回的真实 token 用量，用于成本对账 */
   usage?: {
@@ -34,6 +43,10 @@ export interface AnalysisJob {
     cachedTokens: number;
   };
   analysis?: string;
+  /** Agent 运行记录（工具调用、校验、成本、digest） */
+  agent?: AgentRunRecord;
+  agentError?: string;
+  agentPhase?: string;
   error?: string;
   logs?: string[];
   analysisStarted?: boolean;

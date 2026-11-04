@@ -293,8 +293,10 @@ export function validateReport(
 
   if (contract) {
     all.push(...checkTimeline(contract, context));
-    all.push(...checkEvidence(contract, context));
-    all.push(...checkCoverage(contract, context));
+    if (context.requireEvidence !== false) {
+      all.push(...checkEvidence(contract, context));
+      all.push(...checkCoverage(contract, context));
+    }
     all.push(...checkSegmentCount(contract, context));
   }
 

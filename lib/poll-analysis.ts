@@ -3,6 +3,7 @@ import {
   explainFetchError,
   readFetchJson,
 } from "./fetch-json";
+import type { AgentRunRecord } from "./agent/run-types";
 
 const POLL_INTERVAL_MS = 3000;
 /** 含 429 冷却与后台分析重试 */
@@ -18,6 +19,9 @@ export interface AnalyzeApiResult {
   error?: string;
   message?: string;
   phase?: string;
+  /** 网页端 Agent 运行审计（工具调用、校验、成本） */
+  agent?: AgentRunRecord;
+  agentPhase?: string;
   elapsedMs?: number;
 }
 
@@ -40,6 +44,8 @@ type StatusJson = {
   analysis?: string;
   retryable?: boolean;
   analysisAttempt?: number;
+  agentPhase?: string;
+  agent?: AgentRunRecord;
 };
 
 const STATUS_HINTS: Record<string, string> = {
@@ -48,15 +54,30 @@ const STATUS_HINTS: Record<string, string> = {
   rate_limited: "【排队】DeepSeek 限流或服务繁忙，正在自动重试…",
 };
 
-function analyzingHint(data: StatusJson, elapsedSec: number): string {
+function analyzingHint(
+  data: StatusJson,
+  elapsedSec: number,
+  locale: "zh" | "en"
+): string {
   if (data.error) return String(data.error);
+  if (data.agentPhase === "agent") {
+    return locale === "en"
+      ? "Coach agent is gathering evidence and validating the report…"
+      : "教练 Agent 正在取证并校验报告…";
+  }
   if (data.analysisAttempt && data.analysisAttempt > 1) {
-    return `后台分析中（第 ${data.analysisAttempt} 次尝试）…`;
+    return locale === "en"
+      ? `Background analysis (attempt ${data.analysisAttempt})…`
+      : `后台分析中（第 ${data.analysisAttempt} 次尝试）…`;
   }
   if (elapsedSec > 120) {
-    return "深度分析耗时较长，请继续等待…";
+    return locale === "en"
+      ? "Deep analysis is taking longer; please keep waiting…"
+      : "深度分析耗时较长，请继续等待…";
   }
-  return STATUS_HINTS.analyzing;
+  return locale === "en"
+    ? "Coach is analyzing frame by frame (background)…"
+    : STATUS_HINTS.analyzing;
 }
 
 const PHASE_LABELS: Record<string, string> = {
@@ -144,7 +165,7 @@ export async function pollUntilComplete(
       status === "rate_limited" && data.error
         ? String(data.error)
         : status === "analyzing"
-          ? analyzingHint(data, elapsedSec)
+          ? analyzingHint(data, elapsedSec, options?.locale ?? "zh")
           : STATUS_HINTS[status] ?? "分析进行中…";
     const hint = baseHint + estimateWaitHint(elapsedMs, status);
 
@@ -163,6 +184,8 @@ export async function pollUntilComplete(
         analysis: data.analysis,
         async: true,
         phase: PHASE_LABELS.completed,
+        agent: data.agent,
+        agentPhase: data.agentPhase,
         elapsedMs,
       };
     }

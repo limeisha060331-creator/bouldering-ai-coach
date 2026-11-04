@@ -21,6 +21,8 @@ import {
   runDeepSeekAnalysis,
 } from "./deepseek-analysis";
 import type { AnalyzeFrame } from "./frame-extraction";
+import { agentFallbackEnabled, getAgentRuntimeMode } from "./agent/runtime-flag";
+import { AgentAnalysisError, runWebAgentAnalysis } from "./agent/web-runtime";
 
 /** 后台分析超过此时长视为卡死并重试 */
 const STALE_ANALYSIS_MS = 120_000;
@@ -153,11 +155,92 @@ async function executeAnalysisInBackground(jobId: string): Promise<void> {
     const depth = job.depth ?? "deep";
     const locale = job.locale ?? "zh";
     const model = job.model || getDeepSeekModelId();
+    const durationSec =
+      job.durationSec ?? frames[frames.length - 1]?.seconds ?? 0;
 
     logInfo(
       "job",
-      `[后台] DeepSeek 开始 jobId=${jobId} model=${model} frames=${frames.length}`
+      `[后台] 分析开始 jobId=${jobId} model=${model} frames=${frames.length} agent=${getAgentRuntimeMode()}`
     );
+
+    let agentRecord: AnalysisJob["agent"];
+    let agentError: string | undefined;
+
+    if (getAgentRuntimeMode() === "on") {
+      try {
+        const result = await runWebAgentAnalysis({
+          runId: jobId,
+          userId: job.userId,
+          grade: job.grade,
+          frames,
+          pose: job.pose ?? null,
+          durationSec,
+          depth,
+          locale,
+          apiKey,
+          model,
+          onEvent: (event) => {
+            logInfo(
+              "agent",
+              `[${jobId}] ${event.type}${event.tool ? `/${event.tool}` : ""}: ${event.message}`
+            );
+          },
+        });
+
+        await persistJob(
+          withStatus(
+            {
+              ...job,
+              analysis: result.analysis,
+              model: result.outcome.record.model,
+              usage: result.outcome.record.usage,
+              agent: result.outcome.record,
+              agentPhase: "done",
+              agentError: undefined,
+              analysisStarted: false,
+              analysisStartedAt: undefined,
+              error: undefined,
+            },
+            "completed"
+          )
+        );
+        logInfo(
+          "job",
+          `[后台] Agent 完成 jobId=${jobId} steps=${result.outcome.record.steps} tries=${result.outcome.record.attempts}`
+        );
+        return;
+      } catch (err) {
+        agentRecord =
+          err instanceof AgentAnalysisError ? err.outcome.record : undefined;
+        agentError = err instanceof Error ? err.message : String(err);
+        logError(`job/${jobId}/agent`, err);
+
+        const safetyBlocked =
+          err instanceof AgentAnalysisError &&
+          err.outcome.record.validation.codes.includes("E_SAFETY_BLOCKED");
+        if (!agentFallbackEnabled() || safetyBlocked) {
+          await persistJob(
+            withStatus(
+              {
+                ...job,
+                analysisStarted: false,
+                analysisStartedAt: undefined,
+                agent: agentRecord,
+                agentError,
+                agentPhase: "failed",
+                error: safetyBlocked
+                  ? `模型输出触碰安全红线，已停止：${agentError}`
+                  : `Agent 分析失败：${agentError}`,
+              },
+              "failed"
+            )
+          );
+          return;
+        }
+
+        logInfo("job", `[后台] Agent 失败，回退单次分析 jobId=${jobId}`);
+      }
+    }
 
     const detail = await runDeepSeekAnalysis({
       apiKey,
@@ -175,6 +258,9 @@ async function executeAnalysisInBackground(jobId: string): Promise<void> {
           analysis: detail.text,
           model: detail.modelId,
           usage: detail.usage ?? undefined,
+          agent: agentRecord,
+          agentError,
+          agentPhase: agentError ? "fallback" : undefined,
           analysisStarted: false,
           analysisStartedAt: undefined,
           error: undefined,
@@ -184,7 +270,7 @@ async function executeAnalysisInBackground(jobId: string): Promise<void> {
     );
     logInfo(
       "job",
-      `[后台] 任务完成 jobId=${jobId} ${detail.latencyMs}ms ${detail.usage?.totalTokens ?? "?"}tok`
+      `[后台] 任务完成 jobId=${jobId} ${detail.latencyMs}ms ${detail.usage?.totalTokens ?? "?"}tok fallback=${Boolean(agentRecord)}`
     );
   } catch (err) {
     await persistAnalysisError(jobId, err, job);
@@ -374,6 +460,8 @@ async function advanceAnalysisJobUnlocked(
             analysisAttempt: job.analysisAttempt ?? 1,
             analysisStarted: false,
             analysisStartedAt: undefined,
+            agentPhase:
+              getAgentRuntimeMode() === "on" ? "agent" : undefined,
           },
           "analyzing"
         ),
@@ -395,6 +483,8 @@ async function advanceAnalysisJobUnlocked(
         analysisStarted: true,
         analysisStartedAt: new Date().toISOString(),
         analysisAttempt: job.analysisAttempt ?? 1,
+        agentPhase:
+          getAgentRuntimeMode() === "on" ? "agent" : job.agentPhase,
       };
       await persistJob(job);
       await appendJobLog(job, "[分析] 已提交后台 DeepSeek…");

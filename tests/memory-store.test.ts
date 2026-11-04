@@ -3,7 +3,10 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { MemoryStore } from "../lib/agent/memory";
-import type { MemoryEpisodeInput } from "../lib/agent/memory";
+import type {
+  MemoryEpisodeInput,
+  MemoryPersistence,
+} from "../lib/agent/memory";
 
 let dir: string;
 let file: string;
@@ -184,6 +187,35 @@ describe("memory store", () => {
       lighting: "good",
     });
 
+    expect(hits).toHaveLength(1);
+  });
+
+  it("可注入外部持久化端口（网页端 Supabase 走同一套策略）", async () => {
+    let stored: unknown = null;
+    const persistence: MemoryPersistence = {
+      read: async () => stored as never,
+      write: async (data) => {
+        stored = JSON.parse(JSON.stringify(data));
+      },
+    };
+    const remote = new MemoryStore("unused.json", {
+      now: () => NOW,
+      persistence,
+    });
+
+    const decision = await remote.addEpisode(episode());
+    expect(decision.written).toBe(true);
+    expect(stored).toBeTruthy();
+
+    const reopened = new MemoryStore("unused.json", {
+      now: () => NOW,
+      persistence,
+    });
+    const hits = await reopened.retrieve("u1", {
+      grade: "V4",
+      angle: "side",
+      lighting: "good",
+    });
     expect(hits).toHaveLength(1);
   });
 });

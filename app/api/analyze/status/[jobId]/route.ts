@@ -77,6 +77,9 @@ export async function GET(
     statusSince: job.statusSince,
     analysisStarted: job.analysisStarted ?? false,
     analysisAttempt: job.analysisAttempt,
+    agentPhase: job.agentPhase,
+    agent: job.agent,
+    agentError: job.agentError,
     retryAfter: job.retryAfter,
     elapsedMs: elapsedSinceCreate,
     retryable:

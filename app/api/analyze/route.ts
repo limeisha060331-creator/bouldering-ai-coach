@@ -21,11 +21,20 @@ import {
 } from "@/lib/deepseek-analysis";
 import { parseAnalyzeRequest } from "@/lib/analyze-request";
 import { logError, logInfo } from "@/lib/log";
+import { getSessionUser } from "@/lib/auth-server";
+import {
+  agentFallbackEnabled,
+  getAgentRuntimeMode,
+} from "@/lib/agent/runtime-flag";
+import {
+  AgentAnalysisError,
+  runWebAgentAnalysis,
+} from "@/lib/agent/web-runtime";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-function useAsyncPipeline(): boolean {
+function shouldUseAsyncPipeline(): boolean {
   return hasBlobStorage() || isMemoryJobStoreEnabled();
 }
 
@@ -35,7 +44,7 @@ export async function POST(request: NextRequest) {
     vercel: process.env.VERCEL === "1",
     blob: hasBlobStorage(),
     memoryJobs: isMemoryJobStoreEnabled(),
-    async: useAsyncPipeline(),
+    async: shouldUseAsyncPipeline(),
   });
 
   const apiKey = process.env.DEEPSEEK_API_KEY;
@@ -71,6 +80,8 @@ export async function POST(request: NextRequest) {
   const jobId = randomUUID();
   const now = new Date().toISOString();
   const model = getDeepSeekModelId();
+  const runtimeMode = getAgentRuntimeMode();
+  const user = await getSessionUser().catch(() => null);
 
   logInfo("POST", "关键帧已校验", {
     fileName,
@@ -80,7 +91,7 @@ export async function POST(request: NextRequest) {
     locale,
   });
 
-  if (useAsyncPipeline()) {
+  if (shouldUseAsyncPipeline()) {
     const job: AnalysisJob = {
       id: jobId,
       status: "uploaded",
@@ -95,6 +106,9 @@ export async function POST(request: NextRequest) {
       depth,
       locale,
       model,
+      userId: user?.id,
+      pose: parsed.value.pose ?? undefined,
+      grade: parsed.value.grade,
     };
 
     try {
@@ -115,7 +129,11 @@ export async function POST(request: NextRequest) {
         async: true,
         status: "processing",
         phase: "frames_received",
-        message: `已抽取 ${frames.length} 张关键帧，正在提交 DeepSeek 分析…`,
+        message:
+          runtimeMode === "on"
+            ? `已抽取 ${frames.length} 张关键帧，正在提交 Agent 分析…`
+            : `已抽取 ${frames.length} 张关键帧，正在提交 DeepSeek 分析…`,
+        runtime: runtimeMode === "on" ? "agent" : "legacy",
         estimatedSeconds: Math.min(180, 15 + frames.length * 3),
       });
     } catch (err) {
@@ -129,9 +147,73 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  logInfo("POST", "无异步存储，同步调用 DeepSeek（仅建议本地调试）");
+  logInfo(
+    "POST",
+    `无异步存储，同步调用${runtimeMode === "on" ? " Agent" : " DeepSeek"}（仅建议本地调试）`
+  );
 
   try {
+    let agentRecord: Awaited<
+      ReturnType<typeof runWebAgentAnalysis>
+    >["outcome"]["record"] | undefined;
+    let agentError: string | undefined;
+
+    if (runtimeMode === "on") {
+      try {
+        const result = await runWebAgentAnalysis({
+          runId: jobId,
+          userId: user?.id,
+          grade: parsed.value.grade,
+          frames,
+          pose: parsed.value.pose,
+          durationSec,
+          depth,
+          locale,
+          apiKey,
+          model,
+        });
+
+        logInfo("POST", `同步 Agent 分析完成 ${Date.now() - startedAt}ms`, {
+          steps: result.outcome.record.steps,
+          attempts: result.outcome.record.attempts,
+        });
+
+        return NextResponse.json({
+          id: jobId,
+          jobId,
+          async: false,
+          status: "completed",
+          analysis: result.analysis,
+          model: result.outcome.record.model,
+          usage: result.outcome.record.usage,
+          agent: result.outcome.record,
+          runtime: "agent",
+        });
+      } catch (err) {
+        agentRecord =
+          err instanceof AgentAnalysisError ? err.outcome.record : undefined;
+        agentError = err instanceof Error ? err.message : String(err);
+        logError("POST/sync/agent", err);
+
+        const safetyBlocked =
+          err instanceof AgentAnalysisError &&
+          err.outcome.record.validation.codes.includes("E_SAFETY_BLOCKED");
+        if (!agentFallbackEnabled() || safetyBlocked) {
+          return NextResponse.json(
+            {
+              error: `Agent 分析失败：${agentError}`,
+              agent: agentRecord,
+              agentError,
+              runtime: "agent",
+              retryable: !safetyBlocked,
+            },
+            { status: safetyBlocked ? 422 : 500 }
+          );
+        }
+        logInfo("POST", "同步 Agent 失败，回退单次 DeepSeek");
+      }
+    }
+
     const detail = await runDeepSeekAnalysis({
       apiKey,
       model,
@@ -153,6 +235,9 @@ export async function POST(request: NextRequest) {
       analysis: detail.text,
       model: detail.modelId,
       usage: detail.usage,
+      agent: agentRecord,
+      agentError,
+      runtime: "legacy",
     });
   } catch (err) {
     logError("POST/sync", err);

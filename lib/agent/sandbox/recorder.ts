@@ -45,7 +45,12 @@ export class ToolRecorder {
   }
 
   set(key: string, entry: RecordedEntry): Promise<void> {
-    this.entries.set(key, entry);
+    // 图片附件是 base64，写进录制文件会让它膨胀几十倍；
+    // 回放只保证数据与 trace 一致，附件按需重新执行工具生成。
+    const result = entry.result.attachments
+      ? { ...entry.result, attachments: undefined }
+      : entry.result;
+    this.entries.set(key, { ...entry, result });
     this.writeChain = this.writeChain.then(() => this.flush());
     return this.writeChain;
   }
