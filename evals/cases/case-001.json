@@ -5,7 +5,7 @@
   "grade": "V4",
   "locale": "zh",
   "depth": "deep",
-  "model": "gemini-2.5-flash",
+  "model": "deepseek-flash",
   "labels": {
     "dimensions": {
       "hips": 4,

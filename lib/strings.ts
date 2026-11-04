@@ -38,8 +38,6 @@ type CopyBlock = {
   sessionNoteLabel: string;
   sessionNotePlaceholder: string;
   checkingVideo: string;
-  compressedFromTo: (fromMb: string, toMb: string) => string;
-  noCompressSuffix: string;
   compressFailed: string;
   uploading: string;
   analysisFailed: string;
@@ -49,7 +47,6 @@ type CopyBlock = {
   videoTooBigHint: string;
   pickVideo: string;
   needVideo: string;
-  stillLarge: string;
   canceled: string;
   canceledHint: string;
   cancelAnalysis: string;
@@ -149,10 +146,7 @@ export const STRINGS: Record<UiLocale, CopyBlock> = {
     sessionNoteLabel: "备注",
     sessionNotePlaceholder: "馆名、线路名…",
     checkingVideo: "正在读取视频…",
-    compressedFromTo: (fromMb, toMb) =>
-      `已压缩：${fromMb}MB → ${toMb}MB`,
-    noCompressSuffix: "，无需压缩",
-    compressFailed: "压缩失败",
+    compressFailed: "视频处理失败",
     uploading: "正在提交关键帧…",
     analysisFailed: "分析失败",
     asyncProgress: (est) =>
@@ -162,7 +156,6 @@ export const STRINGS: Record<UiLocale, CopyBlock> = {
     videoTooBigHint: "请先用剪辑软件裁短再上传。",
     pickVideo: "请选择视频文件（如 mp4、webm、mov）",
     needVideo: "请先选择视频",
-    stillLarge: "视频仍超过 {analyzeMb}MB，请重新选择或等待压缩完成",
     canceled: "已取消分析",
     canceledHint: "你可使用当前视频再次开始，或重新选择文件。",
     cancelAnalysis: "取消分析",
@@ -261,9 +254,6 @@ export const STRINGS: Record<UiLocale, CopyBlock> = {
     sessionNoteLabel: "Note",
     sessionNotePlaceholder: "Gym, route name…",
     checkingVideo: "Checking video…",
-    compressedFromTo: (fromMb, toMb) =>
-      `Compressed: ${fromMb}MB → ${toMb}MB`,
-    noCompressSuffix: ", no compression needed",
     compressFailed: "Compression failed",
     uploading: "Submitting key frames…",
     analysisFailed: "Analysis failed",
@@ -274,7 +264,6 @@ export const STRINGS: Record<UiLocale, CopyBlock> = {
     videoTooBigHint: "Trim in an editor, then upload again.",
     pickVideo: "Please choose a video file (e.g. mp4, webm, mov)",
     needVideo: "Select a video first",
-    stillLarge: "Still over {analyzeMb}MB—wait for compression or pick another file",
     canceled: "Analysis canceled",
     canceledHint: "Start again with the same clip or choose a new file.",
     cancelAnalysis: "Cancel",
