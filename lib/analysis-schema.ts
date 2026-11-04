@@ -65,7 +65,7 @@ export const analysisContractSchema = z.object({
 
 export type AnalysisContract = z.infer<typeof analysisContractSchema>;
 
-function extractJsonCandidate(raw: string): string | null {
+export function extractJsonCandidate(raw: string): string | null {
   const fenced = raw.match(/```(?:json)?\s*([\s\S]*?)```/i);
   if (fenced?.[1]) return fenced[1].trim();
 
