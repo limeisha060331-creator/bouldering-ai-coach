@@ -1,6 +1,6 @@
 # CRUX 抱石项目架构说明
 
-> 扫描基线：2026-11-04，分支 `feat/visual-refresh`，提交 `b65f99c`。
+> 扫描基线：2026-11-04，分支 `feat/visual-refresh`，Agent 接入提交 `3d79f50`。
 > 本文以当前代码为准，描述网页端、桌面端、共享领域层、质量评测链路，以及已接入网页分析链路的 Agent harness。
 
 ## 1. 项目概览与整体架构
@@ -678,8 +678,9 @@ Agent 相关测试：
 - `tests/agent-loop.test.ts`
 - `tests/pose-tools.test.ts`
 - `tests/frame-extract.test.ts`
+- `tests/web-agent.test.ts`
 
-### 5.2 设计中的 Agent 执行流程
+### 5.2 运行时 Agent 执行流程
 
 ```mermaid
 flowchart TD
@@ -687,7 +688,7 @@ flowchart TD
     ToolFacts --> Facts["factsFromToolResults<br/>每条事实绑定 sourceCallId"]
     Facts --> Context["buildContext<br/>policy → profile → session → memory → tools → task"]
     Context --> Render["renderContext + sha256 digest"]
-    Render --> Model["模型生成<br/>（仓库外，由调用方注入）"]
+    Render --> Model["模型生成<br/>AgentModel / DeepSeekAgentModel"]
     Model --> NeedTool{需要工具?}
 
     NeedTool -- 是 --> Sandbox["Sandbox.run<br/>白名单 → zod → 安全闸门<br/>配额 → 步数 / 超时 / 输出上限"]
@@ -879,7 +880,7 @@ cost-budget
 
 **批量运行。** `runAgentEval` 按 `cases × configs × k` 生成任务，支持并发、JSONL 断点续跑，报告是运行记录的纯函数；同样输入与固定 `now` 会得到完全一致的报告。
 
-### 5.9 当前接入缺口
+### 5.9 接入状态与剩余边界
 
 原来的三块缺口已补齐：
 
