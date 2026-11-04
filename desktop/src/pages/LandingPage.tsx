@@ -3,47 +3,16 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { CountUp } from "@ui/count-up";
 import { CruxHeader } from "@/components/crux-header";
 import { listAnalysisRecords } from "@lib/analysis-db";
-import { sumAscentMeters } from "@lib/climbing-stats";
+import {
+  averageScore,
+  bestGradeLabel,
+  countThisMonth,
+  scoreBarValue,
+  sumAscentMeters,
+} from "@lib/climbing-stats";
 import { formatRecordDate } from "@lib/record-display";
-import { gradeToNumber } from "@lib/bouldering-grade";
 import { gradeTapeColor } from "@lib/grade-tape";
 import type { AnalysisRecord } from "@lib/types";
-
-function monthCount(records: AnalysisRecord[]): number {
-  const now = new Date();
-  return records.filter((r) => {
-    const d = new Date(r.createdAt);
-    return (
-      d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth()
-    );
-  }).length;
-}
-
-function averageScore(records: AnalysisRecord[]): number | null {
-  const scores = records
-    .map((r) => r.score)
-    .filter((s): s is number => typeof s === "number");
-  if (scores.length === 0) return null;
-  return Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
-}
-
-function maxGrade(records: AnalysisRecord[]): string | null {
-  let best: { n: number; g: string } | null = null;
-  for (const r of records) {
-    const n = gradeToNumber(r.grade ?? undefined);
-    if (n == null) continue;
-    if (!best || n > best.n) best = { n, g: `V${n}` };
-  }
-  return best?.g ?? null;
-}
-
-function scoreBar(record: AnalysisRecord): number {
-  if (typeof record.score === "number") {
-    return Math.max(6, Math.min(100, record.score));
-  }
-  const g = gradeToNumber(record.grade ?? undefined);
-  return g == null ? 6 : Math.max(6, Math.min(100, (g + 1) * 8));
-}
 
 export function LandingPage() {
   const navigate = useNavigate();
@@ -65,9 +34,9 @@ export function LandingPage() {
   const totalAscentM = useMemo(() => sumAscentMeters(records), [records]);
   const recent = records.slice(0, 4);
   const chartRecords = records.slice(0, 8).reverse();
-  const monthTotal = monthCount(records);
+  const monthTotal = countThisMonth(records);
   const avg = averageScore(records);
-  const top = maxGrade(records);
+  const top = bestGradeLabel(records);
   const latestNote = records.find((r) => r.sessionNote?.trim())?.sessionNote;
 
   return (
@@ -241,7 +210,7 @@ export function LandingPage() {
                 {chartRecords.map((r, i) => (
                   <i
                     key={r.id}
-                    style={{ height: `${scoreBar(r)}%` }}
+                    style={{ height: `${scoreBarValue(r)}%` }}
                     data-now={i === chartRecords.length - 1}
                   />
                 ))}
