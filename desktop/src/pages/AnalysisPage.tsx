@@ -5,7 +5,7 @@ import { CruxHeader } from "@/components/crux-header";
 import { IconArrowLeft, IconLoader } from "@ui/icons";
 import { getAnalysisRecord, patchAnalysisRecord } from "@lib/analysis-db";
 import { STRINGS } from "@lib/strings";
-import { useUiLocale } from "@/lib/use-ui-locale";
+import { useUiLocale } from "@lib/use-ui-locale";
 import { gradeTapeColor } from "@lib/grade-tape";
 import type { AnalysisRecord } from "@lib/types";
 

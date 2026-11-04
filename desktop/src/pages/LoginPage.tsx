@@ -3,7 +3,7 @@ import { useEffect } from "react";
 import { AuthForm } from "@/components/auth-form";
 import { CruxHeader } from "@/components/crux-header";
 import { useAuth } from "@/lib/use-auth";
-import { useUiLocale } from "@/lib/use-ui-locale";
+import { useUiLocale } from "@lib/use-ui-locale";
 import { STRINGS } from "@lib/strings";
 
 export function LoginPage() {

@@ -1,6 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { useState } from "react";
-import { useUiLocale } from "@/lib/use-ui-locale";
+import { useUiLocale } from "@lib/use-ui-locale";
 import { IconMenu, IconX } from "@ui/icons";
 import { AuthNav } from "@/components/auth-nav";
 import { ThemeToggle } from "@ui/theme-toggle";

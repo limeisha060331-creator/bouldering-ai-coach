@@ -4,7 +4,7 @@ import { CruxHeader } from "@/components/crux-header";
 import { IconClock, IconLoader, IconStar } from "@ui/icons";
 import { listAllSegmentBookmarks } from "@lib/bookmarks";
 import { STRINGS } from "@lib/strings";
-import { useUiLocale } from "@/lib/use-ui-locale";
+import { useUiLocale } from "@lib/use-ui-locale";
 import type { SegmentBookmarkItem } from "@lib/types";
 
 export function FavoritesPage() {

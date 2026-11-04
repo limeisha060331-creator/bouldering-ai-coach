@@ -32,7 +32,7 @@ import type {
 import { FRAME_PROMPT_VERSION } from "@lib/version";
 import { STRINGS, formatStr } from "@lib/strings";
 import { useAuth } from "@/lib/use-auth";
-import { useUiLocale } from "@/lib/use-ui-locale";
+import { useUiLocale } from "@lib/use-ui-locale";
 import { AnalysisCanceledError, analyzeVideo } from "@/lib/analyze-client";
 import { extractFramesWithMeta } from "@/lib/extract-frames";
 import type { AnalyzeFrame } from "@shared/ipc";

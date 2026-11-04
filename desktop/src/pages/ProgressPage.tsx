@@ -8,7 +8,7 @@ import {
   type DayStat,
 } from "@lib/climbing-stats";
 import { listAnalysisRecords } from "@lib/analysis-db";
-import { useUiLocale } from "@/lib/use-ui-locale";
+import { useUiLocale } from "@lib/use-ui-locale";
 
 export function ProgressPage() {
   const [uiLocale] = useUiLocale();
