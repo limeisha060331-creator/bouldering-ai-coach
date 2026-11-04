@@ -3,38 +3,36 @@ import path from "node:path";
 import {
   ACTIVE_CONTRACT,
   CONTRACT_VERSIONS,
-  getAnalysisPrompt,
-  getMaxOutputTokens,
-  getGeminiModelId,
-  getPromptVersion,
   type ContractVersion,
 } from "../lib/analyze-prompt";
 import {
   computeCost,
-  estimateGeminiVideoUsage,
+  estimateDeepSeekFrameUsage,
   type ModelId,
   type TokenUsage,
 } from "../lib/ai-cost";
+import {
+  getDeepSeekModelId,
+  getFrameAnalysisPrompt,
+  runDeepSeekAnalysis,
+} from "../lib/deepseek-analysis";
+import { FRAME_PROMPT_VERSION } from "../lib/version";
 import {
   aggregateStructural,
   evaluateStructural,
   type StructuralAggregate,
   type StructuralCaseMetrics,
 } from "../lib/eval-structural";
-import {
-  geminiPhase1Upload,
-  geminiPhase2CheckReady,
-  runGeminiAnalysisDetailed,
-} from "../lib/gemini-analyze";
 import { parseAnalysis } from "../lib/parse-analysis";
 import type { AnalysisDepth, AnalysisLocale } from "../lib/types";
 import { parseCorpusManifest, type CorpusManifestEntry } from "./corpus/schema";
+import { loadCachedFrames } from "./frame-cache";
 import { renderLiveReport } from "./live-report";
 
 /**
  * 真实视频 live 评测。
  *
- * 跑的是生产同一条链路：uploadFile → 轮询 ACTIVE → generateContent。
+ * 跑的是生产同一条链路：读本地关键帧 → DeepSeek Chat Completions。
  * 产出三类真数据：结构指标（不需要人工标注）、provider 真实 token、各阶段耗时。
  * 质量分（5 维 MAE）不在这里算，必须等人工金标，报告里会写明这一点。
  */
@@ -166,21 +164,6 @@ function loadEnvLocal(root: string): void {
   }
 }
 
-async function waitUntilActive(
-  apiKey: string,
-  fileName: string,
-  timeoutMs = 240_000
-): Promise<{ waitedMs: number; state: string }> {
-  const startedAt = Date.now();
-  while (Date.now() - startedAt < timeoutMs) {
-    const check = await geminiPhase2CheckReady(apiKey, fileName);
-    if (check.ready) return { waitedMs: Date.now() - startedAt, state: check.state };
-    if (check.state === "FAILED") throw new Error("Gemini 视频处理失败（state=FAILED）");
-    await sleep(2000);
-  }
-  throw new Error(`等待视频 ACTIVE 超时（${timeoutMs / 1000}s）`);
-}
-
 function meanOrNull(values: number[]): number | null {
   return values.length === 0
     ? null
@@ -191,11 +174,9 @@ async function runOne(
   apiKey: string,
   item: CorpusManifestEntry,
   options: Options,
-  promptText: string,
+  root: string,
   modelId: string
 ): Promise<LiveCaseResult> {
-  const absPath = path.resolve(process.cwd(), item.localPath);
-  const buffer = fs.readFileSync(absPath);
   const startedAt = Date.now();
 
   let uploadMs: number | null = null;
@@ -205,51 +186,59 @@ async function runOne(
   let usage: LiveCaseResult["usage"] = null;
   let raw = "";
   let error: string | null = null;
+  let frameCount = 0;
 
   try {
-    const uploadStart = Date.now();
-    const uploaded = await geminiPhase1Upload(
-      apiKey,
-      buffer,
-      item.mimeType,
-      `eval-${item.id}`
-    );
-    uploadMs = Date.now() - uploadStart;
+    const loadStart = Date.now();
+    const cached = loadCachedFrames(root, item.id);
+    frameCount = cached.frames.length;
+    uploadMs = Date.now() - loadStart;
+    readyWaitMs = null;
 
-    const ready = await waitUntilActive(apiKey, uploaded.fileName);
-    readyWaitMs = ready.waitedMs;
-
-    const detail = await runGeminiAnalysisDetailed(
+    const detail = await runDeepSeekAnalysis({
       apiKey,
-      uploaded.fileUri,
-      item.mimeType,
-      {
-        prompt: promptText,
-        maxOutputTokens: getMaxOutputTokens(options.depth),
-        depth: options.depth,
-        locale: options.locale,
-        maxAttempts: 3,
-      }
-    );
+      model: modelId,
+      depth: options.depth,
+      locale: options.locale,
+      frames: cached.frames,
+      prompt: getFrameAnalysisPrompt(
+        options.depth,
+        options.locale,
+        cached.frames.length
+      ),
+      maxAttempts: 3,
+    });
     raw = detail.text;
     generateMs = detail.latencyMs;
     attempts = detail.attempts;
-    usage = detail.usage;
+    usage = detail.usage
+      ? {
+          promptTokens: detail.usage.promptTokens,
+          cachedTokens: detail.usage.cachedTokens,
+          outputTokens: detail.usage.outputTokens,
+          totalTokens: detail.usage.totalTokens,
+        }
+      : null;
   } catch (err) {
     error = err instanceof Error ? err.message : String(err);
   }
 
   const totalMs = Date.now() - startedAt;
-  const estimatedUsage: TokenUsage = estimateGeminiVideoUsage({
-    durationSec: item.durationSec,
-    promptText,
+  const estimatedUsage: TokenUsage = estimateDeepSeekFrameUsage({
+    frameCount: frameCount || undefined,
+    promptText: getFrameAnalysisPrompt(
+      options.depth,
+      options.locale,
+      frameCount || 16
+    ),
     outputText: raw,
     locale: options.locale,
   });
   const estimatedUsd = computeCost(modelId as ModelId, estimatedUsage).totalCostUsd;
   const actualUsd = usage
     ? computeCost(modelId as ModelId, {
-        inputVideoTokens: usage.promptTokens,
+        inputImageTokens: usage.promptTokens,
+        cachedInputTokens: usage.cachedTokens,
         outputTokens: usage.outputTokens,
       }).totalCostUsd
     : null;
@@ -346,16 +335,11 @@ async function main(): Promise<void> {
   }
   if (items.length === 0) throw new Error("筛选后没有可跑的语料");
 
-  const modelId = getGeminiModelId();
-  const promptText = getAnalysisPrompt(
-    options.depth,
-    options.locale,
-    options.contract
-  );
+  const modelId = getDeepSeekModelId();
 
   if (options.dryRun) {
     console.log(
-      `live 评测计划：${items.length} 条，model=${modelId} depth=${options.depth} contract=${options.contract} prompt=${getPromptVersion(options.contract)}`
+      `live 评测计划：${items.length} 条，model=${modelId} depth=${options.depth} prompt=${FRAME_PROMPT_VERSION}`
     );
     for (const item of items) {
       console.log(
@@ -366,8 +350,8 @@ async function main(): Promise<void> {
     return;
   }
 
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) throw new Error("缺少 GEMINI_API_KEY（.env.local 或环境变量）");
+  const apiKey = process.env.DEEPSEEK_API_KEY;
+  if (!apiKey) throw new Error("缺少 DEEPSEEK_API_KEY（.env.local 或环境变量）");
 
   const outDir = path.join(root, "evals", "runs", options.runId);
   const rawDir = path.join(outDir, "raw");
@@ -378,7 +362,7 @@ async function main(): Promise<void> {
     console.log(
       `[${index + 1}/${items.length}] ${item.id} ${item.durationSec}s …`
     );
-    const result = await runOne(apiKey, item, options, promptText, modelId);
+    const result = await runOne(apiKey, item, options, root, modelId);
     results.push(result);
     if (result.error) {
       console.log(`  失败：${result.error}`);
@@ -420,7 +404,7 @@ async function main(): Promise<void> {
     createdAt: new Date().toISOString(),
     mode: "live",
     model: modelId,
-    promptVersion: getPromptVersion(options.contract),
+    promptVersion: FRAME_PROMPT_VERSION,
     contract: options.contract,
     depth: options.depth,
     locale: options.locale,
@@ -442,8 +426,8 @@ async function main(): Promise<void> {
           : results.reduce((sum, item) => sum + item.cost.estimatedUsd, 0) /
             results.length,
       pricingNote:
-        "provider 只给 promptTokenCount 总数，这里把整段 prompt token 按视频单价计费；" +
-        "Gemini 2.5 Flash 文本/图片/视频同为 0.30 美元每百万 token，只有音轨按 1.00 计价，差额在千分位以下。",
+        "provider 只给 prompt_tokens 总数；DeepSeek 图片按文本同价（0.15 美元每百万 token），" +
+        "缓存命中部分单列计价，因此实际账单通常低于这里按全价估算的值。",
     },
     timings: {
       totalMs: results.reduce((sum, item) => sum + (item.totalMs ?? 0), 0),
@@ -460,9 +444,10 @@ async function main(): Promise<void> {
     },
     results,
     notes: [
-      "本轮用真实抱石视频跑生产链路，结构指标可直接引用。",
+      "本轮用真实抱石视频的关键帧跑生产链路（16 帧、768px），结构指标可直接引用。",
       "未做人工 5 维标注，所以不给综合质量分、不给维度分 MAE，也不下「质量变好」的结论。",
       "语料是公开授权的赛事与户外视频，不含真实用户上传，场景分布偏专业选手。",
+      "输入是离散关键帧，帧间动作细节不可见；与直传视频的历史基线不可直接横比。",
     ],
   };
 

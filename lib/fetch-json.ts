@@ -27,7 +27,7 @@ export function humanizeNonJsonBody(
     }
     if (status === 503) {
       return (
-        "服务暂不可用（503）。请确认已配置 BLOB_READ_WRITE_TOKEN 与 GEMINI_API_KEY，并重新部署后再试。"
+        "服务暂不可用（503）。请确认已配置 BLOB_READ_WRITE_TOKEN 与 DEEPSEEK_API_KEY，并重新部署后再试。"
       );
     }
     return "服务暂时不可用，请稍后重试。";

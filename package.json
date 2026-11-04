@@ -15,12 +15,12 @@
     "eval": "tsx evals/run.ts",
     "eval:compare": "tsx evals/compare.ts",
     "corpus:fetch": "tsx evals/corpus/fetch.ts",
+    "frames:extract": "node scripts/extract-frames.mjs",
     "eval:live": "tsx evals/live.ts",
     "eval:live:compare": "tsx evals/live-compare.ts",
     "cost:report": "tsx evals/cost-report.ts"
   },
   "dependencies": {
-    "@google/generative-ai": "^0.24.1",
     "@supabase/supabase-js": "^2.117.2",
     "@vercel/blob": "^2.3.3",
     "@vercel/functions": "^3.6.0",

@@ -228,13 +228,7 @@ export function renderLiveReport(run: LiveRun): string {
   lines.push("");
   lines.push("| 阶段 | 平均 |");
   lines.push("| --- | --- |");
-  lines.push(`| 上传 | ${ms(run.timings.avgUploadMs)} |`);
-  lines.push(`| 等待 ACTIVE | ${ms(
-    run.results
-      .map((item) => item.readyWaitMs)
-      .filter((value): value is number => value != null)
-      .reduce((sum, value, _, arr) => sum + value / arr.length, 0)
-  )} |`);
+  lines.push(`| 读取关键帧 | ${ms(run.timings.avgUploadMs)} |`);
   lines.push(`| 生成 | ${ms(run.timings.avgGenerateMs)} |`);
   lines.push(`| 单条端到端 | ${ms(
     run.results.length === 0 ? null : run.timings.totalMs / run.results.length

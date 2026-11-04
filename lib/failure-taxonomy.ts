@@ -49,7 +49,7 @@ export const FAILURE_LIBRARY: Record<FailureCode, FailureMeta> = {
     label: "模型返回空正文",
     severity: "P0",
     owner: "pipeline",
-    fix: "保留 GeminiEmptyAnalysisError，后台重试；仍为空则降级到更短片段并提示用户。",
+    fix: "保留 DeepSeekEmptyAnalysisError，后台重试；仍为空则改用轻量深度或更短片段并提示用户。",
     regression: "fixture: empty-output",
   },
   NO_TIMESTAMPED_SEGMENTS: {

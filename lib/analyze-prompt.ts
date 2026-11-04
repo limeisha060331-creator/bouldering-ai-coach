@@ -186,18 +186,3 @@ export function getAnalysisPrompt(
   return `${base}\n${suffix}`.trim();
 }
 
-export function getMaxOutputTokens(depth: AnalysisDepth): number {
-  return depth === "light" ? 4096 : 8192;
-}
-
-/**
- * 默认模型：须在 AI Studio Rate Limit 里为非 0/0。
- * 常见免费 Key 仅 2.5-flash 有额度；2.0-flash / 2.0-flash-lite / 2.5-flash-lite 常为 0/0。
- */
-export const DEFAULT_GEMINI_MODEL = "gemini-2.5-flash";
-const DEFAULT_MODEL = DEFAULT_GEMINI_MODEL;
-
-/** 可在 .env.local / Vercel 设置 GEMINI_MODEL 覆盖 */
-export function getGeminiModelId(): string {
-  return process.env.GEMINI_MODEL?.trim() || DEFAULT_MODEL;
-}
