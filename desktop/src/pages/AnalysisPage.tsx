@@ -44,7 +44,7 @@ export function AnalysisPage() {
         }
         setRecord(data);
         setBookmarks(data.bookmarkedSegmentIndices ?? []);
-        if (data.videoBlob) {
+        if (data.videoBlob && data.videoBlob.size > 0) {
           url = URL.createObjectURL(data.videoBlob);
           setVideoUrl(url);
         }

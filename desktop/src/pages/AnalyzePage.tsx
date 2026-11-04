@@ -16,7 +16,10 @@ import {
   listAnalysisRecords,
   saveAnalysisRecord,
 } from "@lib/analysis-db";
-import { MAX_SOURCE_BYTES } from "@lib/upload-limits";
+import {
+  HISTORY_VIDEO_MAX_BYTES,
+  MAX_SOURCE_BYTES,
+} from "@lib/upload-limits";
 import { parseAnalysis } from "@lib/parse-analysis";
 import { BOULDER_GRADES } from "@lib/bouldering-grade";
 import { gradeTapeColor } from "@lib/grade-tape";
@@ -327,7 +330,10 @@ export function AnalyzePage() {
         userId: authUser?.id,
       };
 
-      await saveAnalysisRecord(record, file);
+      // 原片只在不太大时留作本地回放；大文件只保留缩略图，避免撑爆 IndexedDB
+      const videoForHistory =
+        file.size <= HISTORY_VIDEO_MAX_BYTES ? file : new Blob();
+      await saveAnalysisRecord(record, videoForHistory);
       await loadHistory();
       navigate(`/analysis/${record.id}`);
     } catch (e) {

@@ -51,7 +51,7 @@ async function drain(): Promise<void> {
 }
 
 beforeEach(() => {
-  process.env.NODE_ENV = "development";
+  Object.assign(process.env, { NODE_ENV: "development" });
   process.env.DEEPSEEK_API_KEY = "sk-test";
   background.tasks.length = 0;
   deepseek.run.mockReset();
@@ -59,7 +59,7 @@ beforeEach(() => {
 
 afterEach(() => {
   delete process.env.DEEPSEEK_API_KEY;
-  process.env.NODE_ENV = "test";
+  Object.assign(process.env, { NODE_ENV: "test" });
 });
 
 describe("advanceAnalysisJob（内存任务表 + DeepSeek 状态机）", () => {
