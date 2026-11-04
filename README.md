@@ -107,9 +107,13 @@ AUTH_SECRET=...
 
 ```text
 ├─ app/             网页版路由与 API（Next.js）
-├─ components/      网页版 UI 组件
+├─ components/      两端共用的 UI 组件（路由/传输有差异的页面级组件在 desktop 内保留）
+├─ styles/          两端共用的设计系统 styles/crux.css
 ├─ lib/             两端共用的核心逻辑（Prompt、抽帧、DeepSeek 调用、解析、统计、PDF）
-├─ docs/            产品需求、设计说明
+├─ docs/            产品需求、设计说明、代码结构
+├─ evals/           评测夹具、指标、成本模型与运行报告
+├─ openspec/        变更提案与代码卫生规范
+├─ tests/           网页与共享逻辑测试
 ├─ supabase/        数据库迁移脚本与接入说明
 └─ desktop/         桌面客户端
    ├─ electron/     主进程：任务状态机、DeepSeek 调用、设置与本地账户
@@ -143,6 +147,7 @@ npm run cost:report   # 生成单次 / 月度 / 单位经济成本模型
 
 ## 更多文档
 
+- 代码结构与共享边界：**[docs/architecture.md](./docs/architecture.md)**
 - 桌面客户端详细说明：**[desktop/README.md](./desktop/README.md)**
 - Supabase 数据库接入：**[supabase/README.md](./supabase/README.md)**
 - 产品需求：**[docs/PRD-bouldering-app.md](./docs/PRD-bouldering-app.md)**
