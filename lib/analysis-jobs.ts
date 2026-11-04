@@ -62,10 +62,6 @@ export function hasBlobStorage(): boolean {
   return Boolean(process.env.BLOB_READ_WRITE_TOKEN);
 }
 
-export function supportsAsyncJobs(): boolean {
-  return hasBlobStorage();
-}
-
 async function streamToBuffer(
   stream: ReadableStream<Uint8Array>
 ): Promise<Buffer> {

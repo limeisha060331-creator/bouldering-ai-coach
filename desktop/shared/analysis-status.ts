@@ -18,14 +18,3 @@ export const PHASE_LABELS: Record<JobStatus, string> = {
   failed: "failed",
 };
 
-export const PIPELINE_STATUSES: JobStatus[] = [
-  "uploaded",
-  "analyzing",
-  "rate_limited",
-  "completed",
-  "failed",
-];
-
-export function isTerminalStatus(status: JobStatus): boolean {
-  return status === "completed" || status === "failed";
-}
