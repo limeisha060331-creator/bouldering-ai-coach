@@ -10,36 +10,22 @@ import {
 import {
   getMemoryJob,
   isMemoryJobStoreEnabled,
-  saveMemoryJob,
   updateMemoryJob,
 } from "./job-memory-store";
+import { logError, logInfo } from "./log";
 import {
-  logGeminiError,
-  logInfo,
-  mapGeminiError,
-  runGeminiAnalysis,
-} from "./gemini-analyze";
-import { isGeminiEmptyAnalysisError } from "./gemini-response-text";
-import {
-  formatGeminiDailyQuotaMessage,
-  formatGeminiGenerateContentCooldownMessage,
-  formatGeminiRpmRateLimitMessage,
-  isGeminiDailyQuotaExceeded,
-  isGeminiDailyQuotaHardStop,
-  isGeminiRpmRateLimit,
-  isGeminiRateLimitError,
-  isGeminiTransientError,
-  parseGeminiRetrySeconds,
-} from "./gemini-retry";
-import { geminiPhase1Upload, geminiPhase2CheckReady } from "./gemini-phases";
-import { getAnalysisPrompt, getMaxOutputTokens } from "./analyze-prompt";
+  describeDeepSeekStatus,
+  getDeepSeekModelId,
+  isDeepSeekApiError,
+  isDeepSeekEmptyAnalysisError,
+  runDeepSeekAnalysis,
+} from "./deepseek-analysis";
+import type { AnalyzeFrame } from "./frame-extraction";
 
-/** 后台 generateContent 超过此时长视为卡死并重试 */
-const STALE_ANALYSIS_MS = 100_000;
-/** Gemini 处理视频阶段最长等待 */
-const STALE_GEMINI_PROCESSING_MS = 180_000;
-/** 阶段一长时间未离开 uploaded/uploading */
-const STALE_UPLOAD_MS = 120_000;
+/** 后台分析超过此时长视为卡死并重试 */
+const STALE_ANALYSIS_MS = 120_000;
+/** 已接收关键帧但长时间没有进入分析 */
+const STALE_UPLOAD_MS = 60_000;
 const MAX_ANALYSIS_BACKGROUND_ATTEMPTS = 3;
 /** 同一任务并发推进锁（跨 status 轮询与 POST waitUntil） */
 const PIPELINE_LOCK_MS = 120_000;
@@ -59,85 +45,72 @@ function withStatus(job: AnalysisJob, status: JobStatus): AnalysisJob {
   };
 }
 
-async function fetchVideoBuffer(
-  job: AnalysisJob & { videoBuffer?: Buffer }
-): Promise<Buffer> {
-  if (job.videoBuffer) return job.videoBuffer;
-
-  if (job.videoBlobPath) {
-    return readPrivateBlob(job.videoBlobPath);
-  }
-
-  if (job.videoBlobUrl) {
-    const res = await fetch(job.videoBlobUrl);
-    if (!res.ok) throw new Error(`无法读取云存储视频: ${res.status}`);
-    return Buffer.from(await res.arrayBuffer());
-  }
-
-  throw new Error("缺少视频数据");
-}
-
-async function loadJob(
-  jobId: string
-): Promise<(AnalysisJob & { videoBuffer?: Buffer }) | null> {
+async function loadJob(jobId: string): Promise<AnalysisJob | null> {
   if (isMemoryJobStoreEnabled()) {
     return getMemoryJob(jobId);
   }
   return getJob(jobId);
 }
 
-async function persistJob(
-  job: AnalysisJob,
-  videoBuffer?: Buffer
-): Promise<void> {
+async function persistJob(job: AnalysisJob): Promise<void> {
   if (isMemoryJobStoreEnabled()) {
     updateMemoryJob(job);
-    if (videoBuffer) {
-      const m = getMemoryJob(job.id);
-      if (m) saveMemoryJob(job, videoBuffer);
-    }
     return;
   }
   await saveJob(job);
 }
 
-async function persistGeminiError(
+async function loadFrames(job: AnalysisJob): Promise<AnalyzeFrame[]> {
+  if (job.frames && job.frames.length > 0) return job.frames;
+  if (job.framesBlobPath) {
+    const buf = await readPrivateBlob(job.framesBlobPath);
+    return JSON.parse(buf.toString("utf-8")) as AnalyzeFrame[];
+  }
+  throw new Error("缺少关键帧数据，请重新上传视频");
+}
+
+async function persistAnalysisError(
   jobId: string,
   err: unknown,
   fallbackJob?: AnalysisJob
 ): Promise<void> {
-  logGeminiError(`job/${jobId}`, err);
+  logError(`job/${jobId}`, err);
   const current = (await loadJob(jobId)) ?? fallbackJob;
   if (!current) return;
 
-  if (isGeminiDailyQuotaExceeded(err)) {
-    if (isGeminiDailyQuotaHardStop(err)) {
-      await persistJob(
-        withStatus(
-          {
-            ...current,
-            analysisStarted: false,
-            analysisStartedAt: undefined,
-            retryAfter: undefined,
-            dailyQuotaExhausted: true,
-            error: formatGeminiDailyQuotaMessage(err),
-          },
-          "failed"
-        )
-      );
-      return;
+  let waitSec = 15;
+  let retryable = true;
+  let message = "分析失败，请稍后重试。";
+
+  if (isDeepSeekApiError(err)) {
+    retryable = err.retryable;
+    waitSec = err.waitSeconds || 15;
+    message = err.message;
+  } else if (isDeepSeekEmptyAnalysisError(err)) {
+    waitSec = 12;
+    message = `模型未返回正文，约 ${waitSec} 秒后自动重试…`;
+  } else if (err instanceof Error) {
+    const status = (err as { status?: number }).status;
+    if (typeof status === "number") {
+      const described = describeDeepSeekStatus(status, err.message);
+      retryable = described.retryable;
+      waitSec = described.waitSeconds || 15;
+      message = described.message;
+    } else {
+      retryable = false;
+      message = err.message;
     }
+  }
 
-    const waitSec = parseGeminiRetrySeconds(err);
+  if (retryable) {
     await persistJob(
       withStatus(
         {
           ...current,
           analysisStarted: false,
           analysisStartedAt: undefined,
-          dailyQuotaExhausted: false,
           retryAfter: new Date(Date.now() + waitSec * 1000).toISOString(),
-          error: formatGeminiGenerateContentCooldownMessage(err),
+          error: message,
         },
         "rate_limited"
       )
@@ -145,44 +118,13 @@ async function persistGeminiError(
     return;
   }
 
-  if (
-    isGeminiRateLimitError(err) ||
-    isGeminiTransientError(err) ||
-    isGeminiEmptyAnalysisError(err)
-  ) {
-    const waitSec = isGeminiEmptyAnalysisError(err)
-      ? 12
-      : parseGeminiRetrySeconds(err);
-    const errorMsg = isGeminiTransientError(err)
-      ? `Gemini 服务繁忙（503），约 ${waitSec} 秒后自动重试…`
-      : isGeminiEmptyAnalysisError(err)
-        ? `模型未返回正文，约 ${waitSec} 秒后自动重试…`
-        : isGeminiRpmRateLimit(err)
-          ? formatGeminiRpmRateLimitMessage(err)
-          : `Gemini 短时限流，约 ${waitSec} 秒后自动重试…`;
-    await persistJob(
-      withStatus(
-        {
-          ...current,
-          analysisStarted: false,
-          analysisStartedAt: undefined,
-          dailyQuotaExhausted: false,
-          retryAfter: new Date(Date.now() + waitSec * 1000).toISOString(),
-          error: errorMsg,
-        },
-        "rate_limited"
-      )
-    );
-    return;
-  }
-
-  const { message } = mapGeminiError(err);
   await persistJob(
     withStatus(
       {
         ...current,
         analysisStarted: false,
         analysisStartedAt: undefined,
+        retryAfter: undefined,
         error: message,
       },
       "failed"
@@ -190,42 +132,49 @@ async function persistGeminiError(
   );
 }
 
-/** 在 waitUntil 中跑完整 generateContent，避免单次 status 轮询超过 60s 被 Vercel 杀掉 */
+/** 在 waitUntil 中跑完整 DeepSeek 调用，避免单次 status 轮询超过时限 */
 async function executeAnalysisInBackground(jobId: string): Promise<void> {
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = process.env.DEEPSEEK_API_KEY;
   if (!apiKey) {
     const job = await loadJob(jobId);
     if (job) {
       await persistJob(
-        withStatus({ ...job, error: "GEMINI_API_KEY 未配置" }, "failed")
+        withStatus({ ...job, error: "DEEPSEEK_API_KEY 未配置" }, "failed")
       );
     }
     return;
   }
 
   const job = await loadJob(jobId);
-  if (!job || job.status !== "analyzing" || !job.geminiFileUri) return;
+  if (!job || job.status !== "analyzing") return;
 
   try {
-    logInfo("job", `[后台] generateContent 开始 jobId=${jobId}`);
-    const analysis = await runGeminiAnalysis(
-      apiKey,
-      job.geminiFileUri,
-      job.mimeType,
-      {
-        depth: job.depth ?? "deep",
-        locale: job.locale ?? "zh",
-        prompt: getAnalysisPrompt(job.depth ?? "deep", job.locale ?? "zh"),
-        maxOutputTokens: getMaxOutputTokens(job.depth ?? "deep"),
-        maxAttempts: 1,
-      }
+    const frames = await loadFrames(job);
+    const depth = job.depth ?? "deep";
+    const locale = job.locale ?? "zh";
+    const model = job.model || getDeepSeekModelId();
+
+    logInfo(
+      "job",
+      `[后台] DeepSeek 开始 jobId=${jobId} model=${model} frames=${frames.length}`
     );
+
+    const detail = await runDeepSeekAnalysis({
+      apiKey,
+      model,
+      depth,
+      locale,
+      frames,
+      maxAttempts: 1,
+    });
 
     await persistJob(
       withStatus(
         {
           ...job,
-          analysis,
+          analysis: detail.text,
+          model: detail.modelId,
+          usage: detail.usage ?? undefined,
           analysisStarted: false,
           analysisStartedAt: undefined,
           error: undefined,
@@ -233,22 +182,25 @@ async function executeAnalysisInBackground(jobId: string): Promise<void> {
         "completed"
       )
     );
-    logInfo("job", `[后台] 任务完成 jobId=${jobId}`);
+    logInfo(
+      "job",
+      `[后台] 任务完成 jobId=${jobId} ${detail.latencyMs}ms ${detail.usage?.totalTokens ?? "?"}tok`
+    );
   } catch (err) {
-    await persistGeminiError(jobId, err, job);
+    await persistAnalysisError(jobId, err, job);
   }
 }
 
 function scheduleBackgroundAnalysis(jobId: string): void {
   waitUntil(
     executeAnalysisInBackground(jobId).catch((err) => {
-      logGeminiError(`waitUntil/analysis/${jobId}`, err);
+      logError(`waitUntil/analysis/${jobId}`, err);
     })
   );
 }
 
 /**
- * 轮询前修复卡死任务（不推进 Gemini，仅重置/失败）
+ * 轮询前修复卡死任务。
  * @returns 是否已处理（调用方应重新 load job）
  */
 export async function recoverStaleJob(jobId: string): Promise<boolean> {
@@ -259,40 +211,20 @@ export async function recoverStaleJob(jobId: string): Promise<boolean> {
 
   const since = job.statusSince ?? job.updatedAt ?? job.createdAt;
 
-  if (
-    (job.status === "uploaded" || job.status === "gemini_uploading") &&
-    msSince(since) > STALE_UPLOAD_MS
-  ) {
-    logInfo("job", `恢复：上传阶段卡死 ${jobId}，重置为 uploaded`);
+  if (job.status === "uploaded" && msSince(since) > STALE_UPLOAD_MS) {
+    logInfo("job", `恢复：任务未进入分析 ${jobId}，重新排队`);
     await persistJob(
       withStatus(
         {
           ...job,
           analysisStarted: false,
           analysisStartedAt: undefined,
-          error: "上传阶段超时，正在自动重试…",
+          error: undefined,
         },
         "uploaded"
       )
     );
-    return true;
-  }
-
-  if (
-    job.status === "gemini_processing" &&
-    msSince(since) > STALE_GEMINI_PROCESSING_MS
-  ) {
-    logInfo("job", `恢复：Gemini 处理视频超时 ${jobId}`);
-    await persistJob(
-      withStatus(
-        {
-          ...job,
-          error:
-            "Gemini 处理视频超过 3 分钟。请换更短片段后重新分析。",
-        },
-        "failed"
-      )
-    );
+    schedulePipelineAdvance(jobId);
     return true;
   }
 
@@ -309,7 +241,7 @@ export async function recoverStaleJob(jobId: string): Promise<boolean> {
               analysisStarted: false,
               analysisStartedAt: undefined,
               error:
-                "分析多次超时未完成。请改用「轻量」深度、缩短视频后重试（模型请保持 gemini-2.5-flash）。",
+                "分析多次超时未完成。请改用「轻量」深度或换更短的视频后重试。",
             },
             "failed"
           )
@@ -360,7 +292,7 @@ export async function recoverStaleJob(jobId: string): Promise<boolean> {
 export function schedulePipelineAdvance(jobId: string): void {
   waitUntil(
     advanceAnalysisJob(jobId).catch((err) => {
-      logGeminiError(`waitUntil/pipeline/${jobId}`, err);
+      logError(`waitUntil/pipeline/${jobId}`, err);
     })
   );
 }
@@ -391,7 +323,6 @@ export async function advanceAnalysisJob(jobId: string): Promise<void> {
   try {
     job = (await loadJob(jobId)) ?? job;
     if (job.status === "completed" || job.status === "failed") return;
-
     await advanceAnalysisJobUnlocked(jobId, job);
   } finally {
     const latest = await loadJob(jobId);
@@ -403,7 +334,7 @@ export async function advanceAnalysisJob(jobId: string): Promise<void> {
 
 async function advanceAnalysisJobUnlocked(
   jobId: string,
-  initialJob: AnalysisJob & { videoBuffer?: Buffer }
+  initialJob: AnalysisJob
 ): Promise<void> {
   let job = initialJob;
 
@@ -427,73 +358,35 @@ async function advanceAnalysisJobUnlocked(
     return;
   }
 
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
+  if (!process.env.DEEPSEEK_API_KEY) {
     await persistJob(
-      withStatus({ ...job, error: "GEMINI_API_KEY 未配置" }, "failed")
+      withStatus({ ...job, error: "DEEPSEEK_API_KEY 未配置" }, "failed")
     );
     return;
   }
 
   try {
-    if (job.status === "uploaded" || job.status === "gemini_uploading") {
+    if (job.status === "uploaded") {
       job = await appendJobLog(
-        withStatus(job, "gemini_uploading"),
-        "[阶段一] 上传至 Gemini Files API…"
-      );
-
-      const buffer = await fetchVideoBuffer(job);
-      const p1 = await geminiPhase1Upload(
-        apiKey,
-        buffer,
-        job.mimeType,
-        job.fileName
-      );
-
-      job = withStatus(
-        {
-          ...job,
-          geminiFileName: p1.fileName,
-          geminiFileUri: p1.fileUri,
-        },
-        "gemini_processing"
+        withStatus(
+          {
+            ...job,
+            analysisAttempt: job.analysisAttempt ?? 1,
+            analysisStarted: false,
+            analysisStartedAt: undefined,
+          },
+          "analyzing"
+        ),
+        `[分析] 已接收 ${job.frameCount ?? 0} 张关键帧，提交 DeepSeek…`
       );
       await persistJob(job);
-      await appendJobLog(job, `[阶段一] 完成 fileName=${p1.fileName}`);
-      return;
-    }
-
-    if (job.status === "gemini_processing" && job.geminiFileName) {
-      const check = await geminiPhase2CheckReady(apiKey, job.geminiFileName);
-
-      if (check.state === "FAILED") {
-        throw new Error("Gemini 视频处理失败，请换更短片段重试");
-      }
-
-      if (!check.ready) {
-        logInfo("job", `[阶段二] 仍在处理 state=${check.state}`);
-        return;
-      }
-
-      job = await appendJobLog(
-        withStatus(job, "analyzing"),
-        "[阶段二] 视频已就绪，启动 AI 分析…"
-      );
-      await persistJob({
-        ...job,
-        analysisStarted: false,
-        analysisStartedAt: undefined,
-        analysisAttempt: 1,
-      });
       scheduleBackgroundAnalysis(jobId);
       return;
     }
 
     if (job.status === "analyzing") {
-      if (!job.geminiFileUri) return;
-
       if (job.analysisStarted) {
-        logInfo("job", `[阶段二-B] 后台分析进行中 jobId=${jobId}`);
+        logInfo("job", `[分析] 后台分析进行中 jobId=${jobId}`);
         return;
       }
 
@@ -504,11 +397,11 @@ async function advanceAnalysisJobUnlocked(
         analysisAttempt: job.analysisAttempt ?? 1,
       };
       await persistJob(job);
-      await appendJobLog(job, "[阶段二-B] 已提交后台 generateContent…");
+      await appendJobLog(job, "[分析] 已提交后台 DeepSeek…");
       scheduleBackgroundAnalysis(jobId);
     }
   } catch (err) {
-    await persistGeminiError(jobId, err, job);
+    await persistAnalysisError(jobId, err, job);
   }
 }
 

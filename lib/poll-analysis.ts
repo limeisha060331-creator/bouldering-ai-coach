@@ -5,7 +5,7 @@ import {
 } from "./fetch-json";
 
 const POLL_INTERVAL_MS = 3000;
-/** 含 429 冷却、Gemini 处理、后台分析重试 */
+/** 含 429 冷却与后台分析重试 */
 const MAX_POLL_MS = 540_000;
 const VERCEL_SOFT_LIMIT_MS = 10_000;
 
@@ -40,33 +40,28 @@ type StatusJson = {
   analysis?: string;
   retryable?: boolean;
   analysisAttempt?: number;
-  dailyQuotaExhausted?: boolean;
 };
 
 const STATUS_HINTS: Record<string, string> = {
-  uploaded: "已上传，准备提交 Gemini…",
-  gemini_uploading: "【阶段一】正在上传至 Gemini Files API…",
-  gemini_processing: "【阶段二】Gemini 正在处理视频，请稍候…",
-  analyzing: "【阶段二】教练正在观看并分析（后台运行）…",
-  rate_limited: "【排队】Gemini 限流或服务繁忙，正在自动重试…",
+  uploaded: "已接收关键帧，准备提交分析…",
+  analyzing: "教练正在逐帧分析（后台运行）…",
+  rate_limited: "【排队】DeepSeek 限流或服务繁忙，正在自动重试…",
 };
 
 function analyzingHint(data: StatusJson, elapsedSec: number): string {
   if (data.error) return String(data.error);
   if (data.analysisAttempt && data.analysisAttempt > 1) {
-    return `【阶段二】后台分析中（第 ${data.analysisAttempt} 次尝试）…`;
+    return `后台分析中（第 ${data.analysisAttempt} 次尝试）…`;
   }
   if (elapsedSec > 120) {
-    return "【阶段二】深度分析耗时较长，请继续等待…";
+    return "深度分析耗时较长，请继续等待…";
   }
   return STATUS_HINTS.analyzing;
 }
 
 const PHASE_LABELS: Record<string, string> = {
-  uploaded: "phase_upload",
-  gemini_uploading: "phase1_gemini_upload",
-  gemini_processing: "phase2_gemini_wait",
-  analyzing: "phase2_gemini_analyze",
+  uploaded: "phase_received",
+  analyzing: "phase_analyze",
   completed: "done",
   failed: "failed",
 };
@@ -175,7 +170,7 @@ export async function pollUntilComplete(
     if (status === "failed") {
       throw new AnalysisPollError(
         data.error || "分析失败",
-        data.retryable !== false && !data.dailyQuotaExhausted,
+        data.retryable !== false,
         elapsedMs
       );
     }
@@ -185,9 +180,9 @@ export async function pollUntilComplete(
 
   throw new AnalysisPollError(
     `分析超时（已等待 ${Math.round(MAX_POLL_MS / 1000)} 秒，任务 ${jobId}）。` +
-      `常见原因：Gemini 限流、视频处理排队，或深度分析耗时过长。` +
-      `建议：① 改用「轻量」深度；② 视频压到 3.5MB、30 秒内；③ 等待 2 分钟后点「使用当前视频再试」；` +
-      `④ 确认 Vercel 中 GEMINI_MODEL=gemini-2.5-flash。可在 Logs 搜索 jobId=${jobId}。`,
+      `常见原因：DeepSeek 限流、网络波动，或深度分析耗时过长。` +
+      `建议：① 改用「轻量」深度；② 换更短的片段；③ 等待 2 分钟后点「使用当前视频再试」；` +
+      `④ 确认 Vercel 中 DEEPSEEK_API_KEY 已配置。可在 Logs 搜索 jobId=${jobId}。`,
     true,
     MAX_POLL_MS
   );

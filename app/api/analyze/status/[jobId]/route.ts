@@ -8,16 +8,14 @@ import {
   getMemoryJob,
   isMemoryJobStoreEnabled,
 } from "@/lib/job-memory-store";
-import { logInfo } from "@/lib/gemini-log";
+import { logInfo } from "@/lib/log";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
 const PHASE_MAP: Record<string, string> = {
-  uploaded: "phase_upload",
-  gemini_uploading: "phase1_gemini_upload",
-  gemini_processing: "phase2_gemini_wait",
-  analyzing: "phase2_gemini_analyze",
+  uploaded: "phase_received",
+  analyzing: "phase_analyze",
   rate_limited: "rate_limited",
   completed: "done",
   failed: "failed",
@@ -81,10 +79,9 @@ export async function GET(
     analysisAttempt: job.analysisAttempt,
     retryAfter: job.retryAfter,
     elapsedMs: elapsedSinceCreate,
-    dailyQuotaExhausted: job.dailyQuotaExhausted ?? false,
     retryable:
       job.status === "rate_limited" ||
-      (job.status === "failed" && !job.dailyQuotaExhausted),
+      job.status === "failed",
     vercelNote:
       job.status !== "completed" && job.status !== "failed"
         ? "采用短请求轮询以规避 Vercel 10 秒函数限制"

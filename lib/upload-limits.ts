@@ -5,3 +5,6 @@
 export const MAX_ANALYZE_BYTES = Math.floor(3.5 * 1024 * 1024);
 
 export const MAX_ANALYZE_MB = MAX_ANALYZE_BYTES / 1024 / 1024;
+
+/** 用户可选择的原始视频上限；抽帧在浏览器本地完成，不再上传整段视频 */
+export const MAX_SOURCE_BYTES = 200 * 1024 * 1024;

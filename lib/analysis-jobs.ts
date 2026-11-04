@@ -3,11 +3,10 @@ import {
   isMemoryJobStoreEnabled,
   updateMemoryJob,
 } from "./job-memory-store";
+import type { AnalyzeFrame } from "./frame-extraction";
 
 export type JobStatus =
   | "uploaded"
-  | "gemini_uploading"
-  | "gemini_processing"
   | "analyzing"
   | "rate_limited"
   | "completed"
@@ -20,12 +19,20 @@ export interface AnalysisJob {
   updatedAt: string;
   fileName: string;
   mimeType: string;
-  /** 私有 Blob 的路径（推荐） */
-  videoBlobPath?: string;
-  /** @deprecated 旧版 public URL，仅兼容读取 */
-  videoBlobUrl?: string;
-  geminiFileName?: string;
-  geminiFileUri?: string;
+  /** 私有 Blob 中保存的关键帧 JSON 路径 */
+  framesBlobPath?: string;
+  /** 仅内存任务表使用；写 Blob 时单独存放，避免任务 JSON 过大 */
+  frames?: AnalyzeFrame[];
+  frameCount?: number;
+  durationSec?: number;
+  model?: string;
+  /** provider 返回的真实 token 用量，用于成本对账 */
+  usage?: {
+    promptTokens: number;
+    outputTokens: number;
+    totalTokens: number;
+    cachedTokens: number;
+  };
   analysis?: string;
   error?: string;
   logs?: string[];
@@ -35,8 +42,6 @@ export interface AnalysisJob {
   statusSince?: string;
   /** 分析阶段后台任务重试次数 */
   analysisAttempt?: number;
-  /** 免费层按日额度用尽，短时重试无效 */
-  dailyQuotaExhausted?: boolean;
   /** 429 后自动重试的最早时间（ISO） */
   retryAfter?: string;
   /** 防止多实例同时推进同一任务（ISO 到期时间） */
@@ -51,10 +56,6 @@ export interface AnalysisJob {
 
 function jobPath(id: string) {
   return `jobs/${id}.json`;
-}
-
-function videoPath(jobId: string) {
-  return `videos/${jobId}`;
 }
 
 export function hasBlobStorage(): boolean {
@@ -121,16 +122,15 @@ export async function getJob(id: string): Promise<AnalysisJob | null> {
   return readJobJson(jobPath(id));
 }
 
-/** 上传视频到私有 Blob，返回 pathname（非公开 URL） */
-export async function uploadVideoBlob(
+/** 把关键帧保存到私有 Blob，返回 pathname（非公开 URL） */
+export async function uploadFramesBlob(
   jobId: string,
-  buffer: Buffer,
-  mimeType: string
+  frames: AnalyzeFrame[]
 ): Promise<string> {
-  const pathname = videoPath(jobId);
-  await put(pathname, buffer, {
+  const pathname = `frames/${jobId}.json`;
+  await put(pathname, JSON.stringify(frames), {
     access: "private",
-    contentType: mimeType,
+    contentType: "application/json",
     addRandomSuffix: false,
     allowOverwrite: true,
   });

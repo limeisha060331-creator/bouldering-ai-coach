@@ -18,12 +18,10 @@ import {
   listAnalysisRecords,
   saveAnalysisRecord,
 } from "@/lib/analysis-db";
-import {
-  MAX_ANALYZE_BYTES,
-  MAX_ANALYZE_MB,
-  MAX_SOURCE_BYTES,
-  prepareVideoForUpload,
-} from "@/lib/compress-video";
+import { MAX_SOURCE_BYTES } from "@/lib/upload-limits";
+import { extractFramesWithMeta, type AnalyzeFrame } from "@/lib/frame-extraction";
+import { FRAME_PROMPT_VERSION } from "@/lib/version";
+import { MAX_DURATION_SEC } from "@/lib/analyze-request";
 import {
   errorFromFetchJson,
   explainFetchError,
@@ -40,25 +38,19 @@ import type {
   AnalysisRecord,
   BoulderGrade,
 } from "@/lib/types";
-import { PROMPT_VERSION } from "@/lib/analyze-prompt";
 import { STRINGS, formatStr } from "@/lib/strings";
 import { useAuth } from "@/lib/use-auth";
 import { useUiLocale } from "@/lib/use-ui-locale";
 
 function pipelineStep(
-  compressing: boolean,
+  preparing: boolean,
   loading: boolean,
   pollStatus: string | null
 ): number {
-  if (compressing) return 0;
+  if (preparing) return 0;
   if (!loading) return -1;
   if (!pollStatus || pollStatus === "uploaded") return 1;
-  if (
-    pollStatus === "gemini_uploading" ||
-    pollStatus === "gemini_processing"
-  ) {
-    return 2;
-  }
+  if (pollStatus === "analyzing" || pollStatus === "rate_limited") return 2;
   return 3;
 }
 
@@ -71,11 +63,12 @@ export default function AnalyzePage() {
   const abortRef = useRef<AbortController | null>(null);
 
   const [file, setFile] = useState<File | null>(null);
-  const [originalFile, setOriginalFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
-  const [compressing, setCompressing] = useState(false);
-  const [compressHint, setCompressHint] = useState<string | null>(null);
-  const [compressInfo, setCompressInfo] = useState<string | null>(null);
+  const [frames, setFrames] = useState<AnalyzeFrame[]>([]);
+  const [durationSec, setDurationSec] = useState<number | null>(null);
+  const [preparing, setPreparing] = useState(false);
+  const [prepHint, setPrepHint] = useState<string | null>(null);
+  const [prepInfo, setPrepInfo] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [progressHint, setProgressHint] = useState<string | null>(null);
   const [elapsedSec, setElapsedSec] = useState(0);
@@ -157,12 +150,14 @@ export default function AnalyzePage() {
     });
   }, [history, searchQ, datePreset, scoreMin, scoreMax]);
 
-  const activeStep = pipelineStep(compressing, loading, pollStatus);
+  const activeStep = pipelineStep(preparing, loading, pollStatus);
 
   async function processSelectedFile(selected: File) {
     setError(null);
     setRetryable(false);
-    setCompressInfo(null);
+    setPrepInfo(null);
+    setFrames([]);
+    setDurationSec(null);
 
     if (!selected.type.startsWith("video/")) {
       setError(t.pickVideo);
@@ -176,51 +171,66 @@ export default function AnalyzePage() {
       return;
     }
 
-    setOriginalFile(selected);
-    setCompressing(true);
-    setCompressHint(t.checkingVideo);
+    setFile(selected);
+    if (preview) URL.revokeObjectURL(preview);
+    setPreview(URL.createObjectURL(selected));
+
+    setPreparing(true);
+    setPrepHint(t.checkingVideo);
 
     try {
-      const result = await prepareVideoForUpload(selected, (msg, pct) => {
-        setCompressHint(msg);
-        if (pct != null) setCompressHint(`${msg} (${Math.round(pct)}%)`);
+      const result = await extractFramesWithMeta(selected, {
+        onProgress: (done, total) => {
+          setPrepHint(
+            uiLocale === "zh"
+              ? `正在抽取关键帧… ${done}/${total}`
+              : `Extracting key frames… ${done}/${total}`
+          );
+        },
       });
 
-      setFile(result.file);
-      if (preview) URL.revokeObjectURL(preview);
-      setPreview(URL.createObjectURL(result.file));
-
-      if (result.compressed) {
-        setCompressInfo(
-          t.compressedFromTo(
-            (result.originalSize / 1024 / 1024).toFixed(1),
-            (result.finalSize / 1024 / 1024).toFixed(1)
-          )
-        );
-      } else {
-        setCompressInfo(
-          `${(result.finalSize / 1024 / 1024).toFixed(1)}MB` + t.noCompressSuffix
+      if (result.durationSec > MAX_DURATION_SEC) {
+        throw new Error(
+          uiLocale === "zh"
+            ? `视频约 ${Math.round(result.durationSec)} 秒，请剪辑到 ${MAX_DURATION_SEC / 60} 分钟以内`
+            : `Clip is ${Math.round(result.durationSec)}s; trim it to under ${MAX_DURATION_SEC / 60} minutes`
         );
       }
+
+      setFrames(result.frames);
+      setDurationSec(result.durationSec);
+      setPrepInfo(
+        uiLocale === "zh"
+          ? `已抽取 ${result.frames.length} 张关键帧 · 时长 ${Math.round(result.durationSec)} 秒`
+          : `${result.frames.length} key frames · ${Math.round(result.durationSec)}s`
+      );
     } catch (e) {
       setFile(null);
-      setOriginalFile(null);
+      setFrames([]);
+      setDurationSec(null);
       if (preview) URL.revokeObjectURL(preview);
       setPreview(null);
-      setError(e instanceof Error ? e.message : t.compressFailed);
+      setError(
+        e instanceof Error
+          ? e.message
+          : uiLocale === "zh"
+            ? "视频处理失败"
+            : t.compressFailed
+      );
     } finally {
-      setCompressing(false);
-      setCompressHint(null);
+      setPreparing(false);
+      setPrepHint(null);
     }
   }
 
   function selectFile(selected: File | undefined) {
     if (!selected) {
       setFile(null);
-      setOriginalFile(null);
+      setFrames([]);
+      setDurationSec(null);
       if (preview) URL.revokeObjectURL(preview);
       setPreview(null);
-      setCompressInfo(null);
+      setPrepInfo(null);
       if (inputRef.current) inputRef.current.value = "";
       return;
     }
@@ -242,13 +252,8 @@ export default function AnalyzePage() {
   }
 
   async function runAnalysis() {
-    if (!file) {
+    if (!file || frames.length === 0 || !durationSec) {
       setError(t.needVideo);
-      return;
-    }
-
-    if (file.size > MAX_ANALYZE_BYTES) {
-      setError(formatStr(t.stillLarge, { analyzeMb: MAX_ANALYZE_MB }));
       return;
     }
 
@@ -263,21 +268,18 @@ export default function AnalyzePage() {
     abortRef.current?.abort();
     abortRef.current = new AbortController();
 
-    const formData = new FormData();
-    formData.append("video", file);
-    formData.append("compressed", String(file !== originalFile));
-    formData.append(
-      "originalSize",
-      String(originalFile?.size ?? file.size)
-    );
-    formData.append("depth", depth);
-    formData.append("locale", analysisLocale);
-
     try {
       const [res, thumbnail] = await Promise.all([
         fetch("/api/analyze", {
           method: "POST",
-          body: formData,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            fileName: file.name,
+            durationSec,
+            frames,
+            depth,
+            locale: analysisLocale,
+          }),
           signal: abortRef.current.signal,
         }),
         captureVideoThumbnail(file).catch(() => ""),
@@ -333,13 +335,13 @@ export default function AnalyzePage() {
       const record: AnalysisRecord = {
         id: data.id ?? data.jobId!,
         createdAt: new Date().toISOString(),
-        fileName: originalFile?.name ?? file.name,
+        fileName: file.name,
         thumbnail: thumbnail || preview || "",
         analysis: data.analysis!,
         score: parsed.score,
         highlight: parsed.highlight,
         segments: parsed.segments,
-        promptVersion: PROMPT_VERSION,
+        promptVersion: FRAME_PROMPT_VERSION,
         depth,
         locale: analysisLocale,
         bookmarkedSegmentIndices: [],
@@ -408,10 +410,10 @@ export default function AnalyzePage() {
               onDrop={handleDrop}
               className="dropzone mt-6"
               data-over={dragOver}
-              data-busy={compressing}
+              data-busy={preparing}
             >
               <span className="icon" aria-hidden>
-                {compressing ? (
+                {preparing ? (
                   <IconLoader className="h-5 w-5" />
                 ) : (
                   <IconUpload className="h-5 w-5" />
@@ -419,12 +421,11 @@ export default function AnalyzePage() {
               </span>
               <span className="txt">
                 <span className="t">
-                  {compressing ? t.uploadCompress : t.uploadIdle}
+                  {preparing ? t.uploadCompress : t.uploadIdle}
                 </span>
                 <span className="h">
                   {formatStr(t.uploadHint, {
                     maxMb: MAX_SOURCE_BYTES / 1024 / 1024,
-                    analyzeMb: MAX_ANALYZE_MB,
                   })}
                 </span>
               </span>
@@ -441,16 +442,16 @@ export default function AnalyzePage() {
               accept="video/*"
               className="hidden"
               onChange={handleFileChange}
-              disabled={compressing || loading}
+              disabled={preparing || loading}
             />
 
-            {compressHint && (
+            {prepHint && (
               <p className="mono mt-3 flex items-center gap-2">
                 <IconLoader className="h-3.5 w-3.5" />
-                {compressHint}
+                {prepHint}
               </p>
             )}
-            {compressInfo && <p className="mono mt-2">{compressInfo}</p>}
+            {prepInfo && <p className="mono mt-2">{prepInfo}</p>}
 
             {preview && file && (
               <div className="mt-5">
@@ -660,7 +661,7 @@ export default function AnalyzePage() {
 
                 <PulseButton
                   onClick={runAnalysis}
-                  disabled={!file || compressing}
+                  disabled={!file || frames.length === 0 || preparing}
                   loading={loading}
                 >
                   <span className="inline-flex items-center justify-center gap-2">
