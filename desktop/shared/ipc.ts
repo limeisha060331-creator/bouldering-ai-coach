@@ -10,8 +10,6 @@ export type AnalysisLocale = "zh" | "en";
 
 export type JobStatus =
   | "uploaded"
-  | "gemini_uploading"
-  | "gemini_processing"
   | "analyzing"
   | "rate_limited"
   | "completed"
@@ -25,9 +23,7 @@ export type AnalyzeStartPayload = {
   locale: AnalysisLocale;
   originalSize: number;
   compressedSize: number;
-  /** 视频字节；Gemini 直接分析视频，DeepSeek 不使用 */
-  data: Uint8Array;
-  /** 本地抽取的关键帧；DeepSeek 依赖它，Gemini 忽略 */
+  /** 本地抽取的关键帧；DeepSeek 只接受图片 */
   frames: AnalyzeFrame[];
 };
 

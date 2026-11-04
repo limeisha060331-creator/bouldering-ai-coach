@@ -1,5 +1,5 @@
-/** 可选的分析后端。DeepSeek 走「本地抽帧 + 图像理解」，Gemini 直接吃视频。 */
-export const PROVIDERS = ["deepseek", "gemini"] as const;
+/** 分析后端。DeepSeek 走「本地抽帧 + 图像理解」，官方 API 不接受视频。 */
+export const PROVIDERS = ["deepseek"] as const;
 
 export type AnalysisProvider = (typeof PROVIDERS)[number];
 
@@ -25,12 +25,6 @@ export const PROVIDER_CAPABILITIES: Record<
     supportsVideo: false,
     label: "DeepSeek",
     homepage: "https://platform.deepseek.com/api_keys",
-  },
-  gemini: {
-    needsFrames: false,
-    supportsVideo: true,
-    label: "Google Gemini",
-    homepage: "https://aistudio.google.com/apikey",
   },
 };
 

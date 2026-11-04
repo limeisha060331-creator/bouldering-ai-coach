@@ -97,26 +97,8 @@ test("默认使用 DeepSeek 模型并展示运行环境信息", async () => {
   await expect(page.getByText("Electron / Chromium")).toBeVisible();
 });
 
-test("可切换到 Gemini，两个后端的配置互不影响", async () => {
-  await page.getByRole("link", { name: "设置" }).first().click();
-
-  await page.getByTestId("provider-gemini").click();
-  await expect(page.getByTestId("provider-gemini")).toHaveAttribute(
-    "aria-pressed",
-    "true"
-  );
-  await expect(page.getByTestId("model-input")).toHaveValue("gemini-2.5-flash");
-  // 只给 DeepSeek 配过 Key，Gemini 仍应是未配置
-  await expect(page.getByTestId("api-key-status")).toHaveText("未配置 Key");
-
-  await page.getByTestId("provider-deepseek").click();
-  await expect(page.getByTestId("model-input")).toHaveValue("deepseek-flash");
-  await expect(page.getByTestId("api-key-status")).toHaveText("已配置 Key");
-});
-
 test("可以清除已保存的 API Key 并恢复未配置提示", async () => {
   await page.getByRole("link", { name: "设置" }).first().click();
-  await page.getByTestId("provider-deepseek").click();
   await page.getByTestId("clear-api-key").click();
 
   await expect(page.getByTestId("api-key-status")).toHaveText("未配置 Key");

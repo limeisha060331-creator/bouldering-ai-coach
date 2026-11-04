@@ -7,15 +7,16 @@ import type {
 } from "@shared/ipc";
 
 const payload: AnalyzeStartPayload = {
-  provider: "gemini",
+  provider: "deepseek",
   fileName: "crux.mp4",
   mimeType: "video/mp4",
   depth: "deep",
   locale: "zh",
   originalSize: 100,
   compressedSize: 100,
-  data: new Uint8Array([1, 2, 3]),
-  frames: [],
+  frames: [
+    { seconds: 0.4, timestamp: "00:00", dataUrl: "data:image/jpeg;base64,F1" },
+  ],
 };
 
 function event(patch: Partial<AnalyzeProgressEvent>): AnalyzeProgressEvent {
@@ -125,8 +126,8 @@ describe("analyzeVideo", () => {
 
   it("start 抛错时直接失败", async () => {
     const api = installFakeApi();
-    api.start.mockRejectedValueOnce(new Error("未配置 Gemini API Key"));
-    await expect(analyzeVideo(payload)).rejects.toThrow("未配置 Gemini API Key");
+    api.start.mockRejectedValueOnce(new Error("未配置 DeepSeek API Key"));
+    await expect(analyzeVideo(payload)).rejects.toThrow("未配置 DeepSeek API Key");
   });
 
   it("abort 会取消任务并抛出取消错误", async () => {

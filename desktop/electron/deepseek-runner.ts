@@ -1,6 +1,6 @@
 import type { AnalyzeFrame } from "@shared/ipc";
 import { DEFAULT_DEEPSEEK_MODEL } from "@shared/providers";
-import { runDeepSeekAnalysis } from "./deepseek-analyze";
+import { runDeepSeekAnalysis } from "@lib/deepseek-analysis";
 import type { JobHooks, JobRunner } from "./job-manager";
 
 export type DeepSeekRunnerOptions = {
@@ -35,7 +35,7 @@ export function createDeepSeekRunner(options: DeepSeekRunnerOptions): JobRunner 
     hooks.log(`[DeepSeek] 提交 ${frames.length} 张关键帧 model=${model}`);
     hooks.setStatus("analyzing");
 
-    const analysis = await analyze({
+    const detail = await analyze({
       apiKey,
       model,
       baseUrl: options.baseUrl,
@@ -43,9 +43,10 @@ export function createDeepSeekRunner(options: DeepSeekRunnerOptions): JobRunner 
       depth: job.depth ?? "deep",
       locale: job.locale ?? "zh",
       frames,
+      maxAttempts: 1,
     });
 
     hooks.log("[DeepSeek] 分析完成");
-    return analysis;
+    return detail.text;
   };
 }

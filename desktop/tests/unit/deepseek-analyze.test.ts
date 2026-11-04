@@ -9,7 +9,7 @@ import {
   getFrameAnalysisPrompt,
   parseDeepSeekResponse,
   runDeepSeekAnalysis,
-} from "../../electron/deepseek-analyze";
+} from "@lib/deepseek-analysis";
 import { DEFAULT_DEEPSEEK_MODEL } from "@shared/providers";
 import type { AnalyzeFrame } from "@shared/ipc";
 
@@ -138,10 +138,10 @@ describe("buildDeepSeekRequest", () => {
 
 describe("parseDeepSeekResponse", () => {
   it("取回正文", () => {
-    const text = parseDeepSeekResponse({
+    const parsed = parseDeepSeekResponse({
       choices: [{ message: { content: "  难度：V4\n00:03 起步偏后  " } }],
     });
-    expect(text).toBe("难度：V4\n00:03 起步偏后");
+    expect(parsed.text).toBe("难度：V4\n00:03 起步偏后");
   });
 
   it("空正文抛可重试错误", () => {
@@ -197,15 +197,16 @@ describe("runDeepSeekAnalysis", () => {
         )
     );
 
-    const text = await runDeepSeekAnalysis({
+    const detail = await runDeepSeekAnalysis({
       apiKey: "sk-test",
       depth: "deep",
       locale: "zh",
       frames: frames(2),
       fetchImpl: fetchImpl as unknown as typeof fetch,
+      maxAttempts: 1,
     });
 
-    expect(text).toContain("难度：V5");
+    expect(detail.text).toContain("难度：V5");
     expect(fetchImpl).toHaveBeenCalledTimes(1);
     const [url, init] = fetchImpl.mock.calls[0];
     expect(url).toBe("https://api.deepseek.com/chat/completions");
@@ -226,6 +227,7 @@ describe("runDeepSeekAnalysis", () => {
         locale: "zh",
         frames: frames(1),
         fetchImpl: fetchImpl as unknown as typeof fetch,
+        maxAttempts: 1,
       })
     ).rejects.toMatchObject({ status: 402, retryable: false });
   });
@@ -242,6 +244,7 @@ describe("runDeepSeekAnalysis", () => {
         locale: "zh",
         frames: frames(1),
         fetchImpl: fetchImpl as unknown as typeof fetch,
+        maxAttempts: 1,
       })
     ).rejects.toBeInstanceOf(DeepSeekApiError);
   });
@@ -258,6 +261,7 @@ describe("runDeepSeekAnalysis", () => {
         locale: "zh",
         frames: frames(1),
         fetchImpl: fetchImpl as unknown as typeof fetch,
+        maxAttempts: 1,
       })
     ).rejects.toMatchObject({ status: 502, retryable: true });
   });

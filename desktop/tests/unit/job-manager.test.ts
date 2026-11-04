@@ -1,19 +1,21 @@
 // @vitest-environment node
 import { describe, expect, it, vi } from "vitest";
 import { JobManager, type AnalysisJob } from "../../electron/job-manager";
+import { DeepSeekApiError } from "@lib/deepseek-analysis";
 import type { AnalyzeStartPayload, AnalyzeProgressEvent } from "@shared/ipc";
 
 function payload(): AnalyzeStartPayload {
   return {
-    provider: "gemini",
+    provider: "deepseek",
     fileName: "crux.mp4",
     mimeType: "video/mp4",
     depth: "deep",
     locale: "zh",
     originalSize: 1024,
     compressedSize: 1024,
-    data: new Uint8Array([1, 2, 3, 4]),
-    frames: [],
+    frames: [
+      { seconds: 0.4, timestamp: "00:00", dataUrl: "data:image/jpeg;base64,F1" },
+    ],
   };
 }
 
@@ -62,7 +64,7 @@ describe("JobManager", () => {
     const { manager, events } = createManager(async () => {
       attempts += 1;
       if (attempts === 1) {
-        throw new Error("429 GenerateRequestsPerMinute retry in 3s");
+        throw new DeepSeekApiError(429, "DeepSeek 触发限流", true, 3);
       }
       return "第二次成功";
     });
@@ -98,7 +100,7 @@ describe("JobManager", () => {
     let attempts = 0;
     const { manager } = createManager(async () => {
       attempts += 1;
-      throw new Error("503 service unavailable");
+      throw new DeepSeekApiError(503, "DeepSeek 服务暂时不可用", true, 0);
     });
 
     manager.start(payload());
@@ -130,24 +132,9 @@ describe("JobManager", () => {
     expect(job?.analysis).toBeUndefined();
   });
 
-  it("日配额硬停：failed 且标记 dailyQuotaExhausted", async () => {
-    const { manager } = createManager(async () => {
-      throw new Error(
-        "429 QuotaFailure generate_content_free_tier GenerateRequestsPerDay limit: 20 retry in 9000s"
-      );
-    });
-
-    manager.start(payload());
-    await flush();
-
-    const job = manager.get("job-test");
-    expect(job?.status).toBe("failed");
-    expect(job?.dailyQuotaExhausted).toBe(true);
-  });
-
   it("未配置 API Key 时给出可操作提示", async () => {
     const { manager } = createManager(async () => {
-      throw new Error("未配置 Gemini API Key，请在「设置」中填写后再分析。");
+      throw new Error("未配置 DeepSeek API Key，请在「设置」中填写后再分析。");
     });
 
     manager.start(payload());
@@ -156,13 +143,13 @@ describe("JobManager", () => {
     expect(manager.get("job-test")?.error).toContain("API Key");
   });
 
-  it("任务对象保留 prompt 版本与输入元数据", async () => {
+  it("任务对象保留帧提示词版本与输入元数据", async () => {
     const { manager } = createManager(async () => "ok");
     manager.start(payload());
     const job = manager.get("job-test");
     expect(job?.promptVersion).toBeTruthy();
     expect(job?.mimeType).toBe("video/mp4");
-    expect(job?.videoBuffer.length).toBe(4);
+    expect(job?.frames).toHaveLength(1);
     await flush();
   });
 });

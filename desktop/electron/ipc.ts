@@ -13,7 +13,6 @@ import type {
 import type { AuthStore } from "./auth-store";
 import type { SettingsStore } from "./settings-store";
 import { JobManager } from "./job-manager";
-import { createGeminiRunner } from "./gemini-runner";
 import { createDeepSeekRunner } from "./deepseek-runner";
 import { openContainingPath, saveBinaryFile, saveTextFile } from "./file-io";
 import {
@@ -30,19 +29,13 @@ export type IpcOptions = {
 export function registerIpc(options: IpcOptions): JobManager {
   const { settings, auth } = options;
 
-  const geminiRunner = createGeminiRunner({
-    apiKey: () => settings.apiKey("gemini"),
-  });
   const deepseekRunner = createDeepSeekRunner({
     apiKey: () => settings.apiKey("deepseek"),
     model: () => settings.model("deepseek"),
   });
 
   const jobManager = new JobManager({
-    run: (job, hooks) =>
-      job.provider === "gemini"
-        ? geminiRunner(job, hooks)
-        : deepseekRunner(job, hooks),
+    run: (job, hooks) => deepseekRunner(job, hooks),
     onProgress: (event: AnalyzeProgressEvent) =>
       options.broadcast("analyze:progress", event),
   });
@@ -94,9 +87,6 @@ export function registerIpc(options: IpcOptions): JobManager {
     const capability = PROVIDER_CAPABILITIES[payload.provider];
     if (capability.needsFrames && !payload.frames?.length) {
       throw new Error("未收到关键帧数据，请重新选择视频。");
-    }
-    if (!capability.needsFrames && (!payload.data || payload.data.length === 0)) {
-      throw new Error("未收到视频数据，请重新选择文件。");
     }
     if (!settings.apiKey(payload.provider)) {
       const label = capability.label;

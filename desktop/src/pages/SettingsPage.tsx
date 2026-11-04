@@ -100,8 +100,8 @@ export function SettingsPage() {
             <h1 className="h1">{t("设置", "Settings")}</h1>
             <p className="lede">
               {t(
-                "选择分析后端并填写对应密钥，密钥只保存在本机。",
-                "Pick the analysis backend and store its key locally."
+                "填写 DeepSeek 密钥，密钥只保存在本机。",
+                "Store your DeepSeek key locally; it never leaves this machine."
               )}
             </p>
           </div>
@@ -120,7 +120,7 @@ export function SettingsPage() {
         ) : (
           <div className="mt-8 flex flex-col gap-7">
             <section>
-              <h2 className="h2 mb-3">{t("分析后端", "Backend")}</h2>
+              <h2 className="h2 mb-3">{t("分析引擎", "Engine")}</h2>
               <div className="grid gap-3 sm:grid-cols-2">
                 {PROVIDERS.map((candidate) => {
                   const item = snapshot.providers[candidate];
@@ -159,12 +159,10 @@ export function SettingsPage() {
                         </span>
                       </span>
                       <span className="mt-2 block pl-2 text-[11px] leading-snug text-[var(--crux-text-muted)]">
-                        {item.supportsVideo
-                          ? t("直接上传视频做动作理解", "Understands the video directly")
-                          : t(
-                              "官方 API 仅支持图像，将自动抽取关键帧",
-                              "Image-only API; the app samples key frames"
-                            )}
+                        {t(
+                          "官方 API 仅支持图像，客户端会先抽取 16 张关键帧",
+                          "Image-only API; the app samples 16 key frames first"
+                        )}
                       </span>
                     </button>
                   );
@@ -274,15 +272,10 @@ export function SettingsPage() {
                   </button>
                 </div>
                 <p className="field-hint">
-                  {provider === "deepseek"
-                    ? t(
-                        `默认 ${active.defaultModel}，接口地址 https://api.deepseek.com（OpenAI 兼容）。`,
-                        `Default ${active.defaultModel}, endpoint https://api.deepseek.com (OpenAI-compatible).`
-                      )
-                    : t(
-                        `默认 ${active.defaultModel}（免费额度通常只对该模型开放）。`,
-                        `Default ${active.defaultModel} (the free tier usually only covers this model).`
-                      )}
+                  {t(
+                    `默认 ${active.defaultModel}，接口地址 https://api.deepseek.com（OpenAI 兼容）。`,
+                    `Default ${active.defaultModel}, endpoint https://api.deepseek.com (OpenAI-compatible).`
+                  )}
                 </p>
               </div>
             </section>

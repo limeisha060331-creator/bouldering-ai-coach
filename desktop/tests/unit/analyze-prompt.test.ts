@@ -1,10 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
-  DEFAULT_GEMINI_MODEL,
   PROMPT_VERSION,
   getAnalysisPrompt,
-  getGeminiModelId,
-  getMaxOutputTokens,
 } from "@lib/analyze-prompt";
 
 describe("analyze-prompt", () => {
@@ -22,19 +19,6 @@ describe("analyze-prompt", () => {
 
   it("英文提示词不含双引号（降低解析干扰）", () => {
     expect(getAnalysisPrompt("deep", "en")).not.toContain('"');
-  });
-
-  it("token 上限按深度区分", () => {
-    expect(getMaxOutputTokens("light")).toBe(4096);
-    expect(getMaxOutputTokens("deep")).toBe(8192);
-  });
-
-  it("模型 ID 默认值与常量一致", () => {
-    delete process.env.GEMINI_MODEL;
-    expect(getGeminiModelId()).toBe(DEFAULT_GEMINI_MODEL);
-    process.env.GEMINI_MODEL = "gemini-2.5-flash";
-    expect(getGeminiModelId()).toBe("gemini-2.5-flash");
-    delete process.env.GEMINI_MODEL;
   });
 
   it("提示词版本号非空", () => {

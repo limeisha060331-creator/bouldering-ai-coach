@@ -1,6 +1,5 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { DEFAULT_GEMINI_MODEL } from "@lib/analyze-prompt";
 import {
   DEFAULT_DEEPSEEK_MODEL,
   DEFAULT_PROVIDER,
@@ -15,35 +14,22 @@ export type StoredSettings = {
   provider?: AnalysisProvider;
   deepseekApiKey?: string;
   deepseekModel?: string;
-  /** 与旧版本字段同名，可直接复用历史配置 */
-  geminiApiKey?: string;
-  geminiModel?: string;
 };
 
 const ENV_KEYS: Record<AnalysisProvider, { apiKey: string; model: string }> = {
   deepseek: { apiKey: "DEEPSEEK_API_KEY", model: "DEEPSEEK_MODEL" },
-  gemini: { apiKey: "GEMINI_API_KEY", model: "GEMINI_MODEL" },
 };
 
 const DEFAULT_MODELS: Record<AnalysisProvider, string> = {
   deepseek: DEFAULT_DEEPSEEK_MODEL,
-  gemini: DEFAULT_GEMINI_MODEL,
 };
 
-const KEY_FIELDS: Record<
-  AnalysisProvider,
-  "deepseekApiKey" | "geminiApiKey"
-> = {
+const KEY_FIELDS: Record<AnalysisProvider, "deepseekApiKey"> = {
   deepseek: "deepseekApiKey",
-  gemini: "geminiApiKey",
 };
 
-const MODEL_FIELDS: Record<
-  AnalysisProvider,
-  "deepseekModel" | "geminiModel"
-> = {
+const MODEL_FIELDS: Record<AnalysisProvider, "deepseekModel"> = {
   deepseek: "deepseekModel",
-  gemini: "geminiModel",
 };
 
 /** 只展示首尾各 4 位，避免截图/日志泄露完整 Key */
@@ -55,7 +41,7 @@ export function maskApiKey(apiKey: string): string {
 }
 
 /**
- * 桌面端设置：分析后端（DeepSeek / Gemini）与各自的 API Key、模型。
+ * 桌面端设置：DeepSeek 的 API Key 与模型。
  * 环境变量优先级最高，方便 CI / 高级用户覆盖。
  */
 export class SettingsStore {
@@ -88,8 +74,6 @@ export class SettingsStore {
             : undefined,
           deepseekApiKey: this.readString(parsed.deepseekApiKey),
           deepseekModel: this.readString(parsed.deepseekModel),
-          geminiApiKey: this.readString(parsed.geminiApiKey),
-          geminiModel: this.readString(parsed.geminiModel),
         };
       }
     } catch {
@@ -196,7 +180,7 @@ export class SettingsStore {
 
   /**
    * 把配置写回 process.env，
-   * 这样复用仓库根目录 lib/ 的 Gemini 代码无需感知桌面端设置来源。
+   * 这样复用仓库根目录 lib/ 的 DeepSeek 代码无需感知桌面端设置来源。
    */
   applyToEnv(target: NodeJS.ProcessEnv = process.env): void {
     for (const provider of PROVIDERS) {

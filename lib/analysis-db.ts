@@ -69,7 +69,10 @@ async function patchLocalAnalysisRecord(
     const req = store.get(id);
     req.onsuccess = () => {
       const prev = req.result as StoredRecord | undefined;
-      if (!prev) return;
+      if (!prev) {
+        reject(new Error(`分析记录不存在：${id}`));
+        return;
+      }
       const { videoBlob, ...meta } = prev;
       const next = { ...meta, ...patch, id, videoBlob };
       store.put(next);

@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { PROMPT_VERSION } from "@lib/analyze-prompt";
+import { FRAME_PROMPT_VERSION } from "@lib/version";
 import type {
   AnalysisDepth,
   AnalysisLocale,
@@ -25,18 +25,12 @@ export type AnalysisJob = {
   locale: AnalysisLocale;
   originalSize: number;
   compressedSize: number;
-  videoBuffer: Buffer;
   frames: AnalyzeFrame[];
   promptVersion: string;
   analysisAttempt: number;
-  geminiFileName?: string;
-  geminiFileUri?: string;
-  geminiState?: string;
-  fileReady?: boolean;
   analysis?: string;
   error?: string;
   retryAfter?: string;
-  dailyQuotaExhausted?: boolean;
   logs: string[];
 };
 
@@ -72,7 +66,7 @@ function defaultSleep(ms: number): Promise<void> {
 
 /**
  * 分析任务状态机（桌面版本地运行，无 Serverless 时限）：
- * 上传 → Gemini 处理 → 分析，带限流退避与整体重试。
+ * 关键帧就绪 → DeepSeek 分析，带限流退避与整体重试。
  */
 export class JobManager {
   private readonly jobs = new Map<string, AnalysisJob>();
@@ -114,9 +108,8 @@ export class JobManager {
       locale: payload.locale,
       originalSize: payload.originalSize,
       compressedSize: payload.compressedSize,
-      videoBuffer: Buffer.from(payload.data),
       frames: payload.frames ?? [],
-      promptVersion: PROMPT_VERSION,
+      promptVersion: FRAME_PROMPT_VERSION,
       analysisAttempt: 1,
       logs: [],
     };
@@ -214,7 +207,6 @@ export class JobManager {
       const decision: ErrorDecision = classifyAnalysisError(outcome.error);
 
       if (!decision.retryable || attempt >= this.maxAttempts) {
-        job.dailyQuotaExhausted = decision.dailyQuotaExhausted;
         this.finish(job, "failed", decision.message);
         return;
       }
@@ -260,7 +252,7 @@ export class JobManager {
     return { promise, resolve };
   }
 
-  /** 取消要能立刻生效：不必等 Gemini 请求自然结束 */
+  /** 取消要能立刻生效：不必等 DeepSeek 请求自然结束 */
   private runWithCancelSignal(
     job: AnalysisJob,
     hooks: JobHooks
