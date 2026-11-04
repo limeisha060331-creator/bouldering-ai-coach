@@ -8,11 +8,10 @@ import {
   meanSegmentChars,
 } from "./eval-signals";
 import {
-  failureMeta,
   type FailureCode,
   type FailureFinding,
-  type FailureSeverity,
 } from "./failure-taxonomy";
+import { collectBaseFailures, sortFailures } from "./eval-failures";
 
 /**
  * 真实视频的结构基线。
@@ -21,12 +20,6 @@ import {
  * 好处是真视频当天就能出数；代价是它不衡量建议对不对，只衡量建议能不能用。
  * 报告里必须写明这个边界，否则 90 分的结构分会被误读成 90 分的教练质量。
  */
-
-const SEVERITY_RANK: Record<FailureSeverity, number> = {
-  P0: 0,
-  P1: 1,
-  P2: 2,
-};
 
 const clamp = (value: number, min: number, max: number): number =>
   Math.min(max, Math.max(min, value));
@@ -128,68 +121,25 @@ export function evaluateStructural(
     0
   );
 
-  const failures: FailureFinding[] = [];
-  function addFailure(code: FailureCode, evidence: string): void {
-    const meta = failureMeta(code);
-    failures.push({
-      code,
-      severity: meta.severity,
-      owner: meta.owner,
-      evidence,
-      fix: meta.fix,
-    });
-  }
-
-  if (!raw.trim()) addFailure("EMPTY_OUTPUT", "模型正文为空");
-  if (segmentCount === 0) {
-    addFailure("NO_TIMESTAMPED_SEGMENTS", "0 条可解析时间戳");
-  }
-  if (!scorePresent) addFailure("SCORE_MISSING", "未解析到「评分：xx/100」");
-  if (gradePredicted == null) {
-    addFailure("GRADE_MISSING", "未解析到「难度：Vx」");
-  } else if (gradeMatch === false && gradeExpected != null) {
-    addFailure(
-      "GRADE_MISMATCH",
-      `模型判断 ${gradePredicted}，外部标注 ${gradeExpected}`
-    );
-  }
-  if (segmentCount > 0 && timestamps.inRangeRate < 1) {
-    addFailure(
-      "TIMESTAMP_OUT_OF_RANGE",
-      `${segmentCount - timestamps.inRangeCount}/${segmentCount} 条超出 0-${
-        input.durationSec + 2
-      }s`
-    );
-  }
-  if (segmentCount > 1 && !timestamps.monotonic) {
-    addFailure("TIMESTAMP_NOT_MONOTONIC", "存在倒序时间戳");
-  }
-  if (genericAdviceRate > 0.3) {
-    addFailure(
-      "GENERIC_ADVICE",
-      `${genericCount}/${segmentCount} 条含空话短语`
-    );
-  }
-  if (duplicateSegmentRate > 0.2) {
-    addFailure(
-      "DUPLICATE_SEGMENT",
-      `重复率 ${(duplicateSegmentRate * 100).toFixed(0)}%`
-    );
-  }
-  if (segmentCount > 0 && avgSegmentChars < 12) {
-    addFailure(
-      "SEGMENT_TOO_SHORT",
-      `平均每条 ${avgSegmentChars.toFixed(1)} 字`
-    );
-  }
-  if (!dimensionScores) {
-    addFailure("DIMENSION_SCORES_MISSING", "未找到完整的 5 维分数");
-  }
-
-  failures.sort(
-    (a, b) =>
-      SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity] ||
-      a.code.localeCompare(b.code)
+  const failures = sortFailures(
+    collectBaseFailures({
+      raw,
+      segmentCount,
+      scorePresent,
+      gradePredicted,
+      gradeExpected,
+      gradeMatch,
+      gradeExpectedLabel: "外部标注",
+      durationSec: input.durationSec,
+      inRangeCount: timestamps.inRangeCount,
+      timestampInRangeRate: timestamps.inRangeRate,
+      timestampMonotonic: timestamps.monotonic,
+      genericCount,
+      genericAdviceRate,
+      duplicateSegmentRate,
+      avgSegmentChars,
+      hasDimensionScores: dimensionScores != null,
+    })
   );
 
   return {

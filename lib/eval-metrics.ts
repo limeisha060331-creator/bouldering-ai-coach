@@ -6,24 +6,21 @@ import {
   type EvalCase,
 } from "./eval-schema";
 import {
-  failureMeta,
   type FailureCode,
   type FailureFinding,
-  type FailureSeverity,
 } from "./failure-taxonomy";
 import { parseAnalysisContract } from "./analysis-schema";
+import {
+  addFailure,
+  collectBaseFailures,
+  sortFailures,
+} from "./eval-failures";
 import {
   checkTimestamps,
   computeDuplicateSegmentRate,
   countGenericSegments,
   meanSegmentChars,
 } from "./eval-signals";
-
-const SEVERITY_RANK: Record<FailureSeverity, number> = {
-  P0: 0,
-  P1: 1,
-  P2: 2,
-};
 
 export type CaseMetrics = {
   caseId: string;
@@ -183,76 +180,41 @@ export function evaluateAnalysis(
     0.05 * (gradeMatch == null ? 0 : gradeMatch ? 1 : 0) +
     0.1 * lengthAdequacy;
 
-  const failures: FailureFinding[] = [];
-  function addFailure(code: FailureCode, evidence: string): void {
-    const meta = failureMeta(code);
-    failures.push({
-      code,
-      severity: meta.severity,
-      owner: meta.owner,
-      evidence,
-      fix: meta.fix,
-    });
-  }
+  const failures = collectBaseFailures({
+    raw,
+    segmentCount,
+    scorePresent,
+    gradePredicted,
+    gradeExpected: evalCase.grade,
+    gradeMatch,
+    gradeExpectedLabel: "标注",
+    durationSec: evalCase.durationSec,
+    inRangeCount,
+    timestampInRangeRate,
+    timestampMonotonic,
+    genericCount,
+    genericAdviceRate,
+    duplicateSegmentRate,
+    avgSegmentChars,
+    hasDimensionScores: dimensionScores != null,
+  });
 
-  if (!raw.trim()) addFailure("EMPTY_OUTPUT", "模型正文为空");
-  if (segmentCount === 0) {
-    addFailure("NO_TIMESTAMPED_SEGMENTS", "0 条可解析时间戳");
-  }
-  if (!scorePresent) addFailure("SCORE_MISSING", "未解析到「评分：xx/100」");
-  if (gradePredicted == null) {
-    addFailure("GRADE_MISSING", "未解析到「难度：Vx」");
-  } else if (!gradeMatch) {
-    addFailure(
-      "GRADE_MISMATCH",
-      `模型判断 ${gradePredicted}，标注 ${evalCase.grade}`
-    );
-  }
-  if (segmentCount > 0 && timestampInRangeRate < 1) {
-    addFailure(
-      "TIMESTAMP_OUT_OF_RANGE",
-      `${segmentCount - inRangeCount}/${segmentCount} 条超出 0-${evalCase.durationSec + 2}s`
-    );
-  }
-  if (segmentCount > 1 && !timestampMonotonic) {
-    addFailure("TIMESTAMP_NOT_MONOTONIC", "存在倒序时间戳");
-  }
   if (mustMentionCoverage < 0.6) {
     addFailure(
+      failures,
       "MUST_MENTION_MISSED",
       `命中 ${mustMentionHits.length}/${evalCase.labels.mustMention.length}，漏掉：${mustMentionMisses.join("、")}`
     );
   }
-  if (genericAdviceRate > 0.3) {
-    addFailure(
-      "GENERIC_ADVICE",
-      `${genericCount}/${segmentCount} 条含空话短语`
-    );
-  }
-  if (duplicateSegmentRate > 0.2) {
-    addFailure(
-      "DUPLICATE_SEGMENT",
-      `重复率 ${(duplicateSegmentRate * 100).toFixed(0)}%`
-    );
-  }
-  if (segmentCount > 0 && avgSegmentChars < 12) {
-    addFailure(
-      "SEGMENT_TOO_SHORT",
-      `平均每条 ${avgSegmentChars.toFixed(1)} 字`
-    );
-  }
-  if (!dimensionScores) {
-    addFailure("DIMENSION_SCORES_MISSING", "未找到完整的 5 维分数");
-  }
   if (dimensionMae != null && dimensionMae > 1) {
-    addFailure("DIMENSION_MAE_HIGH", `MAE ${dimensionMae.toFixed(2)}`);
+    addFailure(
+      failures,
+      "DIMENSION_MAE_HIGH",
+      `MAE ${dimensionMae.toFixed(2)}`
+    );
   }
 
-  failures.sort(
-    (a, b) =>
-      SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity] ||
-      a.code.localeCompare(b.code)
-  );
+  sortFailures(failures);
 
   const p0Count = failures.filter((item) => item.severity === "P0").length;
   const penalty = p0Count === 0 ? 1 : p0Count === 1 ? 0.85 : 0.65;
