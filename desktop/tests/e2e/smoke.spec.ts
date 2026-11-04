@@ -39,7 +39,7 @@ test.afterAll(async () => {
 });
 
 test("启动后加载首页品牌与主行动按钮", async () => {
-  await expect(page.getByText("CRUX 抱石").first()).toBeVisible();
+  await expect(page.getByRole("link", { name: "CRUX 抱石" })).toBeVisible();
   await expect(page.getByRole("link", { name: "上传视频分析" })).toBeVisible();
   await expect(page.getByText("累计爬升")).toBeVisible();
 });
@@ -55,7 +55,9 @@ test("顶部导航可切换到进步页与收藏页", async () => {
 test("分析页展示完整表单；未配置 Key 时给出提示", async () => {
   await page.getByRole("link", { name: "分析" }).first().click();
 
-  await expect(page.getByRole("heading", { name: "动作解析" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "分析一段新的攀爬" })
+  ).toBeVisible();
   await expect(page.getByTestId("upload-dropzone")).toBeVisible();
   await expect(page.getByTestId("grade-select")).toHaveValue("V4");
   await expect(page.getByTestId("ascent-input")).toHaveValue("4");
