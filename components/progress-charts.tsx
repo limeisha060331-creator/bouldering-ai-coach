@@ -1,6 +1,6 @@
 "use client";
 
-import type { DayStat } from "@/lib/climbing-stats";
+import type { DayStat } from "../lib/climbing-stats";
 
 type Props = {
   days: DayStat[];
@@ -119,7 +119,7 @@ export function ProgressCharts({ days, locale = "zh" }: Props) {
             return (
               <g key={d.date}>
                 <circle cx={x} cy={y} r="3.5" fill="var(--crux-accent)" />
-                <text x={x} y={H - 6} textAnchor="middle" className={labelClass}>
+                <text x={x} y={H - 8} textAnchor="middle" className={labelClass}>
                   {d.label}
                 </text>
               </g>
@@ -183,7 +183,7 @@ export function ProgressCharts({ days, locale = "zh" }: Props) {
             return (
               <g key={`g-${d.date}`}>
                 <circle cx={x} cy={y} r="3.5" fill="var(--crux-text)" />
-                <text x={x} y={H - 6} textAnchor="middle" className={labelClass}>
+                <text x={x} y={H - 8} textAnchor="middle" className={labelClass}>
                   {d.maxGrade != null ? `V${d.maxGrade}` : "—"}
                 </text>
               </g>

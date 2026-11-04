@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { CruxHeader } from "@/components/crux-header";
-import { IconInfo, IconLoader } from "@/components/icons";
+import { IconInfo, IconLoader } from "@ui/icons";
 import { useUiLocale } from "@/lib/use-ui-locale";
 import type { AppInfo, ProviderSettings, SettingsSnapshot } from "@shared/ipc";
 import { PROVIDERS, type AnalysisProvider } from "@shared/providers";

@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { IconChevronRight, IconClock } from "@/components/icons";
+import { IconChevronRight, IconClock } from "@ui/icons";
 import { formatHistoryTitle, formatRecordDate } from "@lib/record-display";
 import { gradeTapeColor } from "@lib/grade-tape";
 import type { AnalysisRecord } from "@lib/types";

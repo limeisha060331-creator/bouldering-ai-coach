@@ -1,7 +1,7 @@
 "use client";
 
-import type { StructuredReport, ImprovementBlock } from "@/lib/types";
-import type { UiLocale } from "@/lib/strings";
+import type { StructuredReport, ImprovementBlock } from "../lib/types";
+import type { UiLocale } from "../lib/strings";
 
 type Props = {
   structured: StructuredReport;

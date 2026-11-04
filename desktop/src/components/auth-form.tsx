@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { PulseButton } from "@/components/pulse-button";
+import { PulseButton } from "@ui/pulse-button";
 import { notifyAuthChange } from "@/lib/use-auth";
 import type { UiLocale } from "@lib/strings";
 import { STRINGS } from "@lib/strings";

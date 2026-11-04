@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { PulseButton } from "@/components/pulse-button";
-import { VideoThumbnail } from "@/components/video-thumbnail";
+import { PulseButton } from "@ui/pulse-button";
+import { VideoThumbnail } from "@ui/video-thumbnail";
 import { HistoryList } from "@/components/history-list";
 import { CruxHeader } from "@/components/crux-header";
 import {
@@ -10,7 +10,7 @@ import {
   IconSparkles,
   IconUpload,
   IconX,
-} from "@/components/icons";
+} from "@ui/icons";
 import {
   captureVideoThumbnail,
   listAnalysisRecords,

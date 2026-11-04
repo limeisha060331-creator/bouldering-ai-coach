@@ -14,6 +14,7 @@ import {
   Menu,
   Moon,
   Mountain,
+  Settings,
   Sun,
   Printer,
   Share2,
@@ -127,4 +128,12 @@ export const IconSun = ({ className = "h-4 w-4" }: { className?: string }) => (
 
 export const IconMoon = ({ className = "h-4 w-4" }: { className?: string }) => (
   <Moon className={`${iconClass} ${className}`} strokeWidth={1.5} aria-hidden />
+);
+
+export const IconSettings = ({
+  className = "h-4 w-4",
+}: {
+  className?: string;
+}) => (
+  <Settings className={`${iconClass} ${className}`} strokeWidth={1.5} aria-hidden />
 );

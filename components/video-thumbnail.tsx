@@ -1,7 +1,7 @@
 "use client";
 
-import { IconFilm } from "@/components/icons";
-import { isOpaqueFileName } from "@/lib/record-display";
+import { IconFilm } from "./icons";
+import { isOpaqueFileName } from "../lib/record-display";
 
 type Props = {
   src: string;

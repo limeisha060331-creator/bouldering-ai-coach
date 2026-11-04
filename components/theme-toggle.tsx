@@ -1,7 +1,7 @@
 "use client";
 
-import { IconMoon, IconSun } from "@/components/icons";
-import { useTheme } from "@/lib/use-theme";
+import { IconMoon, IconSun } from "./icons";
+import { useTheme } from "../lib/use-theme";
 
 type Props = {
   /** 顶栏紧凑样式 */

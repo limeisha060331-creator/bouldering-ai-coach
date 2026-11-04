@@ -1,12 +1,12 @@
 "use client";
 
 import { forwardRef, type ReactNode } from "react";
-import type { AnalysisRecord } from "@/lib/types";
+import type { AnalysisRecord } from "../lib/types";
 import {
   PDF_SITE_URL,
   buildPdfContent,
   type PdfContent,
-} from "@/lib/pdf-content";
+} from "../lib/pdf-content";
 
 /** A4 @ 96dpi，与 html2canvas 输出一页对齐 */
 const PAGE_W = 794;

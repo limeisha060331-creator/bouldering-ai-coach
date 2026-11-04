@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CountUp } from "@/components/count-up";
+import { CountUp } from "@ui/count-up";
 import { CruxHeader } from "@/components/crux-header";
 import { listAnalysisRecords } from "@lib/analysis-db";
 import { sumAscentMeters } from "@lib/climbing-stats";

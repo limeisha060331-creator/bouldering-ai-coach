@@ -1,6 +1,6 @@
 "use client";
 
-import { IconLoader } from "@/components/icons";
+import { IconLoader } from "./icons";
 
 type Props = React.ButtonHTMLAttributes<HTMLButtonElement> & {
   loading?: boolean;

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { CruxHeader } from "@/components/crux-header";
-import { IconClock, IconLoader, IconStar } from "@/components/icons";
+import { IconClock, IconLoader, IconStar } from "@ui/icons";
 import { listAllSegmentBookmarks } from "@lib/bookmarks";
 import { STRINGS } from "@lib/strings";
 import { useUiLocale } from "@/lib/use-ui-locale";

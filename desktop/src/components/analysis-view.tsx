@@ -6,9 +6,9 @@ import {
   IconFileText,
   IconFilm,
   IconStar,
-} from "@/components/icons";
-import { StructuredReportView } from "@/components/structured-report";
-import { AnalysisPdfTemplate } from "@/components/analysis-pdf-template";
+} from "@ui/icons";
+import { StructuredReportView } from "@ui/structured-report";
+import { AnalysisPdfTemplate } from "@ui/analysis-pdf-template";
 import type { AnalysisRecord, AnalysisSegment } from "@lib/types";
 import { parseAnalysis } from "@lib/parse-analysis";
 import { analysisToMarkdown } from "@lib/export-analysis";

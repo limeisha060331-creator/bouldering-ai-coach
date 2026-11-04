@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { HistoryList } from "@/components/history-list";
-import { StructuredReportView } from "@/components/structured-report";
-import { PulseButton } from "@/components/pulse-button";
+import { StructuredReportView } from "@ui/structured-report";
+import { PulseButton } from "@ui/pulse-button";
 import { parseStructuredReport } from "@lib/parse-structured-report";
 import type { AnalysisRecord } from "@lib/types";
 

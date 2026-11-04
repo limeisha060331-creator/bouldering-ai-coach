@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { CruxHeader } from "@/components/crux-header";
-import { IconLoader } from "@/components/icons";
-import { ProgressCharts } from "@/components/progress-charts";
+import { IconLoader } from "@ui/icons";
+import { ProgressCharts } from "@ui/progress-charts";
 import {
   loadProgressByDay,
   sumAscentMeters,

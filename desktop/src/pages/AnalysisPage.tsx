@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { AnalysisView } from "@/components/analysis-view";
 import { CruxHeader } from "@/components/crux-header";
-import { IconArrowLeft, IconLoader } from "@/components/icons";
+import { IconArrowLeft, IconLoader } from "@ui/icons";
 import { getAnalysisRecord, patchAnalysisRecord } from "@lib/analysis-db";
 import { STRINGS } from "@lib/strings";
 import { useUiLocale } from "@/lib/use-ui-locale";
