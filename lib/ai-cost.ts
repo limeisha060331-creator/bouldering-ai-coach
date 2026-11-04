@@ -40,6 +40,10 @@ export type ModelPricing = {
 };
 
 export const MODEL_PRICING: Record<ModelId, ModelPricing> = {
+  /**
+   * 仅用于历史成本对比：运行时已不再调用 Gemini，
+   * 保留这一行是为了让 cost-report 能回答「当初为什么换 DeepSeek」。
+   */
   "gemini-2.5-flash": {
     id: "gemini-2.5-flash",
     label: "Gemini 2.5 Flash",

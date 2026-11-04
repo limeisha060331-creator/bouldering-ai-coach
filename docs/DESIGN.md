@@ -5,7 +5,7 @@
 
 ## 1. 问题定义
 
-**输入**：用户拍摄的抱石攀爬视频（通常 10～90 秒，需压到约 3.5MB 以内以满足 Vercel 请求体上限）。
+**输入**：用户拍摄的抱石攀爬视频（最长 10 分钟）。视频不上传，浏览器在本地抽成 16 张关键帧（768px、JPEG），只把这 16 张图发给模型。
 
 **输出**：
 
@@ -17,7 +17,7 @@
 **约束**：
 
 - Serverless 单次请求 ~60s，不能直接长时间阻塞 `POST`  
-- Gemini 免费档 RPM / 日配额 / `generateContent` 单独计数  
+- `deepseek-flash` 只接受图片，单请求最多 600 张；本项目控制在 24 张以内  
 - 模型可能返回空正文或 429，需要产品级重试与提示  
 
 ---
@@ -26,24 +26,24 @@
 
 ### 2.1 同步路径（开发 / 无 Blob）
 
-小视频在 `POST /api/analyze` 内联调用 `analyzeVideoInline`，适合本地调试。
+无 Blob 存储时，`POST /api/analyze` 内联调用 `runDeepSeekAnalysis`，适合本地调试。
 
 ### 2.2 异步路径（生产）
 
-1. `POST` 接收视频 → 写入 Vercel Blob → 创建 `AnalysisJob`（JSON 元数据）  
+1. `POST` 接收关键帧 JSON → 帧数组写入 Vercel Blob → 创建 `AnalysisJob`（JSON 元数据）  
 2. `waitUntil` 触发 `process-analysis-job` 后台推进  
 3. 阶段状态（节选）：
-   - `uploaded` → `gemini_uploading` → `gemini_processing` → `analyzing` → `completed` / `failed` / `rate_limited`  
+   - `uploaded` → `analyzing` → `completed` / `failed` / `rate_limited`  
 4. 客户端 `pollUntilComplete` 轮询 `GET /api/analyze/status/:jobId`  
 5. 完成后前端 `parseAnalysis` → 写入 IndexedDB → 跳转详情页  
 
-**设计要点**：把「等 Gemini 两分钟」拆成**可轮询的状态机**，避免 HTTP 连接超时，并在状态里附带 `retryAfter` 供 UI 倒计时。
+**设计要点**：把「一次视觉推理」拆成**可轮询的状态机**，避免 HTTP 连接超时，并在状态里附带 `retryAfter` 供 UI 倒计时。任务里保存真实 token usage，便于核对成本。
 
 ---
 
 ## 3. Prompt 工程
 
-文件：`lib/analyze-prompt.ts`
+文件：`lib/deepseek-analysis.ts`（抽帧提示词）、`lib/analyze-prompt.ts`（评测用输出契约）
 
 | 维度 | 设计 |
 |------|------|
@@ -52,8 +52,9 @@
 | 难度 | 可选行 `难度：Vn`（解析见 `parse-analysis` / `bouldering-grade`） |
 | 深度 | `light`：字数/条数上限；`deep`：完整生物力学向分析 |
 | 语言 | `locale`：`zh` / `en` 两套 base prompt |
-| 版本 | `PROMPT_VERSION = "2026-02-1"` 写入分析记录，便于 A/B 与回归 |
-| 输出上限 | `getMaxOutputTokens(depth)`：light 4096 / deep 8192 |
+| 版本 | `FRAME_PROMPT_VERSION = "2026-11-1"` 写入任务与分析记录，便于 A/B 与回归 |
+| 输出上限 | `getDeepSeekMaxTokens(depth)`：light 4096 / deep 16384 |
+| 输入声明 | 明确告诉模型「这是离散关键帧」，画面无法支撑的结论必须说明依据不足 |
 
 
 ---
@@ -61,7 +62,7 @@
 ## 4. 从 LLM 原文到产品数据
 
 ```
-Gemini 纯文本
+DeepSeek 纯文本
     → parseAnalysis（时间轴行、评分、金句、难度）
     → parseStructuredReport（维度 bullet、改进块）
     → AnalysisRecord + UI / PDF
@@ -78,13 +79,13 @@ Gemini 纯文本
 
 ## 5. 可靠性与限流
 
-文件：`lib/gemini-retry.ts`、`lib/process-analysis-job.ts`
+文件：`lib/deepseek-analysis.ts`、`lib/process-analysis-job.ts`
 
 | 错误类型 | 策略 |
 |----------|------|
-| RPM 429 | 解析 `retry in Ns`，UI 显示冷却；Job 标记 `rate_limited` |
-| generateContent 日配额 | 区分硬失败 vs 短冷却；后台最多 3 次分析重试 |
-| 空分析正文 | `GeminiEmptyAnalysisError`，避免存空白记录 |
+| 429 / 5xx | 按官方建议冷却，Job 标记 `rate_limited` 并带 `retryAfter` |
+| 402 余额不足 / 401 Key 失效 | 不可重试，直接给可操作提示 |
+| 空分析正文 | `DeepSeekEmptyAnalysisError`，避免存空白记录 |
 | 后台卡死 | `STALE_*` 超时检测，跨轮询重新 `waitUntil` 推进 |
 | 管道并发 | `PIPELINE_LOCK_MS` 避免同一 job 重复推进 |
 
@@ -93,26 +94,26 @@ Gemini 纯文本
 
 ## 6. 与 Serverless / 前端的协同
 
-- **压缩**：`lib/compress-video.ts` 在浏览器侧压到可上传大小  
+- **抽帧**：`lib/frame-extraction.ts` 在浏览器侧均匀取帧并编码 JPEG，前后端共用同一套时间点算法  
 - **取消**：`AbortController` 中断 fetch + 轮询  
-- **进度**：`pipelineStep` 四段 UI（本地处理 → 上传 → Gemini 处理 → 生成）  
+- **进度**：`pipelineStep` 四段 UI（本地抽帧 → 提交分析 → DeepSeek 处理 → 生成点评）  
 - **PDF**：`lib/pdf-html2canvas-fix.ts` 去掉 oklab 样式，避免 html2canvas 崩溃  
 
 ---
 
 ## 7. 可扩展：多模型 Provider
 
-当前实现耦合 Gemini File API + `generateContent`。
+当前实现耦合 DeepSeek Chat Completions 的视觉输入格式。
 
 建议抽象：
 
 ```ts
 interface AnalyzeProvider {
-  analyzeVideo(input: { buffer: Buffer; mimeType: string; prompt: string }): Promise<string>;
+  analyzeFrames(input: { frames: AnalyzeFrame[]; prompt: string }): Promise<string>;
 }
 ```
 
-实现 `GeminiProvider`、`OpenAIProvider`（抽帧 + vision）、`QwenVLProvider` 等，用 `ANALYZE_PROVIDER` 环境变量切换——**先抽象接口即可，不必全部实现**。
+实现 `DeepSeekProvider`、`QwenVLProvider` 等，用 `ANALYZE_PROVIDER` 环境变量切换——**先抽象接口即可，不必全部实现**。切换供应商时抽帧层不变，只替换请求构造与错误映射。
 
 ---
 

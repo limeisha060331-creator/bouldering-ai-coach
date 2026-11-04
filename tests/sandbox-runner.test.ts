@@ -103,7 +103,7 @@ describe("sandbox runner", () => {
       tools: [
         nodeTool(
           "env",
-          "console.log(process.env.GEMINI_API_KEY ?? 'LEAKED')"
+          "console.log(process.env.DEEPSEEK_API_KEY ?? 'LEAKED')"
         ),
       ],
       mode: "off",

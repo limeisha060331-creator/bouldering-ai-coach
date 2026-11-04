@@ -60,9 +60,9 @@
 
 ## F-05 模型返回空正文
 
-**现象**：Gemini 返回空字符串或只有拒答，报告页无内容。
+**现象**：DeepSeek 返回空字符串或只有拒答，报告页无内容。
 
-**证据**：`lib/gemini-response-text.ts` 的 `GeminiEmptyAnalysisError`；`lib/process-analysis-job.ts` 对空响应做冷却重试。
+**证据**：`lib/deepseek-analysis.ts` 的 `DeepSeekEmptyAnalysisError`；`lib/process-analysis-job.ts` 对空响应做冷却重试。
 
 **影响**：用户等了很久拿到空白页，属于 P0。
 
@@ -72,29 +72,29 @@
 
 **回归**：待补 `evals/fixtures/empty-output.json`。
 
-## F-06 429 / 日配额耗尽
+## F-06 429 / 服务过载
 
-**现象**：免费档 5 RPM 或 generateContent 日配额触发，分析中断。
+**现象**：DeepSeek 触发限流（429）或返回 5xx，分析中断。
 
-**证据**：`lib/gemini-retry.ts` 区分 RPM、generateContent 冷却和日配额硬停；`lib/process-analysis-job.ts` 用 `retryAfter` 驱动 `rate_limited` 状态。
+**证据**：`lib/deepseek-analysis.ts` 的 `describeDeepSeekStatus` 区分可重试与不可重试；`lib/process-analysis-job.ts` 用 `retryAfter` 驱动 `rate_limited` 状态。
 
 **影响**：用户看到长时间等待或失败，容易重复点击，进一步加剧限流。
 
-**当前处理**：冷却倒计时、自动重试、日配额硬停时给出明确文案。
+**当前处理**：冷却倒计时、自动重试；402 余额不足与 401 Key 失效直接给可操作文案。
 
 **下一步**：加用户级配额与队列；把失败原因分布接进看板。
 
-**回归**：`desktop/tests/unit/gemini-retry.test.ts` 已有重试分类用例。
+**回归**：`tests/deepseek-analysis.test.ts` 覆盖 429 重试与 402 不重试。
 
-## F-07 视频过大
+## F-07 视频过长 / 帧过大
 
-**现象**：上传超过 3.5MB，Vercel 请求体被拒。
+**现象**：视频超过 10 分钟，或关键帧总大小超过 3.2MB，请求被拒。
 
-**证据**：`lib/upload-limits.ts` 的 `MAX_ANALYZE_BYTES`；前端 `lib/compress-video.ts` 做压缩。
+**证据**：`lib/analyze-request.ts` 的 `MAX_DURATION_SEC` / `MAX_TOTAL_DATA_URL_CHARS`；前端抽帧默认 16 张、单帧 768px。
 
 **影响**：首次上传失败，用户流失。
 
-**当前处理**：压缩失败时提示剪辑，不提交无效请求。
+**当前处理**：抽帧后先校验时长，不提交无效请求；错误文案提示剪辑到 10 分钟以内。
 
 **下一步**：上传前预检时长、清晰度和人物完整度；把废片率做成产品指标。
 
