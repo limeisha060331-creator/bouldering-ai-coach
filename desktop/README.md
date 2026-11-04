@@ -107,8 +107,8 @@ npm run dist
    - `packaged.spec.ts`：对**已打包**应用验证 `app://` 协议 + asar 资源加载 + SPA 深链刷新（未打包时自动跳过）。
 
 ```bash
-npm test             # 144 个单元/组件/集成用例
-npm run test:e2e     # 11 个 Electron 端到端用例（含抽帧与打包冒烟）
+npm test             # 125 个单元/组件/集成用例
+npm run test:e2e     # 10 个 Electron 端到端用例（含抽帧与打包冒烟）
 ```
 
 ## 数据与隐私

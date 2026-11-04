@@ -122,8 +122,8 @@ AUTH_SECRET=...
 
 ```bash
 cd desktop
-npm test         # 144 个单元 / 组件 / 集成用例
-npm run test:e2e # 11 个 Electron 端到端用例（含真实抽帧与打包产物冒烟）
+npm test         # 125 个单元 / 组件 / 集成用例
+npm run test:e2e # 10 个 Electron 端到端用例（含真实抽帧与打包产物冒烟）
 ```
 
 ## 质量与成本
