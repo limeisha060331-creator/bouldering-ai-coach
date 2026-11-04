@@ -47,3 +47,6 @@ next-env.d.ts
 # 本地临时文件与冒烟运行的中间产物
 .tmp-*
 /evals/runs/*smoke*/
+
+# Agent 沙箱的工具录制与工作目录，回放数据留在本地
+/.sandbox/
