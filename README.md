@@ -9,6 +9,18 @@
 | **桌面客户端**（推荐） | Electron + React + TypeScript | 免部署，默认接入 DeepSeek，国内直连可用 |
 | 网页版 | Next.js 16 + React 19 + TypeScript | 部署在 Vercel，需要配置服务端环境变量 |
 
+## API Key 由谁配置
+
+网页版的分析请求全部走服务端：DeepSeek Key 只存在于 Vercel 环境变量里，浏览器端拿不到，
+**线上访客打开就能用，不需要填写任何 Key**。只有部署这个站点的人（或本地跑源码的开发者）
+需要配置一次环境变量。
+
+| 场景 | Key 配在哪 | 使用者要不要自己填 |
+| --- | --- | --- |
+| 线上网页版 | 部署者在 Vercel 环境变量里配置 `DEEPSEEK_API_KEY` | 不需要 |
+| 本地跑网页版源码 | 开发者自己的 `.env.local` | 不需要 |
+| 桌面客户端 | 应用内「设置」页，只存在本机 | 需要（桌面端本机直连 DeepSeek，没有中转服务） |
+
 ---
 
 ## 功能
@@ -38,6 +50,9 @@ CRUX Boulder 0.2.0.exe         # 免安装便携版，双击直接运行
 2. 填入 DeepSeek API Key（在 https://platform.deepseek.com/api_keys 创建，按量计费）
 3. 回到「分析」页，选择视频 → 点「开始分析」
 
+> 这一步只针对桌面客户端：它是本地直连 DeepSeek 的，所以 Key 由使用者自己准备并保存在本机。
+> 网页版不需要这一步，站点已经在服务端配好了 Key。
+
 > 关于抽帧：DeepSeek 官方 API 支持图像理解但**不接受视频**。客户端会在本地把视频均匀抽取成 16 张关键帧（768px、JPEG），给每帧标上 `[MM:SS]` 时间戳后提交，因此仍能给出时间轴级别的点评。原视频不上传，帧与帧之间的连续动作看不到，提示词里已明确要求模型不要编造看不清的细节。
 
 从源码运行：
@@ -60,7 +75,8 @@ npm run dev
 # 打开 http://localhost:3000
 ```
 
-`.env.local` 至少需要：
+网页版访客无需任何配置，也不用填 Key。下面这些变量只给「部署站点的人」和「本地跑源码的人」用，
+全部只在服务端读取，不会打包进浏览器：
 
 ```env
 DEEPSEEK_API_KEY=你的密钥
@@ -75,6 +91,8 @@ AUTH_SECRET=...
 AGENT_RUNTIME=on
 AGENT_FALLBACK=on
 ```
+
+`DEEPSEEK_API_KEY` 不要加 `NEXT_PUBLIC_` 前缀；`service_role` 同理。浏览器端拿不到它们。
 
 ## 数据库（Supabase）
 
