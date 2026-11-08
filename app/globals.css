@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "../styles/crux.css";
+@import "../styles/landing-neon.css";
 
 /* next/font 在 layout 里生成字体变量，这里接到共用设计系统上 */
 :root {

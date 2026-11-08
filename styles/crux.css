@@ -100,6 +100,27 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+.crux-mark {
+  display: inline-block;
+  width: 1.6rem;
+  height: 1.6rem;
+  flex: none;
+  background: var(--crux-accent);
+  clip-path: polygon(0 18%, 27% 0, 100% 0, 100% 82%, 73% 100%, 0 100%);
+  position: relative;
+}
+
+.crux-mark::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 0.42rem;
+  height: 0.42rem;
+  background: var(--crux-bg);
+  transform: rotate(45deg);
+}
+
 ::selection {
   background: var(--crux-accent);
   color: var(--crux-on-accent);

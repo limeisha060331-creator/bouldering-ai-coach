@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { DM_Sans, JetBrains_Mono } from "next/font/google";
+import { Bebas_Neue, DM_Sans, JetBrains_Mono } from "next/font/google";
 import { getSiteUrl } from "@/lib/site-url";
 import "./globals.css";
 
@@ -12,6 +12,13 @@ const dmSans = DM_Sans({
 const jetbrains = JetBrains_Mono({
   subsets: ["latin"],
   variable: "--font-jetbrains",
+  display: "swap",
+});
+
+const bebas = Bebas_Neue({
+  subsets: ["latin"],
+  weight: "400",
+  variable: "--font-bebas",
   display: "swap",
 });
 
@@ -80,7 +87,7 @@ export default function RootLayout({
       lang="zh-CN"
       suppressHydrationWarning
       data-theme="light"
-      className={`${dmSans.variable} ${jetbrains.variable} h-full antialiased`}
+      className={`${dmSans.variable} ${jetbrains.variable} ${bebas.variable} h-full antialiased`}
     >
       <head>
         <script

@@ -32,40 +32,44 @@ export function CruxHeader({ variant = "app" }: Props) {
       data-variant={variant}
       className="no-print border-b-2 border-[var(--crux-border)] bg-[var(--crux-bg)]"
     >
-      <div className="flex h-14 w-full items-center justify-between gap-6 px-[clamp(1rem,3vw,3rem)]">
+      <div className="relative flex h-14 w-full items-center justify-between gap-6 px-[clamp(1rem,3vw,3rem)]">
         <Link
           href="/"
-          className="flex items-baseline gap-2 text-[1.1875rem] font-black tracking-[-0.03em] text-[var(--crux-text)]"
+          className="flex items-center gap-2.5 text-[1.1875rem] font-black tracking-[-0.03em] text-[var(--crux-text)]"
         >
-          CRUX
-          <span className="text-[0.8125rem] font-medium tracking-normal text-[var(--crux-text-secondary)]">
-            {uiLocale === "zh" ? "抱石" : "Bouldering"}
+          <span className="crux-mark" aria-hidden />
+          <span className="flex items-baseline gap-2">
+            CRUX
+            <span className="text-[0.8125rem] font-medium tracking-normal text-[var(--crux-text-secondary)]">
+              {uiLocale === "zh" ? "抱石" : "Bouldering"}
+            </span>
           </span>
         </Link>
 
-        <div className="hidden items-center gap-6 sm:flex">
-          <nav className="flex items-center gap-6">
-            {navItems.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                aria-current={isActive(item.href) ? "page" : undefined}
-                className={
-                  isActive(item.href)
-                    ? "text-[0.8125rem] font-extrabold text-[var(--crux-text)] underline decoration-[var(--crux-accent)] decoration-[3px] underline-offset-[7px]"
-                    : "text-[0.8125rem] font-semibold text-[var(--crux-text-secondary)] transition hover:text-[var(--crux-text)]"
-                }
-              >
-                {item.label}
-              </Link>
-            ))}
-          </nav>
+        <nav className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-6 sm:flex">
+          {navItems.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              aria-current={isActive(item.href) ? "page" : undefined}
+              className={
+                isActive(item.href)
+                  ? "text-[0.8125rem] font-extrabold text-[var(--crux-text)] underline decoration-[var(--crux-accent)] decoration-[3px] underline-offset-[7px]"
+                  : "text-[0.8125rem] font-semibold text-[var(--crux-text-secondary)] transition hover:text-[var(--crux-text)]"
+              }
+            >
+              {item.label}
+            </Link>
+          ))}
+        </nav>
+
+        <div className="hidden items-center gap-4 sm:flex">
           <AuthNav uiLocale={uiLocale} compact />
-          <ThemeToggle compact />
+          {variant !== "landing" && <ThemeToggle compact />}
         </div>
 
         <div className="flex items-center gap-2 sm:hidden">
-          <ThemeToggle compact />
+          {variant !== "landing" && <ThemeToggle compact />}
           <button
             type="button"
             className="flex h-9 w-9 items-center justify-center border-2 border-[var(--crux-border)]"
