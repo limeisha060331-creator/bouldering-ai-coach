@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>CRUX · 方案 B 暗夜竞技</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+SC:wght@400;500;700;900&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --black:#0a0a0b;
+    --black-2:#121214;
+    --lime:#d8ff3e;
+    --white:#f6f5ef;
+    --grey:#9b9b95;
+    --line:rgba(246,245,239,.16);
+    --sans:"Noto Sans SC","Microsoft YaHei",sans-serif;
+    --display:"Bebas Neue","Noto Sans SC",sans-serif;
+    --mono:"IBM Plex Mono","Cascadia Mono",monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{width:1440px;height:1100px;overflow:hidden}
+  body{background:var(--black);color:var(--white);font-family:var(--sans);-webkit-font-smoothing:antialiased;position:relative}
+  a{color:inherit;text-decoration:none}
+  .bg-photo{
+    position:absolute;right:0;top:0;width:800px;height:100%;overflow:hidden;
+  }
+  .bg-photo img{width:100%;height:100%;object-fit:cover;object-position:56% 44%;filter:grayscale(.72) contrast(1.35) brightness(.58)}
+  .bg-photo:after{
+    content:"";position:absolute;inset:0;
+    background:
+      linear-gradient(90deg,var(--black) 0%,rgba(10,10,11,.94) 12%,rgba(10,10,11,.35) 48%,rgba(10,10,11,.2) 100%),
+      linear-gradient(180deg,rgba(10,10,11,.5),transparent 30%,transparent 70%,rgba(10,10,11,.85));
+  }
+  .grain{
+    position:absolute;inset:0;pointer-events:none;opacity:.16;mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.55'/%3E%3C/svg%3E");
+  }
+  header{
+    position:relative;z-index:5;height:84px;padding:0 56px;display:flex;align-items:center;justify-content:space-between;
+    border-bottom:1px solid var(--line);
+  }
+  .brand{display:flex;align-items:center;gap:12px}
+  .mark{width:32px;height:32px;background:var(--lime);clip-path:polygon(0 18%,27% 0,100% 0,100% 82%,73% 100%,0 100%);display:flex;align-items:center;justify-content:center}
+  .mark:after{content:"";width:11px;height:11px;background:var(--black);transform:rotate(45deg)}
+  .wordmark{font-family:var(--display);font-size:38px;letter-spacing:.02em;line-height:1}
+  .brand .cn{font-size:12px;font-weight:700;letter-spacing:.2em;color:var(--grey);margin-left:2px}
+  nav{display:flex;gap:36px;font-size:14px;font-weight:700;color:#cfcfc9}
+  nav a{position:relative;padding:31px 0}
+  nav a.active{color:var(--white)}
+  nav a.active:after{content:"";position:absolute;left:0;right:0;bottom:22px;height:3px;background:var(--lime)}
+  .head-right{display:flex;align-items:center;gap:18px}
+  .status{font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--grey);display:flex;align-items:center;gap:8px}
+  .status i{width:6px;height:6px;border-radius:50%;background:var(--lime);box-shadow:0 0 10px var(--lime)}
+  .login{font-size:13px;font-weight:800;padding:10px 20px;border:1px solid rgba(246,245,239,.4)}
+  main{position:relative;z-index:4;height:calc(100% - 84px);padding:0 56px}
+  .ghost{
+    position:absolute;z-index:1;right:-12px;bottom:18px;font-family:var(--display);
+    font-size:340px;line-height:.8;letter-spacing:.02em;color:transparent;
+    -webkit-text-stroke:1px rgba(216,255,62,.24);transform:rotate(-90deg);transform-origin:right bottom;
+  }
+  .hero-copy{position:relative;z-index:5;padding-top:64px;width:760px}
+  .kicker{
+    display:inline-flex;align-items:center;gap:12px;padding:9px 14px;border:1px solid rgba(216,255,62,.5);
+    font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--lime);text-transform:uppercase;
+  }
+  .kicker i{width:18px;height:2px;background:var(--lime)}
+  h1{
+    margin-top:28px;font-size:138px;font-weight:900;line-height:.93;letter-spacing:-.075em;
+    text-shadow:0 12px 40px rgba(0,0,0,.45);
+  }
+  h1 .lime{color:var(--lime);position:relative;display:inline-block}
+  h1 .lime:after{
+    content:"";position:absolute;left:2px;right:-2px;bottom:-4px;height:10px;
+    background:var(--lime);transform:skewX(-16deg);
+  }
+  h1 .outline{color:transparent;-webkit-text-stroke:2px var(--white)}
+  .sub{margin-top:34px;max-width:530px;font-size:20px;line-height:1.75;color:#cfcfc9;font-weight:500}
+  .sub b{color:var(--white);font-weight:800}
+  .cta-row{display:flex;align-items:center;gap:30px;margin-top:38px}
+  .btn-main{
+    display:flex;align-items:center;gap:22px;background:var(--lime);color:var(--black);
+    height:62px;padding:0 26px;font-size:17px;font-weight:900;transform:skewX(-6deg);
+    box-shadow:0 0 0 1px rgba(216,255,62,.35),0 10px 40px rgba(216,255,62,.13);
+  }
+  .btn-main span{font-family:var(--mono);font-size:22px;transform:skewX(6deg)}
+  .btn-ghost{display:flex;align-items:center;gap:10px;font-size:14px;font-weight:800;color:var(--white)}
+  .btn-ghost:after{content:"↗";color:var(--lime);font-family:var(--mono);font-size:18px}
+  .hero-stats{
+    position:absolute;left:56px;bottom:76px;display:flex;gap:0;border-top:1px solid var(--line);
+  }
+  .hero-stat{padding:22px 42px 0 0;margin-right:42px;border-right:1px solid var(--line)}
+  .hero-stat:last-child{border-right:0;margin-right:0}
+  .hero-stat .v{font-family:var(--display);font-size:64px;line-height:.9;letter-spacing:.01em;color:var(--white)}
+  .hero-stat .v small{font-family:var(--mono);font-size:13px;color:var(--lime);margin-left:4px;letter-spacing:0}
+  .hero-stat .l{margin-top:8px;font-family:var(--mono);font-size:10px;letter-spacing:.12em;color:var(--grey);text-transform:uppercase}
+  .chip{
+    position:absolute;z-index:6;background:rgba(10,10,11,.82);border:1px solid rgba(216,255,62,.55);
+    backdrop-filter:blur(10px);padding:13px 16px;min-width:190px;
+    box-shadow:0 14px 50px rgba(0,0,0,.4);
+  }
+  .chip .k{font-family:var(--mono);font-size:9px;letter-spacing:.16em;color:var(--lime);text-transform:uppercase}
+  .chip .v{margin-top:7px;font-size:15px;font-weight:800}
+  .chip .bar{margin-top:10px;height:3px;background:rgba(246,245,239,.16)}
+  .chip .bar i{display:block;width:72%;height:100%;background:var(--lime)}
+  .chip-1{right:294px;top:268px;transform:rotate(-2deg)}
+  .chip-2{right:88px;top:420px;transform:rotate(2deg);border-color:rgba(246,245,239,.3)}
+  .chip-2 .k{color:var(--white)}
+  .scan-label{
+    position:absolute;z-index:6;right:36px;top:132px;writing-mode:vertical-rl;
+    font-family:var(--mono);font-size:10px;letter-spacing:.3em;color:rgba(246,245,239,.65);
+  }
+  .scan-label b{color:var(--lime);font-weight:600}
+  .focus-ring{
+    position:absolute;z-index:3;right:368px;top:230px;width:216px;height:216px;border:1px solid rgba(216,255,62,.72);border-radius:50%;
+  }
+  .focus-ring:before,.focus-ring:after{content:"";position:absolute;background:rgba(216,255,62,.72)}
+  .focus-ring:before{left:-12px;top:50%;width:12px;height:1px}
+  .focus-ring:after{right:-12px;top:50%;width:12px;height:1px}
+  .focus-dot{position:absolute;z-index:4;right:444px;top:352px;width:8px;height:8px;background:var(--lime);border-radius:50%;box-shadow:0 0 18px var(--lime)}
+  .ticker{
+    position:absolute;z-index:7;left:0;right:0;bottom:0;height:44px;background:var(--lime);color:var(--black);
+    display:flex;align-items:center;overflow:hidden;white-space:nowrap;
+  }
+  .ticker-inner{display:flex;align-items:center;gap:30px;font-family:var(--display);font-size:21px;letter-spacing:.06em;padding-left:56px}
+  .ticker-inner em{font-family:var(--sans);font-style:normal;font-size:10px;font-weight:900;letter-spacing:.14em;display:flex;align-items:center;gap:30px}
+  .ticker-inner em:after{content:"✦";font-size:14px}
+</style>
+</head>
+<body>
+  <div class="bg-photo">
+    <img src="../../public/hero-climb.jpg" alt="抱石抓点" />
+  </div>
+  <div class="grain"></div>
+  <header>
+    <a class="brand" href="#"><span class="mark"></span><span class="wordmark">CRUX</span><span class="cn">抱石</span></a>
+    <nav><a class="active" href="#">首页</a><a href="#">视频分析</a><a href="#">进步曲线</a><a href="#">收藏</a></nav>
+    <div class="head-right"><span class="status"><i></i>AI ONLINE</span><a class="login" href="#">登录</a></div>
+  </header>
+
+  <main>
+    <div class="ghost">BETA</div>
+    <div class="focus-ring"></div><div class="focus-dot"></div>
+    <span class="scan-label"><b>SCAN 00:14.2</b> / LEFT HAND / CONTACT</span>
+
+    <div class="chip chip-1">
+      <div class="k">重心偏移 / CENTER OF MASS</div>
+      <div class="v">+12° 向右</div>
+      <div class="bar"><i></i></div>
+    </div>
+    <div class="chip chip-2">
+      <div class="k">动作判断 / MOVEMENT</div>
+      <div class="v">右脚提前脱墙</div>
+      <div class="bar"><i style="width:46%"></i></div>
+    </div>
+
+    <section class="hero-copy">
+      <div class="kicker"><i></i>CRUX / AI CLIMB ANALYSIS</div>
+      <h1>下一次，<br />别掉在<br /><span class="lime">同一步</span>。</h1>
+      <p class="sub">逐秒拆解你的抱石动作。<b>哪里发力、哪里脱脚、下一步怎么练</b>，一次说清。</p>
+      <div class="cta-row">
+        <a class="btn-main" href="#">上传视频，开练 <span>↗</span></a>
+        <a class="btn-ghost" href="#">看一段示例分析</a>
+      </div>
+    </section>
+
+    <div class="hero-stats">
+      <div class="hero-stat"><div class="v">128.6<small>M</small></div><div class="l">累计爬升 / ASCENT</div></div>
+      <div class="hero-stat"><div class="v">42<small>RUNS</small></div><div class="l">已完成分析 / ANALYSES</div></div>
+      <div class="hero-stat"><div class="v">V6</div><div class="l">最高难度 / BEST GRADE</div></div>
+    </div>
+  </main>
+
+  <div class="ticker">
+    <div class="ticker-inner">
+      <em>FLAG</em><em>FOOT CUT</em><em>HESITATION</em><em>BARN DOOR</em><em>BETA</em><em>ONE MORE GO</em>
+    </div>
+  </div>
+</body>
+</html>

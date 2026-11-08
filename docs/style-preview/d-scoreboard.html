@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>CRUX · 方案 D 训练记分板</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800;900&family=Noto+Sans+SC:wght@400;500;700;900&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --white:#f3f3ee;
+    --paper:#fafaf6;
+    --black:#101010;
+    --grey:#77776f;
+    --line:#d6d6cd;
+    --orange:#ff4a00;
+    --lime:#c8f04a;
+    --sans:"Noto Sans SC","Microsoft YaHei",sans-serif;
+    --latin:"Archivo","Noto Sans SC",sans-serif;
+    --mono:"IBM Plex Mono","Cascadia Mono",monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{width:1440px;height:1100px;overflow:hidden}
+  body{background:var(--white);color:var(--black);font-family:var(--sans);-webkit-font-smoothing:antialiased}
+  a{color:inherit;text-decoration:none}
+  .topbar{height:5px;background:var(--orange)}
+  header{
+    height:72px;background:var(--black);color:#fff;padding:0 48px;display:flex;align-items:center;justify-content:space-between;
+  }
+  .brand{display:flex;align-items:center;gap:12px}
+  .mark{width:26px;height:26px;border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-family:var(--latin);font-size:12px;font-weight:900;transform:rotate(-4deg)}
+  .wordmark{font-family:var(--latin);font-size:24px;font-weight:900;letter-spacing:.01em}
+  .brand .cn{font-size:11px;font-weight:600;color:#aaa;letter-spacing:.14em}
+  nav{display:flex;gap:32px;font-size:13px;font-weight:600;color:#b9b9b2}
+  nav a.active{color:#fff;position:relative}
+  nav a.active:after{content:"";position:absolute;left:0;right:0;bottom:-25px;height:3px;background:var(--orange)}
+  .head-right{display:flex;align-items:center;gap:20px}
+  .session{font-family:var(--mono);font-size:9px;letter-spacing:.12em;color:#8c8c85}
+  .login{background:#fff;color:var(--black);font-size:12px;font-weight:800;padding:11px 18px}
+  main{display:grid;grid-template-columns:1fr 622px;height:calc(100% - 77px)}
+  .left{padding:48px 52px 0 48px;position:relative;display:flex;flex-direction:column}
+  .eyebrow{display:flex;align-items:center;gap:12px;font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:var(--grey)}
+  .eyebrow .dot{width:8px;height:8px;background:var(--orange)}
+  .eyebrow .rule{height:1px;flex:0 0 44px;background:var(--black)}
+  h1{margin-top:26px;font-size:78px;line-height:1.13;letter-spacing:-.07em;font-weight:900}
+  h1 .box{display:inline-block;background:var(--black);color:var(--white);padding:0 12px 6px;margin-right:2px;position:relative;top:-3px}
+  h1 .orange{color:var(--orange)}
+  .sub{margin-top:26px;font-size:17px;line-height:1.8;color:#4f4f49;max-width:520px;font-weight:500}
+  .sub b{color:var(--black);font-weight:800}
+  .cta-row{display:flex;align-items:center;gap:22px;margin-top:34px}
+  .btn-main{
+    height:58px;background:var(--black);color:#fff;display:flex;align-items:center;gap:38px;
+    padding:0 24px;font-size:16px;font-weight:800;
+  }
+  .btn-main .arrow{font-family:var(--mono);font-size:21px;color:var(--orange)}
+  .btn-ghost{font-size:13px;font-weight:800;border-bottom:2px solid var(--orange);padding-bottom:4px}
+  .number-row{
+    margin-top:44px;display:grid;grid-template-columns:repeat(3,1fr);border-top:2px solid var(--black);border-bottom:1px solid var(--line);
+  }
+  .number-cell{padding:16px 18px 16px 0;border-right:1px solid var(--line)}
+  .number-cell:last-child{border-right:0;padding-right:0}
+  .number-cell .k{font-family:var(--mono);font-size:9px;letter-spacing:.1em;color:var(--grey)}
+  .number-cell .v{margin-top:7px;font-family:var(--latin);font-size:38px;line-height:1;font-weight:800;letter-spacing:-.04em}
+  .number-cell .v small{font-family:var(--sans);font-size:11px;font-weight:700;color:var(--grey);letter-spacing:0;margin-left:3px}
+  .recent{margin-top:28px;display:flex;align-items:center;justify-content:space-between}
+  .recent .h{font-size:13px;font-weight:800}
+  .recent .all{font-family:var(--mono);font-size:10px;color:var(--grey)}
+  .recent-list{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}
+  .route{background:var(--paper);border:1px solid var(--line);padding:12px 14px;position:relative}
+  .route .tape{position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--black)}
+  .route:nth-child(2) .tape{background:var(--orange)}
+  .route:nth-child(3) .tape{background:#8ea336}
+  .route .top{display:flex;justify-content:space-between;align-items:center}
+  .route .grade{font-family:var(--latin);font-size:20px;font-weight:900}
+  .route .date{font-family:var(--mono);font-size:8px;color:var(--grey)}
+  .route .score{margin-top:6px;font-family:var(--mono);font-size:9px;color:var(--grey)}
+  .route .score b{font-size:12px;color:var(--black)}
+  .steps{display:flex;align-items:center;gap:16px;margin-top:26px;font-size:11px;font-weight:700;color:var(--grey)}
+  .steps b{color:var(--black);font-weight:800}
+  .steps i{flex:1;height:1px;background:var(--line)}
+  .bottom-note{margin-top:auto;margin-bottom:26px;display:flex;justify-content:space-between;align-items:center;font-family:var(--mono);font-size:9px;color:var(--grey);border-top:1px solid var(--line);padding-top:13px}
+  .panel{
+    background:var(--black);color:#fff;padding:38px 36px 0;position:relative;overflow:hidden;
+  }
+  .panel:before{
+    content:"";position:absolute;inset:0;pointer-events:none;opacity:.3;
+    background-image:linear-gradient(rgba(255,255,255,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.045) 1px,transparent 1px);
+    background-size:40px 40px;
+  }
+  .panel-head{position:relative;display:flex;justify-content:space-between;align-items:flex-start;z-index:2}
+  .panel-head .k{font-family:var(--mono);font-size:9px;letter-spacing:.14em;color:#8f8f88}
+  .panel-head .live{display:flex;align-items:center;gap:7px;font-family:var(--mono);font-size:9px;letter-spacing:.1em;color:var(--lime)}
+  .panel-head .live i{width:6px;height:6px;border-radius:50%;background:var(--lime);box-shadow:0 0 10px var(--lime)}
+  .score-line{position:relative;z-index:2;display:flex;align-items:flex-end;gap:18px;margin-top:14px}
+  .big-score{font-family:var(--latin);font-size:174px;line-height:.78;font-weight:900;letter-spacing:-.075em}
+  .score-meta{padding-bottom:12px}
+  .score-meta .den{font-family:var(--mono);font-size:13px;color:#77776f}
+  .score-meta .delta{margin-top:8px;color:var(--lime);font-family:var(--mono);font-size:11px;font-weight:600}
+  .grade-row{position:relative;z-index:2;display:grid;grid-template-columns:128px 1fr;gap:14px;margin-top:18px}
+  .grade-box{background:var(--orange);color:#fff;padding:12px 15px 13px}
+  .grade-box .k{font-family:var(--mono);font-size:8px;letter-spacing:.12em;opacity:.85}
+  .grade-box .v{font-family:var(--latin);font-size:46px;line-height:1;font-weight:900;margin-top:4px}
+  .metrics{display:grid;grid-template-columns:1fr 1fr;border:1px solid rgba(255,255,255,.17)}
+  .metric{padding:11px 14px}
+  .metric:first-child{border-right:1px solid rgba(255,255,255,.17)}
+  .metric .k{font-family:var(--mono);font-size:8px;letter-spacing:.1em;color:#8f8f88}
+  .metric .v{font-family:var(--latin);font-size:21px;font-weight:800;margin-top:4px}
+  .metric .v small{font-size:9px;color:#aaa;font-family:var(--mono);margin-left:2px}
+  .divider{position:relative;z-index:2;height:1px;background:rgba(255,255,255,.16);margin:24px 0 20px}
+  .section-title{position:relative;z-index:2;display:flex;justify-content:space-between;align-items:baseline}
+  .section-title .t{font-size:13px;font-weight:800}
+  .section-title .c{font-family:var(--mono);font-size:8px;color:#8f8f88}
+  .insights{position:relative;z-index:2;margin-top:13px;display:flex;flex-direction:column}
+  .insight{display:grid;grid-template-columns:42px 1fr auto;gap:14px;align-items:center;padding:13px 0;border-top:1px solid rgba(255,255,255,.12)}
+  .insight .n{font-family:var(--latin);font-size:26px;font-weight:800;color:#5c5c55;line-height:1}
+  .insight.hot .n{color:var(--orange)}
+  .insight .body .h{font-size:13px;font-weight:700}
+  .insight .body .p{margin-top:3px;font-size:10px;color:#909088}
+  .insight .time{font-family:var(--mono);font-size:9px;color:#8f8f88}
+  .chart{position:relative;z-index:2;margin-top:20px;height:112px;border-top:1px solid rgba(255,255,255,.14);padding-top:14px;display:flex;align-items:flex-end;gap:8px}
+  .chart .bar{flex:1;background:#34342f;min-height:8px;position:relative}
+  .chart .bar.now{background:var(--lime)}
+  .chart .bar span{position:absolute;top:-15px;left:50%;transform:translateX(-50%);font-family:var(--mono);font-size:7px;color:#8f8f88}
+  .chart .bar.now span{color:var(--lime)}
+  .next-drill{position:relative;z-index:2;margin-top:22px;border:1px solid rgba(255,255,255,.2);padding:16px 18px;display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;background:rgba(255,255,255,.03)}
+  .next-drill .k{font-family:var(--mono);font-size:8px;letter-spacing:.13em;color:var(--orange)}
+  .next-drill .h{margin-top:6px;font-size:15px;font-weight:800}
+  .next-drill .p{margin-top:4px;font-size:10px;color:#8f8f88}
+  .next-drill .btn-square{width:46px;height:46px;border:1px solid rgba(255,255,255,.35);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:17px;color:var(--lime)}
+  .panel-foot{position:absolute;z-index:2;left:36px;right:36px;bottom:20px;display:flex;justify-content:space-between;font-family:var(--mono);font-size:8px;color:#74746d}
+</style>
+</head>
+<body>
+  <div class="topbar"></div>
+  <header>
+    <a class="brand" href="#"><span class="mark">C</span><span class="wordmark">CRUX</span><span class="cn">抱石训练室</span></a>
+    <nav><a class="active" href="#">首页</a><a href="#">视频分析</a><a href="#">进步曲线</a><a href="#">收藏</a></nav>
+    <div class="head-right"><span class="session">SESSION 047 / NOV 07</span><a class="login" href="#">登录</a></div>
+  </header>
+
+  <main>
+    <section class="left">
+      <div class="eyebrow"><span class="dot"></span><span class="rule"></span>BOULDERING PERFORMANCE LAB</div>
+      <h1>上传一条视频。<br />拿到一份<br /><span class="box">能执行</span>的<span class="orange">复盘</span>。</h1>
+      <p class="sub">AI 逐秒标出你的<b>发力顺序、重心轨迹和掉点</b>。不是一句“再试试”，而是下一次具体练什么。</p>
+      <div class="cta-row">
+        <a class="btn-main" href="#">开始分析本次攀爬 <span class="arrow">→</span></a>
+        <a class="btn-ghost" href="#">查看示例报告</a>
+      </div>
+      <div class="number-row">
+        <div class="number-cell"><div class="k">TOTAL ASCENT</div><div class="v">128.6<small>m</small></div></div>
+        <div class="number-cell"><div class="k">ANALYSES</div><div class="v">42<small>次</small></div></div>
+        <div class="number-cell"><div class="k">BEST GRADE</div><div class="v">V6</div></div>
+      </div>
+      <div class="recent">
+        <span class="h">最近三次</span>
+        <a class="all" href="#">全部记录 ↗</a>
+      </div>
+      <div class="recent-list">
+        <div class="route"><span class="tape"></span><div class="top"><span class="grade">V5</span><span class="date">11.07</span></div><div class="score"><b>82</b> 分 · 深度分析</div></div>
+        <div class="route"><span class="tape"></span><div class="top"><span class="grade">V4</span><span class="date">11.05</span></div><div class="score"><b>76</b> 分 · 快速分析</div></div>
+        <div class="route"><span class="tape"></span><div class="top"><span class="grade">V4</span><span class="date">11.02</span></div><div class="score"><b>71</b> 分 · 快速分析</div></div>
+      </div>
+      <div class="steps"><b>上传视频</b><i></i><b>逐秒拆解</b><i></i><b>下次练什么</b></div>
+      <div class="bottom-note"><span>记录保存在本机 · 登录后跨设备同步</span><span>CRUX / 2026</span></div>
+    </section>
+
+    <aside class="panel">
+      <div class="panel-head"><span class="k">LAST ANALYSIS / 11.07 19:24</span><span class="live"><i></i>ANALYZED</span></div>
+      <div class="score-line">
+        <div class="big-score">82</div>
+        <div class="score-meta"><div class="den">/ 100</div><div class="delta">↑ 6 vs LAST</div></div>
+      </div>
+      <div class="grade-row">
+        <div class="grade-box"><div class="k">GRADE</div><div class="v">V5</div></div>
+        <div class="metrics">
+          <div class="metric"><div class="k">ASCENT</div><div class="v">6.4<small>M</small></div></div>
+          <div class="metric"><div class="k">DURATION</div><div class="v">00:38</div></div>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="section-title"><span class="t">本次关键动作</span><span class="c">3 FINDINGS</span></div>
+      <div class="insights">
+        <div class="insight hot"><span class="n">01</span><div class="body"><div class="h">第二手前重心未跟上</div><div class="p">髋部离墙约 12cm，直接导致右脚提前脱墙。</div></div><span class="time">00:14</span></div>
+        <div class="insight"><span class="n">02</span><div class="body"><div class="h">起步节奏偏急</div><div class="p">从起手到第一次发力只用了 0.6 秒。</div></div><span class="time">00:03</span></div>
+        <div class="insight"><span class="n">03</span><div class="body"><div class="h">顶部锁定不足</div><div class="p">右手到位后左肩未锁，出现轻微摆动。</div></div><span class="time">00:31</span></div>
+      </div>
+      <div class="chart">
+        <div class="bar" style="height:38%"><span>64</span></div>
+        <div class="bar" style="height:52%"><span>71</span></div>
+        <div class="bar" style="height:47%"><span>68</span></div>
+        <div class="bar" style="height:63%"><span>76</span></div>
+        <div class="bar" style="height:58%"><span>74</span></div>
+        <div class="bar" style="height:69%"><span>78</span></div>
+        <div class="bar now" style="height:82%"><span>82</span></div>
+      </div>
+      <div class="next-drill">
+        <div><div class="k">NEXT SESSION / RECOMMENDED</div><div class="h">先练髋部贴墙，再练慢速起步。</div><div class="p">3 组 × 8 次 · 完成后再重爬这条线</div></div>
+        <div class="btn-square">↗</div>
+      </div>
+      <div class="panel-foot"><span>SCORE TREND / LAST 7 ANALYSES</span><span>↑ 18 POINTS IN 30 DAYS</span></div>
+    </aside>
+  </main>
+</body>
+</html>
