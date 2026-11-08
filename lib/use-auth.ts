@@ -1,7 +1,26 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import type { User } from "@supabase/supabase-js";
 import type { PublicUser } from "./auth-types";
+import {
+  getBrowserSupabaseConfig,
+  getSupabaseBrowser,
+} from "./supabase/browser";
+import { invalidateAnalysisCache } from "./analysis-store";
+
+function toPublicUser(user: User): PublicUser {
+  const displayName =
+    typeof user.user_metadata?.display_name === "string"
+      ? user.user_metadata.display_name
+      : null;
+  return {
+    id: user.id,
+    email: user.email ?? "",
+    displayName,
+    createdAt: user.created_at,
+  };
+}
 
 export function useAuth(): {
   user: PublicUser | null;
@@ -11,18 +30,26 @@ export function useAuth(): {
   logout: () => Promise<void>;
 } {
   const [user, setUser] = useState<PublicUser | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [configured, setConfigured] = useState(true);
+  const [loading, setLoading] = useState(
+    () => getBrowserSupabaseConfig().configured
+  );
+  const [configured] = useState(() => getBrowserSupabaseConfig().configured);
 
   const refresh = useCallback(async () => {
+    if (!getBrowserSupabaseConfig().configured) {
+      setUser(null);
+      setLoading(false);
+      return;
+    }
     try {
-      const res = await fetch("/api/auth/me", { cache: "no-store" });
-      const data = (await res.json()) as {
-        user: PublicUser | null;
-        configured?: boolean;
-      };
-      setConfigured(data.configured !== false);
-      setUser(data.user ?? null);
+      const supabase = getSupabaseBrowser();
+      const { data, error } = await supabase.auth.getUser();
+      if (error) {
+        const { data: local } = await supabase.auth.getSession();
+        setUser(local.session?.user ? toPublicUser(local.session.user) : null);
+      } else {
+        setUser(data.user ? toPublicUser(data.user) : null);
+      }
     } catch {
       setUser(null);
     } finally {
@@ -31,14 +58,31 @@ export function useAuth(): {
   }, []);
 
   useEffect(() => {
+    if (!configured) return;
+    // 会话校验是异步的；这里只是发起请求，setState 发生在 await 之后
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void refresh();
     const onAuth = () => void refresh();
     window.addEventListener("crux-auth", onAuth);
-    return () => window.removeEventListener("crux-auth", onAuth);
-  }, [refresh]);
+    const { data } = getSupabaseBrowser().auth.onAuthStateChange(
+      (event, session) => {
+        if (event === "SIGNED_IN" || event === "SIGNED_OUT") {
+          invalidateAnalysisCache();
+        }
+        setUser(session?.user ? toPublicUser(session.user) : null);
+        setLoading(false);
+      }
+    );
+    return () => {
+      window.removeEventListener("crux-auth", onAuth);
+      data.subscription.unsubscribe();
+    };
+  }, [configured, refresh]);
 
   const logout = useCallback(async () => {
-    await fetch("/api/auth/logout", { method: "POST" });
+    if (!getBrowserSupabaseConfig().configured) return;
+    await getSupabaseBrowser().auth.signOut();
+    invalidateAnalysisCache();
     setUser(null);
     window.dispatchEvent(new Event("crux-auth"));
   }, []);

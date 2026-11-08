@@ -111,6 +111,8 @@ export interface PollOptions {
   signal?: AbortSignal;
   /** 用于网络错误文案 */
   locale?: "zh" | "en";
+  /** Supabase access token；状态接口要求登录 */
+  accessToken?: string;
 }
 
 export async function pollUntilComplete(
@@ -129,6 +131,9 @@ export async function pollUntilComplete(
     try {
       res = await fetch(`/api/analyze/status/${jobId}`, {
         cache: "no-store",
+        headers: options?.accessToken
+          ? { Authorization: `Bearer ${options.accessToken}` }
+          : undefined,
         signal: options?.signal,
       });
     } catch (err) {

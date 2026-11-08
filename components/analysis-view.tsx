@@ -15,7 +15,7 @@ import type { AnalysisRecord, AnalysisSegment } from "@/lib/types";
 import { parseAnalysis } from "@/lib/parse-analysis";
 import { analysisToMarkdown, downloadTextFile } from "@/lib/export-analysis";
 import { downloadAnalysisPdf } from "@/lib/generate-analysis-pdf";
-import { listAnalysisRecords } from "@/lib/analysis-db";
+import { listAnalysisRecords } from "@/lib/analysis-store";
 import { STRINGS, type UiLocale } from "@/lib/strings";
 import { gradeTapeColor, gradeTapeName } from "@/lib/grade-tape";
 import { formatRecordDate } from "@/lib/record-display";
@@ -78,6 +78,8 @@ export function AnalysisView({
           )
           .slice(0, 3)
       );
+    }).catch(() => {
+      /* 云端不可用时只影响对比图表，正文照常显示 */
     });
   }, [record.id, record.grade]);
 
@@ -225,8 +227,8 @@ export function AnalysisView({
               <IconFilm className="h-5 w-5 text-[var(--crux-text-muted)]" />
               <p className="mono max-w-[30ch] leading-relaxed">
                 {zh
-                  ? "这段视频没有存在本机。换设备后只同步了报告文字。"
-                  : "No local copy of this video — only the report was synced."}
+                  ? "这段视频没有上传到云端（可能超过 50MB）。报告已保存。"
+                  : "This clip was not uploaded to the cloud (it may exceed 50MB). The report is saved."}
               </p>
             </div>
           )}

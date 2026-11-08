@@ -128,7 +128,7 @@ export const STRINGS: Record<UiLocale, CopyBlock> = {
     historyEmptyHint: "上传一段攀爬视频，开始第一次分析。",
     historyNoMatch: "没有符合筛选条件的记录",
     historyNoMatchHint: "尝试放宽日期或分数筛选，或清空搜索。",
-    historyDbError: "无法使用本地历史（浏览器可能禁用了存储）",
+    historyDbError: "无法读取云端记录，请检查网络后重试",
     historyDbHint:
       "你仍可进行分析与查看本次结果；如需历史，请在浏览器设置中允许本站数据存储。",
     historySearch: "搜索文件名",
@@ -198,9 +198,9 @@ export const STRINGS: Record<UiLocale, CopyBlock> = {
     authRegister: "注册",
     authLogout: "退出",
     authLoginTitle: "登录",
-    authLoginSubtitle: "登录后可跨设备同步账户信息（分析记录仍保存在本机浏览器）。",
+    authLoginSubtitle: "登录后，分析报告、缩略图和视频会保存到云端，可在任意设备查看。",
     authRegisterTitle: "注册",
-    authRegisterSubtitle: "创建账户以保存个人资料；视频分析历史默认存在本机 IndexedDB。",
+    authRegisterSubtitle: "创建账户后，分析报告和媒体会自动保存到云端；注册需要邮箱验证。",
     authEmail: "邮箱",
     authPassword: "密码",
     authPasswordHint: "至少 8 位",
@@ -211,9 +211,9 @@ export const STRINGS: Record<UiLocale, CopyBlock> = {
     authHasAccount: "已有账户？",
     authNoAccount: "还没有账户？",
     authGenericError: "操作失败，请稍后重试",
-    authNotConfiguredTitle: "注册功能尚未启用",
+    authNotConfiguredTitle: "账户服务尚未配置",
     authNotConfiguredBody:
-      "管理员需在 Vercel 连接 Postgres 并配置 POSTGRES_URL、AUTH_SECRET 环境变量后，注册与登录才会可用。",
+      "请在 Supabase 控制台开启 Email 登录，并配置 NEXT_PUBLIC_SUPABASE_URL、NEXT_PUBLIC_SUPABASE_ANON_KEY 后重新部署。",
   },
   en: {
     brand: "CRUX Boulder",
@@ -236,7 +236,7 @@ export const STRINGS: Record<UiLocale, CopyBlock> = {
     historyEmptyHint: "Upload a clip to create your first analysis.",
     historyNoMatch: "No records match your filters",
     historyNoMatchHint: "Widen date or score filters, or clear search.",
-    historyDbError: "Local history unavailable (storage may be blocked)",
+    historyDbError: "Could not load cloud history. Check your connection and retry.",
     historyDbHint:
       "You can still analyze and view this session; enable site data for history.",
     historySearch: "Search file name",
@@ -307,10 +307,10 @@ export const STRINGS: Record<UiLocale, CopyBlock> = {
     authLogout: "Log out",
     authLoginTitle: "Log in",
     authLoginSubtitle:
-      "Sign in to associate your account. Analysis history stays in this browser's IndexedDB.",
+      "Sign in to save reports, thumbnails, and videos to the cloud and open them on any device.",
     authRegisterTitle: "Create account",
     authRegisterSubtitle:
-      "Register to save your profile. Video analyses remain stored locally in IndexedDB by default.",
+      "Create an account to save reports and media to the cloud. Email confirmation is required.",
     authEmail: "Email",
     authPassword: "Password",
     authPasswordHint: "At least 8 characters",
@@ -323,7 +323,7 @@ export const STRINGS: Record<UiLocale, CopyBlock> = {
     authGenericError: "Something went wrong. Try again.",
     authNotConfiguredTitle: "Accounts not enabled",
     authNotConfiguredBody:
-      "An admin must connect Vercel Postgres and set POSTGRES_URL and AUTH_SECRET before sign-up works.",
+      "Enable Email auth in Supabase and set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY, then redeploy.",
   },
 };
 

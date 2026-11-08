@@ -1,11 +1,18 @@
 import { listAnalysisRecords } from "./analysis-db";
-import type { SegmentBookmarkItem } from "./types";
+import type { AnalysisRecord, SegmentBookmarkItem } from "./types";
 
 /** 汇总所有分析记录中的时间轴收藏 */
 export async function listAllSegmentBookmarks(): Promise<
   SegmentBookmarkItem[]
 > {
   const records = await listAnalysisRecords();
+  return segmentBookmarksFrom(records);
+}
+
+/** 纯函数版本：网页端从 Supabase 记录直接汇总 */
+export function segmentBookmarksFrom(
+  records: AnalysisRecord[]
+): SegmentBookmarkItem[] {
   const items: SegmentBookmarkItem[] = [];
 
   for (const r of records) {

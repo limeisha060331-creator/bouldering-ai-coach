@@ -9,6 +9,7 @@ import {
   isMemoryJobStoreEnabled,
 } from "@/lib/job-memory-store";
 import { logInfo } from "@/lib/log";
+import { getUserFromRequest } from "@/lib/supabase/auth-server";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -32,10 +33,18 @@ async function loadJobRecord(jobId: string) {
 }
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ jobId: string }> }
 ) {
   const { jobId } = await params;
+
+  const user = await getUserFromRequest(request);
+  if (!user) {
+    return NextResponse.json(
+      { error: "请先登录后再查询分析状态" },
+      { status: 401 }
+    );
+  }
 
   if (!hasBlobStorage() && !isMemoryJobStoreEnabled()) {
     return NextResponse.json(
@@ -49,6 +58,9 @@ export async function GET(
 
   let job = await loadJobRecord(jobId);
   if (!job) {
+    return NextResponse.json({ error: "任务不存在或已过期" }, { status: 404 });
+  }
+  if (job.userId !== user.id) {
     return NextResponse.json({ error: "任务不存在或已过期" }, { status: 404 });
   }
 

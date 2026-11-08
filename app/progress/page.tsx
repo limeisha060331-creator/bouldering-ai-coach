@@ -3,10 +3,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { CruxHeader } from "@/components/crux-header";
 import { IconLoader } from "@/components/icons";
+import { LoginRequired } from "@/components/login-required";
 import { ProgressCharts } from "@/components/progress-charts";
-import { loadProgressByDay, sumAscentMeters } from "@/lib/climbing-stats";
-import { listAnalysisRecords } from "@/lib/analysis-db";
+import { buildProgressByDay, sumAscentMeters } from "@/lib/climbing-stats";
+import { listAnalysisRecords } from "@/lib/analysis-store";
 import type { DayStat } from "@/lib/climbing-stats";
+import { useAuth } from "@/lib/use-auth";
 import { useUiLocale } from "@/lib/use-ui-locale";
 
 export default function ProgressPage() {
@@ -15,19 +17,32 @@ export default function ProgressPage() {
   const [days, setDays] = useState<DayStat[]>([]);
   const [totalM, setTotalM] = useState(0);
   const [loading, setLoading] = useState(true);
+  const { user, loading: authLoading } = useAuth();
+  const userId = user?.id;
 
   const load = useCallback(async () => {
+    if (!userId) {
+      setDays([]);
+      setTotalM(0);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const records = await listAnalysisRecords();
       setTotalM(sumAscentMeters(records));
-      setDays(await loadProgressByDay());
+      setDays(buildProgressByDay(records));
+    } catch {
+      setDays([]);
+      setTotalM(0);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [userId]);
 
   useEffect(() => {
+    // 数据请求完成后才 setState；React Compiler 规则把异步加载误判为同步更新
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void load();
   }, [load]);
 
@@ -36,6 +51,31 @@ export default function ProgressPage() {
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
   }, [load]);
+
+  if (authLoading) {
+    return (
+      <main className="crux-page">
+        <CruxHeader />
+        <div className="shell-narrow flex flex-1 items-center justify-center">
+          <p className="mono flex items-center gap-2">
+            <IconLoader className="h-4 w-4" />
+            {zh ? "加载中…" : "Loading…"}
+          </p>
+        </div>
+      </main>
+    );
+  }
+
+  if (!user) {
+    return (
+      <main className="crux-page">
+        <CruxHeader />
+        <div className="shell-narrow">
+          <LoginRequired />
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="crux-page">

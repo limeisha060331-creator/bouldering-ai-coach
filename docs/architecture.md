@@ -50,13 +50,14 @@
 
 改动其中一份时，对照另一份确认视觉与文案是否也要同步。
 
-仅网页服务端使用的 `lib` 文件包括 `auth-server.ts`、`db.ts`、`db-types.ts`、`supabase/`、`analysis-jobs.ts`、`job-memory-store.ts`、`process-analysis-job.ts`，它们不会进入桌面构建。
+仅网页端使用的 `lib` 文件包括 `analysis-store.ts`、`supabase/browser.ts`、`supabase/auth-server.ts`、`analysis-jobs.ts`、`job-memory-store.ts`、`process-analysis-job.ts`，它们不会进入桌面构建。
 
 ## 部分接入与预留接口
 
 以下代码有测试或接口，但当前没有产品调用方。删除或接入需要单独决策：
 
-- `lib/analysis-cloud.ts` 的 `deleteAnalysisInCloud` 与 `DELETE /api/analyses/[id]`：接口存在，网页没有删除入口。
+- 网页端已改为直连 Supabase（Auth + PostgREST + Storage），不再使用 `/api/analyses`。
+  桌面端共享的 `lib/analysis-cloud.ts` 仍指向该接口，但没有对应 HTTP 服务，云端镜像会静默跳过。
 
 `lib/agent/` 已接入网页端分析流程（`AGENT_RUNTIME=on` 时启用，失败默认回退单次 DeepSeek）；桌面端仍未接入。
 

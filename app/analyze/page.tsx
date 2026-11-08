@@ -6,6 +6,7 @@ import Link from "next/link";
 import { PulseButton } from "@/components/pulse-button";
 import { VideoThumbnail } from "@/components/video-thumbnail";
 import { CruxHeader } from "@/components/crux-header";
+import { LoginRequired } from "@/components/login-required";
 import {
   IconInfo,
   IconLoader,
@@ -13,15 +14,13 @@ import {
   IconUpload,
   IconX,
 } from "@/components/icons";
+import { captureVideoThumbnail } from "@/lib/analysis-db";
 import {
-  captureVideoThumbnail,
   listAnalysisRecords,
   saveAnalysisRecord,
-} from "@/lib/analysis-db";
-import {
-  HISTORY_VIDEO_MAX_BYTES,
-  MAX_SOURCE_BYTES,
-} from "@/lib/upload-limits";
+} from "@/lib/analysis-store";
+import { getSupabaseBrowser } from "@/lib/supabase/browser";
+import { MAX_SOURCE_BYTES } from "@/lib/upload-limits";
 import { extractFramesWithMeta, type AnalyzeFrame } from "@/lib/frame-extraction";
 import { FRAME_PROMPT_VERSION } from "@/lib/version";
 import { MAX_DURATION_SEC } from "@/lib/analyze-request";
@@ -62,7 +61,7 @@ function pipelineStep(
 export default function AnalyzePage() {
   const router = useRouter();
   const [uiLocale, setUiLocale] = useUiLocale();
-  const { user: authUser } = useAuth();
+  const { user: authUser, loading: authLoading } = useAuth();
   const t = STRINGS[uiLocale];
   const inputRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -98,6 +97,11 @@ export default function AnalyzePage() {
   const [scoreMax, setScoreMax] = useState("");
 
   const loadHistory = useCallback(async () => {
+    if (!authUser?.id) {
+      setHistory([]);
+      setHistoryDbError(false);
+      return;
+    }
     try {
       setHistoryDbError(false);
       const list = await listAnalysisRecords();
@@ -106,7 +110,7 @@ export default function AnalyzePage() {
       setHistoryDbError(true);
       setHistory([]);
     }
-  }, []);
+  }, [authUser?.id]);
 
   useEffect(() => {
     loadHistory();
@@ -308,6 +312,10 @@ export default function AnalyzePage() {
       setError(t.needVideo);
       return;
     }
+    if (!authUser) {
+      setError(uiLocale === "zh" ? "请先登录后再分析" : "Sign in before analyzing.");
+      return;
+    }
 
     setLoading(true);
     setError(null);
@@ -321,10 +329,24 @@ export default function AnalyzePage() {
     abortRef.current = new AbortController();
 
     try {
+      const {
+        data: { session },
+      } = await getSupabaseBrowser().auth.getSession();
+      if (!session?.access_token) {
+        throw new AnalysisPollError(
+          uiLocale === "zh" ? "登录已过期，请重新登录" : "Session expired. Sign in again.",
+          false,
+          0
+        );
+      }
+
       const [res, thumbnail] = await Promise.all([
         fetch("/api/analyze", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
           body: JSON.stringify({
             fileName: file.name,
             durationSec,
@@ -374,6 +396,7 @@ export default function AnalyzePage() {
         data = await pollUntilComplete(data.jobId, {
           signal: abortRef.current.signal,
           locale: uiLocale,
+          accessToken: session.access_token,
           onProgress: (status, hint, sec, meta) => {
             setElapsedSec(sec);
             setPollStatus(status);
@@ -410,10 +433,11 @@ export default function AnalyzePage() {
         agent: data.agent,
       };
 
-      // 原片只在不太大时留作本地回放；大文件只保留缩略图，避免撑爆 IndexedDB
-      const videoForHistory =
-        file.size <= HISTORY_VIDEO_MAX_BYTES ? file : new Blob();
-      await saveAnalysisRecord(record, videoForHistory);
+      // 报告先入库；媒体上传是尽力而为，超过 50MB 的原片不会上传
+      await saveAnalysisRecord(record, {
+        video: file,
+        thumbnailDataUrl: thumbnail || "",
+      });
       await loadHistory();
       router.push(`/analysis/${record.id}`);
     } catch (e) {
@@ -447,6 +471,38 @@ export default function AnalyzePage() {
     history.length === 0 ? t.historyEmpty : t.historyNoMatch;
   const emptyHistoryHint =
     history.length === 0 ? t.historyEmptyHint : t.historyNoMatchHint;
+
+  if (authLoading) {
+    return (
+      <main className="crux-page">
+        <CruxHeader />
+        <div className="shell flex flex-1 items-center justify-center">
+          <p className="mono flex items-center gap-2">
+            <IconLoader className="h-4 w-4" />
+            {uiLocale === "zh" ? "加载中…" : "Loading…"}
+          </p>
+        </div>
+      </main>
+    );
+  }
+
+  if (!authUser) {
+    return (
+      <main className="crux-page">
+        <CruxHeader />
+        <div className="shell">
+          <LoginRequired
+            title={uiLocale === "zh" ? "登录后开始分析" : "Sign in to analyze"}
+            body={
+              uiLocale === "zh"
+                ? "分析报告、缩略图和 50MB 以内的原片会保存在云端，换设备也能继续看。"
+                : "Reports, thumbnails, and clips under 50MB are saved to the cloud and available on any device."
+            }
+          />
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="crux-page">

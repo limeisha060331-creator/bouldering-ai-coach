@@ -64,6 +64,8 @@ export interface AnalysisRecord {
   createdAt: string;
   fileName: string;
   thumbnail: string;
+  /** 云端视频的临时播放地址；仅网页端使用，桌面端为 undefined */
+  videoUrl?: string | null;
   analysis: string;
   score: number | null;
   highlight: string | null;

@@ -54,6 +54,11 @@ export function scoreBarValue(record: AnalysisRecord): number {
 
 export async function loadProgressByDay(): Promise<DayStat[]> {
   const records = await listAnalysisRecords();
+  return buildProgressByDay(records);
+}
+
+/** 纯函数版本：网页端从 Supabase 记录直接计算 */
+export function buildProgressByDay(records: AnalysisRecord[]): DayStat[] {
   const map = new Map<
     string,
     { ascentM: number; sessions: number; grades: number[] }

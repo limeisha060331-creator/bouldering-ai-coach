@@ -75,45 +75,47 @@ npm run dev
 # 打开 http://localhost:3000
 ```
 
-网页版访客无需任何配置，也不用填 Key。下面这些变量只给「部署站点的人」和「本地跑源码的人」用，
-全部只在服务端读取，不会打包进浏览器：
+下面这些变量给「部署站点的人」和「本地跑源码的人」用。只有 `NEXT_PUBLIC_SUPABASE_*`
+会进入浏览器（受 RLS 约束），其余密钥只在服务端读取：
 
 ```env
 DEEPSEEK_API_KEY=你的密钥
 # 可选：异步任务（生产环境建议）
 BLOB_READ_WRITE_TOKEN=...
-# 可选：注册登录 + 分析记录云端同步（Supabase）
+# 注册登录 + 云端分析记录 + 媒体存储（Supabase）
 NEXT_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 SUPABASE_SERVICE_ROLE_KEY=...
-AUTH_SECRET=...
 # 可选：网页端 Agent（默认开启，失败回退单次分析）
 AGENT_RUNTIME=on
 AGENT_FALLBACK=on
 ```
 
-`DEEPSEEK_API_KEY` 不要加 `NEXT_PUBLIC_` 前缀；`service_role` 同理。浏览器端拿不到它们。
+`DEEPSEEK_API_KEY` 不要加 `NEXT_PUBLIC_` 前缀；`service_role` 同理。浏览器端只拿
+`NEXT_PUBLIC_SUPABASE_URL` 与 `NEXT_PUBLIC_SUPABASE_ANON_KEY`，权限由 RLS 控制。
 
 ## 数据库（Supabase）
 
-网页版的账户与云端数据存在 Supabase（Postgres）上，共三张表：
+网页版以 Supabase 为唯一事实来源：
 
 | 表 | 用途 |
 | --- | --- |
-| `users` | 注册用户（邮箱 + bcrypt 密码哈希） |
+| `auth.users` | 账号（邮箱、密码哈希、邮箱验证状态，由 Supabase Auth 管理） |
 | `analyses` | 每次视频分析记录（时间轴、评分、难度、收藏下标等） |
 | `agent_memory` | 每个用户的 Agent 长期记忆（档案、训练事件、术语偏好） |
+| Storage `media` | 私有视频与缩略图，按 `{userId}/{analysisId}/...` 隔离 |
 
-接入三步（详见 **[supabase/README.md](./supabase/README.md)**）：
+接入（详见 **[supabase/README.md](./supabase/README.md)**）：
 
 1. 在 <https://supabase.com/dashboard> 新建项目。
-2. 打开 **SQL Editor**，依次执行 `supabase/migrations/0001_init.sql`、`supabase/migrations/0002_agent_memory.sql` 建表。
-3. 在 **Project Settings → API** 复制 `Project URL`、`anon`、`service_role`，
+2. 打开 **Authentication → Providers → Email**，确认 Email 登录已启用。
+3. 打开 **SQL Editor**，执行 `supabase/migrations/0003_supabase_auth.sql`。
+4. 在 **Project Settings → API** 复制 `Project URL`、publishable/anon key、`service_role`，
    填入 `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` / `SUPABASE_SERVICE_ROLE_KEY`。
 
-数据流是「本地优先」：视频与分析记录先写浏览器 IndexedDB（离线可用、含视频 Blob），
-登录后自动镜像到 Supabase，换设备登录即可拉回；未登录时只保留在本地。
-`service_role` 只在本服务的 Route Handler 中使用，浏览器端不直连数据库。
+数据流是「云端优先」：登录后浏览器直接通过 RLS 读写 `analyses`，缩略图和 50MB 以内的
+原片上传到私有 Storage；前端只保留 30 秒内存缓存。未登录用户需要先登录才能分析。
+`service_role` 只留在服务端后台任务里，浏览器端不接触。
 
 ## 技术栈
 
@@ -122,7 +124,7 @@ AGENT_FALLBACK=on
 | 界面 | React 19 + TypeScript + Tailwind 4 + Vite | React 19 + TypeScript + Tailwind 4 |
 | 运行时 | Electron 主进程（Node） | Next.js 16 App Router |
 | AI | DeepSeek `deepseek-flash`（端侧抽帧） | DeepSeek `deepseek-flash` + Agent 工具循环（浏览器抽帧与姿态取证） |
-| 本地存储 | IndexedDB + 应用数据目录配置 | IndexedDB（本地优先）+ Supabase（账户与云端同步） |
+| 本地存储 | IndexedDB + 应用数据目录配置 | Supabase（Auth + Postgres + Storage），仅保留内存缓存 |
 | 测试 | Vitest + Playwright（Electron） | — |
 
 ## 项目结构

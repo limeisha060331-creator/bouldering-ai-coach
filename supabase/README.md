@@ -1,76 +1,93 @@
-# Supabase 数据库接入
+# Supabase 接入（Auth + Postgres + Storage）
 
-Web 端的数据层由 Supabase（Postgres + PostgREST）提供，包含三张表：
+网页版以 Supabase 为唯一事实来源：
 
-| 表 | 用途 | 代码位置 |
+| 能力 | 用途 | 代码位置 |
 | --- | --- | --- |
-| `public.users` | 注册用户（邮箱、bcrypt 密码哈希） | `lib/db.ts` |
-| `public.analyses` | 每次视频分析记录（含时间轴、评分、难度、收藏下标） | `lib/supabase/analysis-repo.ts` |
-| `public.agent_memory` | 每个用户的 Agent 长期记忆（档案、训练事件、术语偏好） | `lib/agent/memory/supabase-persistence.ts` |
+| Supabase Auth | 注册、登录、邮箱验证、会话刷新 | `lib/use-auth.ts`、`components/auth-form.tsx` |
+| `public.analyses` | 每次视频分析记录（时间轴、评分、难度、收藏下标） | `lib/analysis-store.ts` |
+| `public.agent_memory` | 每个用户的 Agent 长期记忆 | `lib/agent/memory/supabase-persistence.ts` |
+| Storage `media` | 私有视频与缩略图，路径 `{userId}/{analysisId}/...` | `lib/analysis-store.ts` |
 
-RLS 默认全部关闭给外部角色，只有服务端用 `service_role` 读写；浏览器端不直连数据库，
-所有请求都经过 `/api/auth/*` 与 `/api/analyses/*`。
+浏览器用 publishable / anon key 直连 PostgREST 与 Storage，RLS 保证每个用户只能读写自己的行；
+`service_role` 只留给服务端后台任务，绝不能出现在浏览器代码里。
 
 ## 一、创建项目
 
 1. 打开 <https://supabase.com/dashboard>，注册 / 登录。
-2. **New project**：填写名称（如 `crux-bouldering-ai`）、数据库密码（记下来）、区域（国内用户建议选新加坡 `ap-southeast-1`）。
+2. **New project**：填写名称、数据库密码、区域（国内用户建议新加坡 `ap-southeast-1`）。
 3. 等待项目初始化完成（约 1–2 分钟）。
 
-## 二、建表
+## 二、执行迁移
 
-1. 左侧 **SQL Editor** → **New query**。
-2. 粘贴 `supabase/migrations/0001_init.sql` 全部内容 → **Run**。
-3. 再粘贴 `supabase/migrations/0002_agent_memory.sql` 全部内容 → **Run**。
-4. 在 **Table Editor** 中确认出现 `users`、`analyses`、`agent_memory` 三张表。
+打开 **SQL Editor** → **New query**，执行下面这个文件：
 
-> 也可以用 Supabase CLI：`supabase link --project-ref <你的项目ref>` 后执行 `supabase db push`。
+- `supabase/migrations/0003_supabase_auth.sql`
 
-## 三、拿密钥并写入环境变量
+> 0003 会重建 `analyses` / `agent_memory`，删除旧的 `public.users`。
+> 本项目此前没有真实用户，所以这是安全的一次性切换；如果以后有真实用户，需要改为增量迁移。
+> `0001_init.sql` / `0002_agent_memory.sql` 是旧版自建账号方案，仅用于历史参考。
+
+迁移会同时完成：
+
+- `analyses.user_id` / `agent_memory.user_id` 改为 `uuid references auth.users(id)`；
+- 打开 RLS，只允许 `auth.uid() = user_id` 的读写；
+- 创建私有 Storage bucket `media`，限制单文件 50MB，并按用户目录隔离。
+
+## 三、开启 Auth
+
+**Authentication → Providers → Email**：
+
+1. 确认 Email provider 已启用。
+2. 本地开发想跳过邮箱验证时，关闭 **Confirm email**；生产环境建议保持开启。
+3. 如果保持开启，需要在 **Authentication → Emails** 配置 SMTP，否则验证邮件可能发不出去。
+
+**Authentication → URL Configuration**：
+
+- **Site URL** 填本地或生产地址，例如 `http://localhost:3000`。
+- **Redirect URLs** 加入 `http://localhost:3000/**` 和线上域名 `https://your-domain/**`，
+  否则注册确认邮件里的回跳链接会被 Supabase 拒绝。
+
+## 四、环境变量
 
 **Project Settings → API**：
 
-| 控制台字段 | 环境变量 | 说明 |
-| --- | --- | --- |
-| Project URL | `NEXT_PUBLIC_SUPABASE_URL` | 形如 `https://xxxx.supabase.co` |
-| `anon` `public` | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | 公开密钥，配合 RLS 使用 |
-| `service_role` `secret` | `SUPABASE_SERVICE_ROLE_KEY` | **绝不能暴露到浏览器** |
-
-**Project Settings → Database → Connection string → URI**（仅迁移/脚本用，可选）：
-
 ```env
-SUPABASE_DB_URL=postgresql://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:6543/postgres
+NEXT_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_publishable_or_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 ```
 
-把以上变量写进本地 `.env.local`，部署时写进 Vercel 的环境变量（Production / Preview / Development 都要）。
-登录功能还需要 `AUTH_SECRET`（≥16 位随机字符串）。
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`：给浏览器用，受 RLS 约束。
+- `SUPABASE_SERVICE_ROLE_KEY`：只给服务端 Agent 记忆等后台任务用，不能加 `NEXT_PUBLIC_` 前缀。
+- `AUTH_SECRET`、`POSTGRES_URL`、`DATABASE_URL` 已不再需要。
 
-## 四、验证
+部署到 Vercel 时，三项都要在 Production / Preview / Development 配置。
+
+## 五、验证
 
 ```bash
 npm run dev
 ```
 
-1. 打开 `/auth/register` 注册一个账号 → 应该在 `users` 表看到新行。
-2. 打开 `/analyze` 完成一次分析 → 登录状态下会在 `analyses` 表看到新行；未登录时只存本地 IndexedDB。
-
-## 五、可选：命令行访问
-
-需要 `psql` 或 Supabase CLI。设置好 `SUPABASE_DB_URL` 后：
-
-```bash
-psql "$SUPABASE_DB_URL" -f supabase/migrations/0001_init.sql
-psql "$SUPABASE_DB_URL" -f supabase/migrations/0002_agent_memory.sql
-```
+1. 打开 `/auth/register` 注册账号。
+2. 在 Supabase **Authentication → Users** 看到新用户。
+3. 登录后打开 `/analyze` 完成一次分析。
+4. 在 **Table Editor → analyses** 看到一行，`user_id` 是当前用户的 uuid。
+5. 在 **Storage → media** 看到 `{userId}/{analysisId}/thumb.jpg` 和（50MB 以内的）视频文件。
+6. 换一个浏览器或设备登录同一个账号，历史记录、缩略图和视频都能看到。
 
 ## 数据流
 
 ```
-/analyze          本地 IndexedDB 写入（含视频 Blob）
-                  └─ 已登录 → POST /api/analyses ──► Supabase analyses
-/analysis/[id]    本地读取；本地没有则 GET /api/analyses/:id 回源并缓存
-/auth/*           Supabase users（service_role）+ JWT 会话 Cookie
-/analyze (Agent)  通过 0002 迁移的 agent_memory 读写长期记忆
+/auth/*            Supabase Auth（邮箱 + 密码，浏览器端会话）
+/analyze           浏览器抽帧 → POST /api/analyze（Bearer token）
+                   → DeepSeek / Agent → 报告
+                   → Storage 上传缩略图/视频 → analyses 入库
+/analysis/[id]     直连 PostgREST 读记录，Storage 签名 URL 播放视频
+/favorites         读 analyses，按 bookmarked_segment_indices 汇总
+/progress          读 analyses，按 created_at 聚合
 ```
 
-视频文件本身仍存在浏览器本地 / Vercel Blob，不入库；云端只同步分析文本、缩略图与元数据。
+原视频超过 50MB 时只保存报告和缩略图；需要保留大视频时，建议把原片放到 Cloudflare R2/B2，
+数据库只存对象路径，避免 Supabase Storage 配额和流量成本快速上升。

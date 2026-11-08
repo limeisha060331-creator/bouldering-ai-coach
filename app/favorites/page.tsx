@@ -4,8 +4,11 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { CruxHeader } from "@/components/crux-header";
 import { IconClock, IconLoader, IconStar } from "@/components/icons";
-import { listAllSegmentBookmarks } from "@/lib/bookmarks";
+import { LoginRequired } from "@/components/login-required";
+import { segmentBookmarksFrom } from "@/lib/bookmarks";
+import { listAnalysisRecords } from "@/lib/analysis-store";
 import { STRINGS } from "@/lib/strings";
+import { useAuth } from "@/lib/use-auth";
 import { useUiLocale } from "@/lib/use-ui-locale";
 import type { SegmentBookmarkItem } from "@/lib/types";
 
@@ -15,20 +18,29 @@ export default function FavoritesPage() {
   const zh = uiLocale === "zh";
   const [items, setItems] = useState<SegmentBookmarkItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const { user, loading: authLoading } = useAuth();
+  const userId = user?.id;
 
   const load = useCallback(async () => {
+    if (!userId) {
+      setItems([]);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
-      const list = await listAllSegmentBookmarks();
-      setItems(list);
+      const records = await listAnalysisRecords();
+      setItems(segmentBookmarksFrom(records));
     } catch {
       setItems([]);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [userId]);
 
   useEffect(() => {
+    // 数据请求完成后才 setState；React Compiler 规则把异步加载误判为同步更新
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void load();
   }, [load]);
 
@@ -37,6 +49,31 @@ export default function FavoritesPage() {
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
   }, [load]);
+
+  if (authLoading) {
+    return (
+      <main className="crux-page">
+        <CruxHeader />
+        <div className="shell-narrow flex flex-1 items-center justify-center">
+          <p className="mono flex items-center gap-2">
+            <IconLoader className="h-4 w-4" />
+            {t.detailLoading}
+          </p>
+        </div>
+      </main>
+    );
+  }
+
+  if (!user) {
+    return (
+      <main className="crux-page">
+        <CruxHeader />
+        <div className="shell-narrow">
+          <LoginRequired />
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="crux-page">

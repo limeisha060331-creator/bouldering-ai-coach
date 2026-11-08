@@ -2,6 +2,11 @@
 
 > 扫描基线：2026-11-04，分支 `feat/visual-refresh`，Agent 接入提交 `3d79f50`。
 > 本文以当前代码为准，描述网页端、桌面端、共享领域层、质量评测链路，以及已接入网页分析链路的 Agent harness。
+>
+> **2026-11-07 更新：** 网页端已切换为 Supabase Auth + RLS + Storage，分析记录以云端为唯一事实来源，
+> 浏览器只保留 30 秒内存缓存；桌面端仍使用本地 IndexedDB。本文第 4/6/9 节中的
+> 「IndexedDB 本地优先、`/api/analyses` 镜像」描述已被这次改造取代，最新数据流以
+> `README.md` 与 `supabase/README.md` 为准。
 
 ## 1. 项目概览与整体架构
 
@@ -26,7 +31,8 @@ flowchart TB
   subgraph Clients["客户端"]
     subgraph Web["网页端 Next.js 16"]
       WebUI["页面与交互<br/>app/page.tsx · app/analyze · app/analysis/:id"]
-      WebAPI["Route Handlers<br/>/api/analyze · /api/analyze/status<br/>/api/analyses · /api/auth"]
+      WebAPI["Route Handlers<br/>/api/analyze · /api/analyze/status"]
+      WebCloud["Supabase<br/>Auth · PostgREST · Storage"]
     end
 
     subgraph Desktop["桌面端 Electron + Vite"]
@@ -99,15 +105,13 @@ my-bouldering-ai/
 ├─ app/                     网页端 App Router 页面与 Route Handlers
 │  ├─ api/analyze/          POST 创建分析任务
 │  ├─ api/analyze/status/   GET 查询任务状态
-│  ├─ api/analyses/         登录用户的云端分析记录 CRUD
-│  ├─ api/auth/             注册、登录、登出、当前用户
 │  ├─ analyze/              上传与分析页
 │  └─ analysis/[id]/        单条分析报告详情页
 ├─ components/              网页与桌面共用的展示组件
 ├─ styles/crux.css          两端共用的设计 token 与组件样式
 ├─ lib/                     共享领域逻辑
 │  ├─ agent/                Agent 循环、模型适配器、工具集、记忆与校验
-│  └─ supabase/             服务端 Supabase 访问层
+│  └─ supabase/             浏览器客户端与服务端 token 校验
 ├─ desktop/
 │  ├─ electron/             Electron 主进程
 │  ├─ shared/               主进程与渲染进程的 IPC 契约
@@ -128,10 +132,10 @@ my-bouldering-ai/
 | 层 | 目录 | 职责 | 边界约束 |
 | --- | --- | --- | --- |
 | 页面与交互 | `app/`、`desktop/src/pages`、`components/` | 选片、预览、抽帧进度、分析进度、报告展示、收藏、统计、导出 | 不直接持有模型密钥；平台 I/O 留在页面或 `desktop/src/lib` |
-| 路由与接口 | `app/api/` | 请求校验、鉴权、任务创建/查询、云端记录 CRUD | 只在服务端读取 `DEEPSEEK_API_KEY`、`SUPABASE_SERVICE_ROLE_KEY` |
+| 路由与接口 | `app/api/` | 请求校验、Bearer token 鉴权、任务创建/查询 | 只在服务端读取 `DEEPSEEK_API_KEY`、`SUPABASE_SERVICE_ROLE_KEY` |
 | 应用编排 | `lib/process-analysis-job.ts`、`desktop/electron/job-manager.ts` | 任务状态机、重试、限流冷却、卡死恢复、并发锁 | 不解析报告内容，不渲染 UI |
 | 领域核心 | `lib/frame-extraction.ts`、`lib/analyze-request.ts`、`lib/deepseek-analysis.ts`、`lib/parse-analysis.ts`、`lib/analysis-schema.ts` | 抽帧、请求契约、模型调用、输出解析、领域模型 | 被两端复用的文件不 import `next/*` 或 `electron` |
-| 持久化 | `lib/analysis-db.ts`、`lib/analysis-cloud.ts`、`lib/supabase/` | IndexedDB 主存储、云端镜像、行与领域对象互转 | 云端失败不能阻断本地使用 |
+| 持久化 | `lib/analysis-store.ts`、`lib/analysis-db.ts`、`lib/supabase/` | 网页 Supabase 云端读写；桌面 IndexedDB 本地存储；Auth 与 RLS | 网页不以浏览器本地库作为事实来源 |
 | 桌面平台 | `desktop/electron/`、`desktop/shared/`、`desktop/src/lib` | 窗口安全、IPC、设置与本地账户、文件保存 | IPC 只暴露白名单方法 |
 | 质量评测 | `evals/`、`lib/eval-*.ts`、`lib/ai-cost.ts` | 夹具评测、真实语料评测、版本对比、成本与失败分类 | 只读 `lib`，不反向依赖页面 |
 | Agent harness | `lib/agent/` | 顶层循环、DeepSeek 动作协议、姿态/取帧/记忆工具、上下文、沙箱、校验修复、轨迹评测 | 网页异步分析主链路；桌面端暂未接入 |
@@ -163,7 +167,7 @@ my-bouldering-ai/
 | `app/analyze/page.tsx` / `desktop/src/pages/AnalyzePage.tsx` | 网页走 HTTP 轮询，桌面走 IPC 事件 |
 | `app/analysis/[id]/page.tsx` / `desktop/src/pages/AnalysisPage.tsx` | 路由参数与 Suspense 边界不同 |
 
-仅网页服务端使用的 `lib` 文件包括 `auth-server.ts`、`auth-config.ts`、`db.ts`、`db-types.ts`、`supabase/`、`analysis-jobs.ts`、`job-memory-store.ts`、`process-analysis-job.ts`，它们不会进入桌面构建。
+仅网页端使用的 `lib` 文件包括 `analysis-store.ts`、`supabase/browser.ts`、`supabase/auth-server.ts`、`analysis-jobs.ts`、`job-memory-store.ts`、`process-analysis-job.ts`，它们不会进入桌面构建。
 
 ## 3. 核心模块职责分析
 
@@ -365,31 +369,28 @@ completed / failed → 直接返回
 
 `sanitizeSegments` 会过滤超出 `durationSec + 2` 的时间点并按秒数排序。
 
-### 3.9 本地存储与云端镜像
+### 3.9 网页云端存储与桌面本地存储
 
-**IndexedDB：`lib/analysis-db.ts`**
+**网页端：Supabase 云端优先（`lib/analysis-store.ts`）**
+
+- `analyses` / `agent_memory` 的 `user_id` 是 `uuid`，引用 `auth.users(id)`；RLS 只允许 `auth.uid() = user_id` 的读写。
+- 浏览器用 publishable / anon key 直连 PostgREST；服务端 Route Handler 通过 `auth.getUser(token)` 校验 Bearer token。
+- 缩略图与 50MB 以内的原片上到私有 Storage bucket `media`，路径固定为 `{userId}/{analysisId}/...`。
+- 读取列表时批量生成一小时有效的缩略图签名 URL；详情页再生成视频签名 URL。
+- 浏览器只保留 30 秒内存缓存，登录、退出或数据变更时立即失效，不再使用 IndexedDB。
+- 超过 50MB 的原片只保存报告与缩略图；数据库仍是报告的唯一事实来源。
+
+**桌面端：IndexedDB（`lib/analysis-db.ts`）**
 
 - 数据库：`bouldering-ai-coach`，版本 3，对象仓库 `analyses`，主键 `id`，索引 `createdAt`。
-- 记录类型：`AnalysisRecord & { videoBlob?: Blob }`。
-- 原片只在不超过 80MB 时保存；大文件只保留缩略图，避免撑爆配额。
-- `getAnalysisRecord` 先读本地，未命中再回源云端；`listAnalysisRecords` 合并本地与云端，只补本地缺失的 id，不覆盖本地版本。
-- `patchAnalysisRecord` 用于收藏、备注等字段合并，保留 `videoBlob`。
+- 记录类型：`AnalysisRecord & { videoBlob?: Blob }`，原片只在不超过 80MB 时保存。
+- 桌面端继续使用本地 `analysis-db`；共享的 `analysis-cloud.ts` 所指向的 `/api/analyses` 已从网页端移除，因此桌面云端镜像不会生效。
 
-**云端镜像：`lib/analysis-cloud.ts` + `app/api/analyses/`**
+**网页鉴权：Supabase Auth**
 
-- `POST /api/analyses` 写入或更新记录；`PATCH /api/analyses/[id]` 更新；`DELETE` 删除；`GET` 列表或单条。
-- 必须登录；服务端从会话 JWT 取用户，不信任请求体里的用户 id。
-- `thumbnail` 超过 2,000,000 字符会被清空，避免请求体过大。
-- `analyses` 表同时保存拆出的关键列与完整 `record` JSON，列优先、`record` 兜底。
-- `assertOwnership` 防止同 id 覆盖其他用户的记录。
-- 浏览器端有 `cloudUnavailable` 缓存：服务端明确返回「Supabase 未配置」后不再重复请求。
-- 所有云端调用都是尽力而为，失败不会阻断本地保存。
-
-**鉴权：`lib/auth-server.ts` + `app/api/auth/`**
-
-- 密码使用 bcrypt（10 rounds）哈希。
-- 会话使用 `jose` 签发的 HS256 JWT，写入 `httpOnly`、`sameSite=lax` Cookie，生产环境加 `secure`。
-- 注册时校验邮箱格式与密码长度（至少 8 位）。
+- 注册、登录、退出、邮箱验证与 token 自动刷新都由 `@supabase/supabase-js` 处理。
+- `/api/analyze` 与状态查询接口强制登录；状态接口还校验 `job.userId`，不能读取其他用户的任务。
+- `service_role` 只留在服务端 Agent 记忆等后台任务，浏览器只接触 anon / publishable key。
 
 ### 3.10 桌面端主进程
 
@@ -493,14 +494,13 @@ sequenceDiagram
     participant B as Vercel Blob
     participant D as DeepSeek
     participant S as GET /api/analyze/status
-    participant I as IndexedDB
-    participant C as Supabase
+    participant I as Supabase PostgREST / Storage
 
     U->>P: 选择或拖入视频
     P->>P: 校验类型与 200MB 上限
     P->>F: extractFramesWithMeta(file)
     F-->>P: frames + durationSec
-    P->>A: JSON { fileName, durationSec, frames, depth, locale }
+    P->>A: Bearer token + JSON { fileName, durationSec, frames, depth, locale }
     A->>A: parseAnalyzeRequest 校验
     A->>B: 写入 frames/{jobId}.json 与 jobs/{jobId}.json
     A-->>P: { jobId, async: true, phase: frames_received }
@@ -520,8 +520,8 @@ sequenceDiagram
     J->>B: 写回 completed
     S-->>P: completed + analysis
     P->>P: parseAnalysis(analysis)
-    P->>I: saveAnalysisRecord(record, videoBlob)
-    P->>C: POST /api/analyses（已登录时）
+    P->>I: saveAnalysisRecord(record, media)
+    I-->>P: analyses 行 + Storage 对象
     P->>U: router.push(/analysis/{id})
     U->>I: 详情页读取记录
     U->>P: 收藏 / 导出 PDF / 导出 Markdown
@@ -903,7 +903,7 @@ cost-budget
 | Agent harness | 网页端异步/同步分析可用，桌面端未接入 | 桌面端不能把 `lib/agent/` 当作当前分析引擎 |
 | 桌面云端同步 | 桌面调用共享 `analysis-db`，但 `analysis-cloud` 请求相对 `/api/analyses`；桌面没有对应 HTTP 服务或代理 | 打包桌面端实际以本地 IndexedDB 为主，云端镜像静默跳过 |
 | 桌面账户 | 本地 `accounts.json` + `scrypt`，与网页 Supabase 账户不互通 | 两端用户体系独立 |
-| 网页删除记录 | `DELETE /api/analyses/[id]` 与 `deleteAnalysisInCloud` 存在 | 页面暂无删除入口 |
+| 网页删除记录 | `lib/analysis-store.ts` 的 `deleteAnalysisRecord` 会同时删除数据库行和 Storage 媒体 | 页面暂无删除入口 |
 | 评测语料 | `evals/private/corpus` 为本地私有视频，不进仓库 | 新环境只能跑合成夹具 |
 | 评测文档 | `evals/README.md` 仍提到 Gemini 与旧链路 | 以 `evals/live.ts` 与 `lib/deepseek-analysis.ts` 的实际代码为准 |
 
@@ -912,11 +912,11 @@ cost-budget
 按调用链阅读，比按目录顺序更高效：
 
 1. **网页主链路**
-   `app/analyze/page.tsx` → `lib/frame-extraction.ts` → `lib/pose-extraction.ts` → `app/api/analyze/route.ts` → `lib/analyze-request.ts` → `lib/process-analysis-job.ts` → `lib/agent/web-runtime.ts` → `lib/agent/loop.ts` → `lib/parse-analysis.ts` → `lib/analysis-db.ts` → `app/analysis/[id]/page.tsx`
+   `app/analyze/page.tsx` → `lib/frame-extraction.ts` → `lib/pose-extraction.ts` → `app/api/analyze/route.ts` → `lib/analyze-request.ts` → `lib/process-analysis-job.ts` → `lib/agent/web-runtime.ts` → `lib/agent/loop.ts` → `lib/parse-analysis.ts` → `lib/analysis-store.ts` → `app/analysis/[id]/page.tsx`
 2. **桌面主链路**
    `desktop/src/pages/AnalyzePage.tsx` → `desktop/src/lib/analyze-client.ts` → `desktop/electron/preload.ts` → `desktop/electron/ipc.ts` → `desktop/electron/job-manager.ts` → `desktop/electron/deepseek-runner.ts`
 3. **存储与账户**
-   `lib/analysis-db.ts` → `lib/analysis-cloud.ts` → `app/api/analyses/route.ts` → `lib/supabase/analysis-repo.ts`；网页鉴权看 `lib/auth-server.ts`，桌面鉴权看 `desktop/electron/auth-store.ts`
+   网页：`lib/use-auth.ts` → Supabase Auth → `lib/analysis-store.ts` → PostgREST / Storage；桌面：`lib/analysis-db.ts` → IndexedDB，账户看 `desktop/electron/auth-store.ts`
 4. **质量链路**
    `evals/run.ts` / `evals/live.ts` → `lib/eval-metrics.ts` / `lib/eval-structural.ts` → `lib/failure-taxonomy.ts` → `evals/runs/*/report.md`
 5. **Agent harness**

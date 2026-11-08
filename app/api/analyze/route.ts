@@ -21,7 +21,7 @@ import {
 } from "@/lib/deepseek-analysis";
 import { parseAnalyzeRequest } from "@/lib/analyze-request";
 import { logError, logInfo } from "@/lib/log";
-import { getSessionUser } from "@/lib/auth-server";
+import { getUserFromRequest } from "@/lib/supabase/auth-server";
 import {
   agentFallbackEnabled,
   getAgentRuntimeMode,
@@ -81,7 +81,13 @@ export async function POST(request: NextRequest) {
   const now = new Date().toISOString();
   const model = getDeepSeekModelId();
   const runtimeMode = getAgentRuntimeMode();
-  const user = await getSessionUser().catch(() => null);
+  const user = await getUserFromRequest(request);
+  if (!user) {
+    return NextResponse.json(
+      { error: "请先登录后再分析", code: "UNAUTHENTICATED" },
+      { status: 401 }
+    );
+  }
 
   logInfo("POST", "关键帧已校验", {
     fileName,
@@ -106,7 +112,7 @@ export async function POST(request: NextRequest) {
       depth,
       locale,
       model,
-      userId: user?.id,
+      userId: user.id,
       pose: parsed.value.pose ?? undefined,
       grade: parsed.value.grade,
     };
@@ -162,7 +168,7 @@ export async function POST(request: NextRequest) {
       try {
         const result = await runWebAgentAnalysis({
           runId: jobId,
-          userId: user?.id,
+          userId: user.id,
           grade: parsed.value.grade,
           frames,
           pose: parsed.value.pose,

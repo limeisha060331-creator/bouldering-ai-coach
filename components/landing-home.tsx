@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CountUp } from "@/components/count-up";
 import { CruxHeader } from "@/components/crux-header";
-import { listAnalysisRecords } from "@/lib/analysis-db";
+import { listAnalysisRecords } from "@/lib/analysis-store";
 import {
   averageScore,
   bestGradeLabel,
@@ -24,11 +24,15 @@ export function LandingHome() {
   const [activeId, setActiveId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    const list = await listAnalysisRecords();
-    setRecords(list);
-    setActiveId((prev) =>
-      prev && list.some((r) => r.id === prev) ? prev : list[0]?.id ?? null
-    );
+    try {
+      const list = await listAnalysisRecords();
+      setRecords(list);
+      setActiveId((prev) =>
+        prev && list.some((r) => r.id === prev) ? prev : list[0]?.id ?? null
+      );
+    } catch {
+      setRecords([]);
+    }
   }, []);
 
   useEffect(() => {

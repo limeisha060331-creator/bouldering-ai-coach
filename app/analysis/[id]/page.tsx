@@ -6,8 +6,10 @@ import { useParams, useSearchParams } from "next/navigation";
 import { AnalysisView } from "@/components/analysis-view";
 import { CruxHeader } from "@/components/crux-header";
 import { IconArrowLeft, IconLoader } from "@/components/icons";
-import { getAnalysisRecord, patchAnalysisRecord } from "@/lib/analysis-db";
+import { LoginRequired } from "@/components/login-required";
+import { getAnalysisRecord, patchAnalysisRecord } from "@/lib/analysis-store";
 import { STRINGS } from "@/lib/strings";
+import { useAuth } from "@/lib/use-auth";
 import { useUiLocale } from "@/lib/use-ui-locale";
 import { gradeTapeColor } from "@/lib/grade-tape";
 import type { AnalysisRecord } from "@/lib/types";
@@ -28,16 +30,15 @@ function AnalysisDetailContent() {
     tParam != null && tParam !== "" ? parseFloat(tParam) : null;
 
   const [record, setRecord] = useState<
-    (AnalysisRecord & { videoBlob?: Blob }) | null
+    AnalysisRecord | null
   >(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [bookmarks, setBookmarks] = useState<number[]>([]);
+  const { user, loading: authLoading } = useAuth();
 
   useEffect(() => {
-    let url: string | null = null;
-
     async function load() {
       try {
         const data = await getAnalysisRecord(id);
@@ -47,10 +48,7 @@ function AnalysisDetailContent() {
         }
         setRecord(data);
         setBookmarks(data.bookmarkedSegmentIndices ?? []);
-        if (data.videoBlob && data.videoBlob.size > 0) {
-          url = URL.createObjectURL(data.videoBlob);
-          setVideoUrl(url);
-        }
+        setVideoUrl(data.videoUrl ?? null);
       } catch {
         setNotFound(true);
       } finally {
@@ -59,9 +57,6 @@ function AnalysisDetailContent() {
     }
 
     load();
-    return () => {
-      if (url) URL.revokeObjectURL(url);
-    };
   }, [id]);
 
   const persistBookmarks = useCallback(
@@ -79,6 +74,31 @@ function AnalysisDetailContent() {
     },
     [id, record]
   );
+
+  if (authLoading) {
+    return (
+      <main className="crux-page">
+        <CruxHeader />
+        <div className="shell flex flex-1 items-center justify-center">
+          <p className="mono flex items-center gap-2">
+            <IconLoader className="h-4 w-4" />
+            {t.detailLoading}
+          </p>
+        </div>
+      </main>
+    );
+  }
+
+  if (!user) {
+    return (
+      <main className="crux-page">
+        <CruxHeader />
+        <div className="shell">
+          <LoginRequired />
+        </div>
+      </main>
+    );
+  }
 
   if (loading) {
     return (
